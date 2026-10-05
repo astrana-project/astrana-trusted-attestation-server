@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Log;
 use OneLogin\Saml2\Auth;
 use OneLogin\Saml2\Constants;
+use OneLogin\Saml2\LogoutRequest;
 use OneLogin\Saml2\LogoutResponse;
 
 /**
@@ -239,7 +240,7 @@ final class SamlController extends Controller
         try {
             $auth = $this->saml->auth();
             $url = $auth->logout(
-                url('/signed-out'),
+                url(self::SIGNED_OUT),
                 [],
                 is_string($nameId) ? $nameId : null,
                 is_string($sessionIndex) ? $sessionIndex : null,
@@ -249,13 +250,13 @@ final class SamlController extends Controller
             // Remembered in the fresh session so the IdP's LogoutResponse can be tied back to this request.
             $request->session()->put(self::LOGOUT_REQUEST_ID, $auth->getLastRequestID());
 
-            return $url !== null ? redirect()->away($url) : redirect('/signed-out');
+            return $url !== null ? redirect()->away($url) : redirect(self::SIGNED_OUT);
         } catch (\Throwable $exception) {
             Log::info('The IdP offers no single logout endpoint; ended the local session only.', [
                 'reason' => $exception->getMessage(),
             ]);
 
-            return redirect('/signed-out');
+            return redirect(self::SIGNED_OUT);
         }
     }
 
@@ -306,7 +307,7 @@ final class SamlController extends Controller
         } catch (\Throwable $exception) {
             Log::warning('A SAML LogoutResponse could not be processed.', ['reason' => $exception->getMessage()]);
 
-            return redirect('/signed-out');
+            return redirect(self::SIGNED_OUT);
         }
 
         // A LogoutResponse that fails validation changes nothing, because the member's own POST already
@@ -317,11 +318,9 @@ final class SamlController extends Controller
                 'errors' => $auth->getErrors(),
                 'reason' => $auth->getLastErrorReason(),
             ]);
-
-            return redirect('/signed-out');
         }
 
-        return redirect('/signed-out');
+        return redirect(self::SIGNED_OUT);
     }
 
     private function answerLogoutRequest(Request $request): RedirectResponse
@@ -379,7 +378,7 @@ final class SamlController extends Controller
             $auth = $this->saml->auth();
             $encoded = $this->verifiedPostedMessage($request, 'SAMLResponse', PostBindingMessage::LOGOUT_RESPONSE, $auth);
             if ($encoded === null) {
-                return redirect('/signed-out');
+                return redirect(self::SIGNED_OUT);
             }
 
             $logoutResponse = $auth->buildLogoutResponse($auth->getSettings(), $encoded);
@@ -387,7 +386,7 @@ final class SamlController extends Controller
         } catch (\Throwable $exception) {
             Log::warning('A SAML LogoutResponse could not be processed.', ['reason' => $exception->getMessage()]);
 
-            return redirect('/signed-out');
+            return redirect(self::SIGNED_OUT);
         }
 
         // Nothing to undo on failure: the member's own POST already ended the session, so this lands on
@@ -396,35 +395,48 @@ final class SamlController extends Controller
             Log::warning('A SAML LogoutResponse failed validation.', ['reason' => $reason]);
         }
 
-        return redirect('/signed-out');
+        return redirect(self::SIGNED_OUT);
     }
 
     private function answerPostedLogoutRequest(Request $request): RedirectResponse
     {
         try {
             $auth = $this->saml->auth();
-            $encoded = $this->verifiedPostedMessage($request, 'SAMLRequest', PostBindingMessage::LOGOUT_REQUEST, $auth);
-            if ($encoded === null) {
-                return redirect('/');
+            $logoutRequest = $this->validPostedLogoutRequest($request, $auth);
+            if ($logoutRequest !== null) {
+                self::endSession($request);
+
+                return redirect()->away($this->logoutResponseUrl($auth, (string) $logoutRequest->id, $request->post('RelayState')));
             }
-
-            $logoutRequest = $auth->buildLogoutRequest($auth->getSettings(), $encoded);
-            if (! $logoutRequest->isValid()) {
-                Log::warning('A SAML LogoutRequest failed validation, so the session was left as it was.', [
-                    'reason' => $logoutRequest->getError(),
-                ]);
-
-                return redirect('/');
-            }
-
-            self::endSession($request);
-
-            return redirect()->away($this->logoutResponseUrl($auth, (string) $logoutRequest->id, $request->post('RelayState')));
         } catch (\Throwable $exception) {
             Log::warning('A SAML LogoutRequest could not be processed.', ['reason' => $exception->getMessage()]);
-
-            return redirect('/');
         }
+
+        // Refused, with the reason logged, so the session is left as it was.
+        return redirect('/');
+    }
+
+    /**
+     * The posted LogoutRequest, once its enveloped signature has verified and it has passed the library's
+     * checks. Null, with the reason logged, when it is refused.
+     */
+    private function validPostedLogoutRequest(Request $request, Auth $auth): ?LogoutRequest
+    {
+        $encoded = $this->verifiedPostedMessage($request, 'SAMLRequest', PostBindingMessage::LOGOUT_REQUEST, $auth);
+        if ($encoded === null) {
+            return null;
+        }
+
+        $logoutRequest = $auth->buildLogoutRequest($auth->getSettings(), $encoded);
+        if ($logoutRequest->isValid()) {
+            return $logoutRequest;
+        }
+
+        Log::warning('A SAML LogoutRequest failed validation, so the session was left as it was.', [
+            'reason' => $logoutRequest->getError(),
+        ]);
+
+        return null;
     }
 
     /**

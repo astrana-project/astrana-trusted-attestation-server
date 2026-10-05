@@ -495,13 +495,27 @@ configure_keycloak() {
   start_php "" "" "" ""
 }
 
+# read_client_credentials <idp>: runs shared/test/<idp>/configure.py and sets CLIENT_ID and CLIENT_SECRET from
+# what it writes. The script never prints the secret. It writes it to a file only this user can read, which is
+# removed as soon as it is read. The path is relative to $ROOT, because native Python on Windows cannot open an
+# absolute /d/... path (see run_one).
+read_client_credentials() {
+  local idp="$1" file
+  file="$(cd "$ROOT" && mktemp "shared/test/reports/.${idp}-credentials.XXXXXX")" \
+    || die "could not create a credentials file for $idp"
+  ( cd "$ROOT" && "$PYTHON" "shared/test/$idp/configure.py" --credentials-file "$file" >/dev/null )
+  CLIENT_ID="$(sed -n 's/^client_id: *//p' "$ROOT/$file")"
+  CLIENT_SECRET="$(sed -n 's/^client_secret: *//p' "$ROOT/$file")"
+  rm -f "$ROOT/$file"
+  [[ -n "$CLIENT_ID" && -n "$CLIENT_SECRET" ]] || die "could not read the $idp client id and secret from configure.py"
+}
+
 configure_zitadel() {
   BROWSER="--browser-login"
   ( cd "$TEST/zitadel" && docker compose up -d >/dev/null 2>&1 )
   for _ in $(seq 1 40); do [[ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9003/.well-known/openid-configuration)" == "200" ]] && break; sleep 5; done
-  local out; out="$(cd "$ROOT" && "$PYTHON" shared/test/zitadel/configure.py)"
-  local cid cs; cid="$(echo "$out" | sed -n 's/^client_id: *//p')"; cs="$(echo "$out" | sed -n 's/^client_secret: *//p')"
-  [[ -n "$cid" && -n "$cs" ]] || die "could not read Zitadel client id/secret from configure.py"
+  read_client_credentials zitadel
+  local cid="$CLIENT_ID" cs="$CLIENT_SECRET"
   start_dotnet "http://localhost:9003" "$cid" "$cs"
   start_java "http://localhost:9003" "$cid" "$cs"
   start_php "http://localhost:9003" "http://localhost:9003/.well-known/openid-configuration" "$cid" "$cs"
@@ -536,9 +550,8 @@ configure_casdoor() {
     [[ "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8010/api/get-organizations?owner=admin")" =~ ^(200|401|403)$ ]] && break
     ( cd "$TEST/casdoor" && docker compose up -d casdoor >/dev/null 2>&1 ); sleep 5
   done
-  local out; out="$(cd "$ROOT" && "$PYTHON" shared/test/casdoor/configure.py)"
-  local cid cs; cid="$(echo "$out" | sed -n 's/^client_id: *//p')"; cs="$(echo "$out" | sed -n 's/^client_secret: *//p')"
-  [[ -n "$cid" && -n "$cs" ]] || die "could not read Casdoor client id/secret from configure.py"
+  read_client_credentials casdoor
+  local cid="$CLIENT_ID" cs="$CLIENT_SECRET"
   local iss="http://localhost:8010"
   start_dotnet "$iss" "$cid" "$cs"
   start_java "$iss" "$cid" "$cs"
@@ -556,9 +569,8 @@ configure_wso2() {
   BROWSER="--browser-login"
   ( cd "$TEST/wso2" && docker compose up -d --build >/dev/null 2>&1 )
   for _ in $(seq 1 60); do [[ "$(curl -sk -o /dev/null -w '%{http_code}' https://localhost:9443/api/health-check/v1.0/health)" == "200" ]] && break; sleep 5; done
-  local out; out="$(cd "$ROOT" && "$PYTHON" shared/test/wso2/configure.py)"
-  local cid cs; cid="$(echo "$out" | sed -n 's/^client_id: *//p')"; cs="$(echo "$out" | sed -n 's/^client_secret: *//p')"
-  [[ -n "$cid" && -n "$cs" ]] || die "could not read WSO2 client id/secret from configure.py"
+  read_client_credentials wso2
+  local cid="$CLIENT_ID" cs="$CLIENT_SECRET"
   local iss="https://localhost:9443/oauth2/token"
 
   # The certificate (and Java's truststore built from it), by a path relative to the stack directory.

@@ -22,6 +22,9 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
  */
 Request::setAllowedHttpMethodOverride([]);
 
+// The API's paths, which differ from the pages in how input, CSRF and errors are handled below.
+$apiRoutes = 'api/*';
+
 return Application::configure(basePath: dirname(__DIR__))
     // No framework health route. The manifest at /.well-known/ata-manifest.json is the liveness and readiness
     // probe on every implementation, so Laravel's own /up stays unregistered and answers 404 like any other
@@ -30,7 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
+    ->withMiddleware(function (Middleware $middleware) use ($apiRoutes): void {
         /*
          * When a reverse proxy terminates TLS, the app has to be told which hops to believe before it can
          * trust X-Forwarded-Proto -- otherwise it generates http:// URLs behind an https:// front door.
@@ -64,7 +67,7 @@ return Application::configure(basePath: dirname(__DIR__))
          * controller runs would make that indistinguishable from a JSON null, which is a 400.
          */
         $middleware->convertEmptyStringsToNull(except: [
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is($apiRoutes),
         ]);
 
         /*
@@ -78,11 +81,11 @@ return Application::configure(basePath: dirname(__DIR__))
          * here and refused there.
          */
         $middleware->trimStrings(except: [
-            fn (Request $request) => $request->is('api/*') || $request->is('set-language'),
+            fn (Request $request) => $request->is($apiRoutes) || $request->is('set-language'),
         ]);
 
         $middleware->validateCsrfTokens(except: [
-            'api/*',
+            $apiRoutes,
 
             // The IdP posts the SAML assertion here from its own origin, so there is no session cookie
             // and no CSRF token to carry. The assertion's signature is what authenticates it, and it is
@@ -136,9 +139,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // stack schedules it this way rather than with a background process or a database scheduler.
         $middleware->append(OpportunisticAuditPrune::class);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
+    ->withExceptions(function (Exceptions $exceptions) use ($apiRoutes): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) => $request->is($apiRoutes) || $request->expectsJson(),
         );
 
         /*
@@ -159,7 +162,7 @@ return Application::configure(basePath: dirname(__DIR__))
          * it has to look like every other error. Inside the pipeline the middleware sets the same values
          * again, which changes nothing.
          */
-        $exceptions->render(function (Throwable $e, Request $request) {
+        $exceptions->render(function (Throwable $e) {
             $status = $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500;
 
             return StripErrorContentType::strip(SecurityHeaders::apply(response('', $status)));

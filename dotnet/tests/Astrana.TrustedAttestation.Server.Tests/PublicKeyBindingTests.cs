@@ -19,7 +19,7 @@ namespace Astrana.TrustedAttestation.Server.Tests;
 /// </summary>
 public class PublicKeyBindingTests
 {
-    private static HttpContext RequestWith(byte[] body, string? contentType = null)
+    private static DefaultHttpContext RequestWith(byte[] body, string? contentType = null)
     {
         var context = new DefaultHttpContext();
         context.Request.Body = new MemoryStream(body);

@@ -26,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
@@ -206,9 +207,10 @@ class SecurityConfigTest {
                 Map.of("sub", "alice", "employee_id", "   "),
                 Map.of("sub", "alice", "employee_id", List.of("a", "b")))) {
             OidcUser user = oidcUser(claims);
+            OAuth2UserService<OidcUserRequest, OidcUser> service =
+                    SecurityConfig.requiringASubject(request -> user, identities);
 
-            assertThatThrownBy(() -> SecurityConfig.requiringASubject(request -> user, identities)
-                            .loadUser(userRequest))
+            assertThatThrownBy(() -> service.loadUser(userRequest))
                     .as("claims %s", claims)
                     .isInstanceOf(OAuth2AuthenticationException.class);
         }

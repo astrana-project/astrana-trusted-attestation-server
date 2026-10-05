@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\AcceptHeader;
+use Symfony\Component\HttpFoundation\AcceptHeaderItem;
 
 final class PageController extends Controller
 {
@@ -65,7 +66,10 @@ final class PageController extends Controller
         $website = is_array($manifest['website'] ?? null) ? $manifest['website'] : [];
         $supportUrl = self::localizedFromManifest($support, $locale, $defaultLocale);
         $websiteUrl = self::localizedFromManifest($website, $locale, $defaultLocale);
-        $contactUrl = $supportUrl !== '' ? $supportUrl : ($websiteUrl !== '' ? $websiteUrl : null);
+        $contactUrl = $supportUrl !== '' ? $supportUrl : $websiteUrl;
+        if ($contactUrl === '') {
+            $contactUrl = null;
+        }
 
         // lang and dir describe the language the page is actually rendered in -- the resolved locale --
         // never Laravel's app locale, which this application leaves at its default and so would label
@@ -105,34 +109,41 @@ final class PageController extends Controller
     private function resolveLocale(Request $request, array $claims = []): string
     {
         $cookie = $request->cookies->get(self::LOCALE_COOKIE);
-        $chosen = $this->localization->match(is_string($cookie) ? $cookie : null);
-        if ($chosen !== null) {
-            return $chosen;
-        }
-
         $claim = $claims[MemberIdentityResolver::LOCALE_CLAIM] ?? null;
-        $fromIam = $this->localization->match(is_string($claim) ? $claim : null);
-        if ($fromIam !== null) {
-            return $fromIam;
-        }
 
-        // Each entry is matched here rather than left to Symfony's getPreferredLanguage(), which pairs a tag
-        // with an offered locale by language prefix before the script rule can see it and so would send
-        // zh-TW to zh-Hans. The header is read in order of preference, and an entry with q=0, which the
-        // browser sends to mean "not this language", is skipped, as the other two implementations skip it.
-        $entries = AcceptHeader::fromString($request->headers->get('Accept-Language'))->all();
-        foreach ($entries as $entry) {
-            if ($entry->getQuality() <= 0) {
-                continue;
-            }
+        // In the order above. The first candidate that matches an offered locale wins.
+        $candidates = [
+            is_string($cookie) ? $cookie : null,
+            is_string($claim) ? $claim : null,
+            ...self::acceptedLanguages($request),
+        ];
 
-            $fromBrowser = $this->localization->match($entry->getValue());
-            if ($fromBrowser !== null) {
-                return $fromBrowser;
+        foreach ($candidates as $candidate) {
+            $matched = $this->localization->match($candidate);
+            if ($matched !== null) {
+                return $matched;
             }
         }
 
         return $this->localization->defaultLocale();
+    }
+
+    /**
+     * The browser's Accept-Language entries in order of preference, leaving out any entry with q=0, which
+     * the browser sends to mean "not this language", as the other two implementations leave it out.
+     *
+     * Each entry is matched by the caller rather than left to Symfony's getPreferredLanguage(), which pairs
+     * a tag with an offered locale by language prefix before the script rule can see it and so would send
+     * zh-TW to zh-Hans.
+     *
+     * @return list<string>
+     */
+    private static function acceptedLanguages(Request $request): array
+    {
+        $entries = AcceptHeader::fromString($request->headers->get('Accept-Language'))->all();
+        $wanted = array_filter($entries, static fn (AcceptHeaderItem $entry): bool => $entry->getQuality() > 0);
+
+        return array_values(array_map(static fn (AcceptHeaderItem $entry): string => $entry->getValue(), $wanted));
     }
 
     /**

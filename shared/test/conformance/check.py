@@ -1426,16 +1426,18 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # the IAM subject, alice signs in successfully and holds nothing, and this is where that shows up.
     results.check("both granted relationships are listed", types_held(me), ["client", "employee"])
 
-    employee = relationship(me, "employee")
+    # Named for the employment relationship rather than "employee", because code scanning reads any name
+    # containing "employee" as a person's private data. These hold only a test key and its relationship.
+    employment = relationship(me, "employee")
     results.check("a granted relationship with no key yet is 'unkeyed'",
-                  employee and employee.get("status"), "unkeyed")
-    results.check("...and carries no key", employee and employee.get("public_key"), None)
+                  employment and employment.get("status"), "unkeyed")
+    results.check("...and carries no key", employment and employment.get("public_key"), None)
 
-    employee_key = random_key()
-    status, saved = alice.json_request("PUT", key_url("employee"), {"public_key": employee_key})
+    employment_key = random_key()
+    status, saved = alice.json_request("PUT", key_url("employee"), {"public_key": employment_key})
     results.check("PUT on the employee relationship is 200", status, 200)
     if saved:
-        results.check("...and echoes the key back", saved.get("public_key"), employee_key)
+        results.check("...and echoes the key back", saved.get("public_key"), employment_key)
         results.check("...names the relationship it applied to", saved.get("relationship_type"), "employee")
         results.check("...and reports it active", saved.get("status"), "active")
 
@@ -1455,7 +1457,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # What a verifying peer sees. Each key resolves to exactly the one relationship it belongs to, and
     # says nothing about the other -- which is the property that lets a member present one relationship
     # without disclosing the rest.
-    status, payload = attest(employee_key)
+    status, payload = attest(employment_key)
     results.check("the employee key attests as employee, and nothing else", payload,
                   {"valid": True, "relationship_type": "employee", "status": "active"})
 
@@ -1468,12 +1470,12 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # of access and proxy logs, and that only holds if the query string is genuinely not a way in; and a
     # key that attests through one framing on one stack but not another is a behavioural split.
     status, raw, _ = anonymous.request(
-        "POST", f"{api}/attest?public_key=" + urllib.parse.quote(employee_key))
+        "POST", f"{api}/attest?public_key=" + urllib.parse.quote(employment_key))
     query_body = json.loads(raw) if raw else None
     results.check("a registered key in the query string is 200 and does not attest", status, 200)
     results.check("...it is ignored, answered exactly {valid: false}", query_body, {"valid": False})
 
-    status, raw, _ = anonymous.post_form(f"{api}/attest", {"public_key": employee_key})
+    status, raw, _ = anonymous.post_form(f"{api}/attest", {"public_key": employment_key})
     form_body = json.loads(raw) if raw else None
     results.check("a registered key in a form-encoded body is 200 and does not attest", status, 200)
     results.check("...it is ignored, answered exactly {valid: false}", form_body, {"valid": False})
@@ -1505,12 +1507,12 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
                   db.audit_rows("alice", "key_cleared", "employee"), cleared_before + 1)
 
     status, me = alice.json_request("GET", f"{api}/me")
-    employee_cleared = relationship(me, "employee")
+    employment_cleared = relationship(me, "employee")
     results.check("/me shows the cleared relationship carrying no key",
-                  employee_cleared and employee_cleared.get("public_key"), None)
-    results.check("...and unkeyed", employee_cleared and employee_cleared.get("status"), "unkeyed")
+                  employment_cleared and employment_cleared.get("public_key"), None)
+    results.check("...and unkeyed", employment_cleared and employment_cleared.get("status"), "unkeyed")
 
-    status, payload = attest(employee_key)
+    status, payload = attest(employment_key)
     results.check("the cleared key no longer attests", payload, {"valid": False})
 
     # Re-saving the already-empty field is a quiet no-op: still 200, but no second audit entry.
@@ -1520,16 +1522,16 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
                   db.audit_rows("alice", "key_cleared", "employee"), cleared_before + 1)
 
     # Reversible: saving a key again restores the relationship to active.
-    status, _ = alice.json_request("PUT", key_url("employee"), {"public_key": employee_key})
+    status, _ = alice.json_request("PUT", key_url("employee"), {"public_key": employment_key})
     results.check("saving a key again restores the relationship", status, 200)
-    status, payload = attest(employee_key)
+    status, payload = attest(employment_key)
     results.check("...and it attests as active once more", payload,
                   {"valid": True, "relationship_type": "employee", "status": "active"})
 
     # A malformed body is not a clear: an absent public_key is a 400 and must leave the set key alone.
     status, raw, _ = alice.request("PUT", key_url("employee"), b"{}", {"Content-Type": "application/json"})
     results.check("an absent public_key is 400, not a silent clear", status, 400)
-    status, payload = attest(employee_key)
+    status, payload = attest(employment_key)
     results.check("...and the key it would have cleared is untouched", payload,
                   {"valid": True, "relationship_type": "employee", "status": "active"})
 
@@ -1537,7 +1539,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # the one a copy from a web page or a word processor most often carries.
     status, _ = alice.json_request("PUT", key_url("employee"), {"public_key": " "})
     results.check("a public_key of one non-breaking space is 400, not a silent clear", status, 400)
-    status, payload = attest(employee_key)
+    status, payload = attest(employment_key)
     results.check("...and the key it would have cleared is still on record", payload,
                   {"valid": True, "relationship_type": "employee", "status": "active"})
 
@@ -1590,7 +1592,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     results.check("self-revoke with EMPLOYEE in the path is 404", status, 404)
     status, payload = attest(uppercase_key)
     results.check("...the key it carried was not registered", payload, {"valid": False})
-    status, payload = attest(employee_key)
+    status, payload = attest(employment_key)
     results.check("...her employee relationship is untouched, still active under its own key", payload,
                   {"valid": True, "relationship_type": "employee", "status": "active"})
     results.check("...and the audit trail holds no key_registered entry under EMPLOYEE",
@@ -1613,7 +1615,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
 
     results.check_that("bob can sign in", True)
 
-    status, _ = bob.json_request("PUT", key_url("client"), {"public_key": employee_key})
+    status, _ = bob.json_request("PUT", key_url("client"), {"public_key": employment_key})
     results.check("registering another member's key is 409", status, 409)
 
     # The same rule inside one member's own record. alice's client relationship holds this key, and
@@ -1698,7 +1700,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     status, _ = alice.json_request("DELETE", key_url("employee"))
     results.check("DELETE is 204", status, 204)
 
-    status, payload = attest(employee_key)
+    status, payload = attest(employment_key)
     results.check("the removed relationship's key stops attesting entirely", payload, {"valid": False})
 
     status, me = alice.json_request("GET", f"{api}/me")

@@ -226,7 +226,7 @@ final class SamlClient
         // Keyed by the metadata URL for the same reason the OIDC client keys by issuer: pointing the app
         // at a different IdP must not be served the previous one's metadata.
         $parsed = Cache::remember(
-            'trusted_attestation.saml.idp-metadata.'.sha1($metadataUrl),
+            'trusted_attestation.saml.idp-metadata.'.hash('sha256', $metadataUrl),
             self::CACHE_SECONDS,
             fn (): array => $this->metadataSource->fetch($metadataUrl)
         );

@@ -1,17 +1,20 @@
 package org.astrana.trustedattestation.config;
 
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.regex.Pattern;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 /**
  * Finds the signature and digest algorithms in a received SAML response that are weaker than SHA-256.
@@ -63,12 +66,12 @@ final class SamlSignatureStrength {
                 }
             }
             return List.copyOf(weak);
-        } catch (Exception parsingOrXpathFailure) {
+        } catch (Exception _) {
             return List.of();
         }
     }
 
-    private static Document parse(String xml) throws Exception {
+    private static Document parse(String xml) throws ParserConfigurationException, SAXException, IOException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
         // This parses attacker-supplied XML, so shut off the external-entity and DOCTYPE processing that

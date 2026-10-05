@@ -101,9 +101,9 @@ class LogoDataTest {
 
     @Test
     void anUnsupportedExtensionRefusesAndListsWhatIsSupported() throws IOException {
-        Path bmp = write("logo.bmp", new byte[] {1});
+        String bmp = write("logo.bmp", new byte[] {1}).toString();
 
-        assertThatThrownBy(() -> LogoData.resolve(SETTING, bmp.toString()))
+        assertThatThrownBy(() -> LogoData.resolve(SETTING, bmp))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("bmp")
                 .hasMessageContaining("png");
@@ -113,9 +113,9 @@ class LogoDataTest {
     void aFileWithNoExtensionRefusesRatherThanGuessing() throws IOException {
         // Sniffing the bytes would mean this implementation deciding what an image is; naming the file
         // properly is the operator's one-line fix, and the message says which file.
-        Path bare = write("logo", new byte[] {1});
+        String bare = write("logo", new byte[] {1}).toString();
 
-        assertThatThrownBy(() -> LogoData.resolve(SETTING, bare.toString()))
+        assertThatThrownBy(() -> LogoData.resolve(SETTING, bare))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("logo");
     }

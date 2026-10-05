@@ -101,36 +101,49 @@ final class RelationshipService
                     return self::NOT_GRANTED;
                 }
 
-                if ($rawPublicKey === null) {
-                    // Clearing. Audited only when a key was actually removed, so re-saving an already-empty
-                    // field is a quiet no-op rather than a hollow log entry.
-                    if ($row->public_key !== null) {
-                        if ($this->store->clearKey($row->id) === 0) {
-                            return self::NOT_GRANTED;
-                        }
-
-                        $this->audit->keyCleared($iamSubjectId, $row->relationship_type);
-                    }
-
-                    return self::SAVED;
-                }
-
-                if ($this->store->isKeyHeldElsewhere($rawPublicKey, $row->id)) {
-                    return self::CONFLICT;
-                }
-
-                if ($this->store->updateKey($row->id, $rawPublicKey) === 0) {
-                    return self::NOT_GRANTED;
-                }
-
-                $this->audit->keyRegistered($iamSubjectId, $row->relationship_type);
-
-                return self::SAVED;
+                return $rawPublicKey === null
+                    ? $this->clearHeldKey($iamSubjectId, $row)
+                    : $this->registerKey($iamSubjectId, $row, $rawPublicKey);
             });
         } catch (KeyConflictException) {
             // Lost the race on the unique index -- the same answer the up-front check gives.
             return self::CONFLICT;
         }
+    }
+
+    /**
+     * Clears the key on a row the member holds. Audited only when a key was actually removed, so re-saving
+     * an already-empty field is a quiet no-op rather than a hollow log entry.
+     */
+    private function clearHeldKey(string $iamSubjectId, MemberRelationship $row): string
+    {
+        if ($row->public_key === null) {
+            return self::SAVED;
+        }
+
+        if ($this->store->clearKey($row->id) === 0) {
+            return self::NOT_GRANTED;
+        }
+
+        $this->audit->keyCleared($iamSubjectId, $row->relationship_type);
+
+        return self::SAVED;
+    }
+
+    /** Registers or replaces the key on a row the member holds, unless another relationship holds that key. */
+    private function registerKey(string $iamSubjectId, MemberRelationship $row, string $rawPublicKey): string
+    {
+        if ($this->store->isKeyHeldElsewhere($rawPublicKey, $row->id)) {
+            return self::CONFLICT;
+        }
+
+        if ($this->store->updateKey($row->id, $rawPublicKey) === 0) {
+            return self::NOT_GRANTED;
+        }
+
+        $this->audit->keyRegistered($iamSubjectId, $row->relationship_type);
+
+        return self::SAVED;
     }
 
     /**

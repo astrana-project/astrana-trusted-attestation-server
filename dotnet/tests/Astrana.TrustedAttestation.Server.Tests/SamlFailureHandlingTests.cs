@@ -2,6 +2,7 @@ using Astrana.TrustedAttestation.Server.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.IdentityModel.Tokens;
 using Sustainsys.Saml2.Exceptions;
@@ -29,10 +30,10 @@ public class SamlFailureHandlingTests
     /// out: a redirect, or the exception propagating.
     /// </summary>
     private static async Task<(int Status, string? Location, Exception? Escaped)> RunAsync(
-        string path, Exception thrown)
+        string path, Exception thrown, ILoggerFactory? loggerFactory = null)
     {
         var services = new ServiceCollection()
-            .AddSingleton<Microsoft.Extensions.Logging.ILoggerFactory>(NullLoggerFactory.Instance)
+            .AddSingleton(loggerFactory ?? NullLoggerFactory.Instance)
             .BuildServiceProvider();
 
         var builder = new ApplicationBuilder(services);
@@ -76,7 +77,7 @@ public class SamlFailureHandlingTests
     };
 
     [Theory]
-    [MemberData(nameof(Rejections))]
+    [MemberData(nameof(Rejections), DisableDiscoveryEnumeration = true)]
     public async Task A_refused_assertion_redirects_to_the_page_with_an_error_marker(Exception refusal)
     {
         var (status, location, escaped) = await RunAsync($"{ModulePath}/Acs", refusal);
@@ -97,6 +98,42 @@ public class SamlFailureHandlingTests
         Assert.DoesNotContain("signature", location, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task The_refusal_is_logged_with_the_path_on_one_line_whatever_the_path_carries()
+    {
+        // The path comes from the request, so a crafted one carrying a line break could otherwise forge a
+        // log line of its own.
+        var logs = new RecordingLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(logging => logging.AddProvider(logs));
+
+        await RunAsync($"{ModulePath}/Acs\r\n[forged] warn: signed in as admin\u001b[0m", new FormatException("not base64"),
+            loggerFactory);
+
+        var message = Assert.Single(logs.Messages);
+        Assert.StartsWith($"A SAML assertion was refused at {ModulePath}/Acs%0D%0A", message);
+        Assert.False(message.Any(char.IsControl), message);
+    }
+
+    /// <summary>Keeps every formatted log message, whichever logger writes it.</summary>
+    private sealed class RecordingLoggerProvider : ILoggerProvider, ILogger
+    {
+        public List<string> Messages { get; } = [];
+
+        public ILogger CreateLogger(string categoryName) => this;
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) => Messages.Add(formatter(state, exception));
+
+        public void Dispose()
+        {
+            // Nothing to release.
+        }
+    }
+
     // -------------------------------------------------------------------------------------------
     // Everything else still escapes
     // -------------------------------------------------------------------------------------------
@@ -111,7 +148,7 @@ public class SamlFailureHandlingTests
     };
 
     [Theory]
-    [MemberData(nameof(GenuineFaults))]
+    [MemberData(nameof(GenuineFaults), DisableDiscoveryEnumeration = true)]
     public async Task A_genuine_fault_on_the_saml_path_still_propagates(Exception fault)
     {
         var (_, _, escaped) = await RunAsync($"{ModulePath}/Acs", fault);

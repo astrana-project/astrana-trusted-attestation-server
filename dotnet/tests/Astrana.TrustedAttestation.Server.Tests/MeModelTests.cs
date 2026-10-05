@@ -184,6 +184,40 @@ public class MeModelTests
         Assert.Equal("Acme Inc", await OrgNameFor("de"));     // default-locale fallback
     }
 
+    public static TheoryData<string?, string?, string?> ContactAddresses => new()
+    {
+        { "https://org.example/support", "https://org.example", "https://org.example/support" },
+        { null, "https://org.example", "https://org.example" },
+        { "   ", "https://org.example", "https://org.example" },
+        { null, null, null },
+    };
+
+    [Theory]
+    [MemberData(nameof(ContactAddresses))]
+    public async Task The_contact_address_is_the_support_address_then_the_website_then_none(
+        string? support, string? website, string? expected)
+    {
+        // The empty state points a member at the organisation's support address, or at its website when
+        // there is no usable support address, and offers no link at all when there is neither.
+        _store.Held = [];
+        var manifest = new ManifestDocument
+        {
+            ManifestVersion = 1,
+            DefaultLocale = "en",
+            Name = new Dictionary<string, string> { ["en"] = "Acme Inc" },
+            RelationshipTypes = [],
+            EnrollmentUrl = "https://org.example/enrol",
+            AttestationUrl = "https://org.example/attest",
+            SupportUrl = support is null ? null : new Dictionary<string, string> { ["en"] = support },
+            Website = website is null ? null : new Dictionary<string, string> { ["en"] = website },
+        };
+
+        var model = Model(SignedIn(), manifest);
+        await model.OnGetAsync(default);
+
+        Assert.Equal(expected, model.ContactUrl);
+    }
+
     [Fact]
     public async Task Without_a_resolvable_member_the_page_stays_empty_but_still_renders_the_org()
     {

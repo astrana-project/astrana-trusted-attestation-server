@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Exceptions\SchemaCreationInProgressException;
 use App\Services\SchemaInitializer;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -197,7 +198,7 @@ final class SchemaInitializerTest extends TestCase
             afterFailure: self::TABLES,
         );
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(SchemaCreationInProgressException::class);
         $this->expectExceptionMessageMatches('/another instance.*still incomplete.*Missing: member_self_revoke_relationship, prune_audit_log\./is');
 
         (new SchemaInitializer(raceRechecks: 2, raceWaitMicroseconds: 0))->ensureSchema();

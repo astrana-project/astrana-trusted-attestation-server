@@ -17,13 +17,15 @@ service-account token Zitadel wrote to ./machinekey/pat.txt on first start. It:
     id set to the fixed UUID the conformance fixtures grant against (SUBJECTS in shared/test/conformance/check.py) --
     Zitadel's `sub` is the user id, so this pins the subject the same way Authentik's scope mapping does.
 
-Then it prints the issuer and the generated client id/secret. Point each implementation at it and run
+Then it prints the issuer and the generated client id. The secret is not printed. With --credentials-file
+PATH it is written to PATH, readable only by you, which is how the integration matrix reads it. Point each
+implementation at it and run
 `check.py ... --browser-login` (Zitadel's sign-in is a JavaScript app, so the built-in form login cannot
 drive it):
 
   .NET (host process, so localhost reaches Zitadel directly):
     TrustedAttestation__Iam__Authority=http://localhost:9003
-    TrustedAttestation__Iam__ClientId=<printed>  ClientSecret=<printed>
+    TrustedAttestation__Iam__ClientId=<printed>  ClientSecret=<from the credentials file>
 
   Java (Spring): the issuer has NO trailing slash (http://localhost:9003), so set
     SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_KEYCLOAK_ISSUER_URI=http://localhost:9003 exactly.
@@ -34,7 +36,9 @@ Java gateway already does for Keycloak). The suite's four Set-Cookie-attribute c
 --browser-login for any IdP (the browser consumes the header), not a Zitadel difference.
 """
 
+import argparse
 import json
+import os
 import pathlib
 import urllib.error
 import urllib.request
@@ -75,7 +79,35 @@ def call(method, path, body=None, expect=(200, 201)):
         return e.code, e.read().decode()[:400]
 
 
+def write_credentials(path, client_id, client_secret):
+    """Writes the client id and secret to a file only the current user can read. The matrix passes a
+    temporary file, reads it and removes it, so the secret never appears in this script's output."""
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.chmod(path, 0o600)  # the mode above applies only to a new file, and the matrix creates it first
+    with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(f"client_id: {client_id}\nclient_secret: {client_secret}\n")
+
+
+def report_client(client_id, client_secret, credentials_file):
+    """Prints the client id and says where the secret went, without printing the secret itself."""
+    print(f"client_id: {client_id}")
+    if credentials_file:
+        write_credentials(credentials_file, client_id, client_secret)
+        print(f"client_secret: written to {credentials_file}")
+    else:
+        print("client_secret: not shown. Run with --credentials-file PATH to write it to a file only you can read.")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--credentials-file", metavar="PATH",
+                        help="write the OIDC client id and secret to PATH, readable only by you")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
     # 1. Policies: allow the weak fixture password, and let members log in by bare username.
     call("PUT", "/admin/v1/policies/password/complexity",
          {"minLength": "1", "hasUppercase": False, "hasLowercase": False, "hasNumber": False, "hasSymbol": False})
@@ -125,8 +157,7 @@ def main():
     print("members created: " + ", ".join(SUBJECTS))
 
     print(f"\nissuer:        {BASE}")
-    print(f"client_id:     {app['clientId']}")
-    print(f"client_secret: {app['clientSecret']}")
+    report_client(app["clientId"], app["clientSecret"], args.credentials_file)
 
 
 if __name__ == "__main__":

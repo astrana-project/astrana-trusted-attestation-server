@@ -115,50 +115,7 @@ public class RelationshipService {
      */
     public SetKeyResult setKey(String iamSubjectId, String relationshipType, byte[] publicKey) {
         try {
-            return transactions.execute(status -> {
-                Optional<MemberRelationship> found = held(iamSubjectId, relationshipType);
-
-                if (found.isEmpty()) {
-                    return SetKeyResult.NOT_GRANTED;
-                }
-
-                MemberRelationship row = found.get();
-
-                if (publicKey == null) {
-                    // Clearing. No conflict check -- there is no key to collide with -- and, as with
-                    // registering, the standing is left untouched. Written and audited only when a key was
-                    // actually removed, so re-saving an already-empty field is a quiet no-op.
-                    if (row.getPublicKey() != null) {
-                        if (repository.updatePublicKey(row.getId(), null) == 0) {
-                            return SetKeyResult.NOT_GRANTED;
-                        }
-                        audit.keyCleared(iamSubjectId, row.getRelationshipType(), Instant.now(clock));
-                    }
-                    return SetKeyResult.SAVED;
-                }
-
-                // A key belongs to exactly one relationship anywhere in the table, including another of
-                // this member's own. Checked up front for a clear answer; the unique index is what
-                // actually enforces it when two requests race, hence the catch below. Excluding this row
-                // keeps an idempotent retry from being answered with a conflict against itself.
-                if (repository.existsByPublicKeyAndIdNot(publicKey, row.getId())) {
-                    return SetKeyResult.CONFLICT;
-                }
-
-                // revoked_at and expires_at are deliberately left alone -- the statement names public_key
-                // and nothing else. Registering a key is not an appeal: a member must not be able to lift
-                // an organisation's revocation by registering a key again, so the status the caller is handed back
-                // may well still say revoked.
-                //
-                // Executed here, inside the transaction, so a violation surfaces as an exception this
-                // method can attribute to this write rather than at some later commit.
-                if (repository.updatePublicKey(row.getId(), publicKey) == 0) {
-                    return SetKeyResult.NOT_GRANTED;
-                }
-
-                audit.keyRegistered(iamSubjectId, row.getRelationshipType(), Instant.now(clock));
-                return SetKeyResult.SAVED;
-            });
+            return transactions.execute(status -> setKeyInTransaction(iamSubjectId, relationshipType, publicKey));
         } catch (DataIntegrityViolationException violation) {
             if (DuplicateKey.describes(violation)) {
                 // Lost the race on the unique index: another relationship took this key between the
@@ -246,6 +203,61 @@ public class RelationshipService {
      * that ignores case or trailing spaces but whose own subject or type is spelt differently: the row is
      * not the one asked for.
      */
+    /** The body of {@link #setKey}, run inside its transaction. */
+    private SetKeyResult setKeyInTransaction(String iamSubjectId, String relationshipType, byte[] publicKey) {
+        Optional<MemberRelationship> found = held(iamSubjectId, relationshipType);
+
+        if (found.isEmpty()) {
+            return SetKeyResult.NOT_GRANTED;
+        }
+
+        MemberRelationship row = found.get();
+
+        if (publicKey == null) {
+            return clearKey(iamSubjectId, row);
+        }
+
+        // A key belongs to exactly one relationship anywhere in the table, including another of this
+        // member's own. Checked up front for a clear answer. The unique index is what actually enforces it
+        // when two requests race, hence the catch in setKey. Excluding this row keeps an idempotent retry
+        // from being answered with a conflict against itself.
+        if (repository.existsByPublicKeyAndIdNot(publicKey, row.getId())) {
+            return SetKeyResult.CONFLICT;
+        }
+
+        // revoked_at and expires_at are deliberately left alone, as the statement names public_key and
+        // nothing else. Registering a key is not an appeal: a member must not be able to lift an
+        // organisation's revocation by registering a key again, so the status the caller is handed back may
+        // well still say revoked.
+        //
+        // Executed here, inside the transaction, so a violation surfaces as an exception setKey can
+        // attribute to this write rather than at some later commit.
+        if (repository.updatePublicKey(row.getId(), publicKey) == 0) {
+            return SetKeyResult.NOT_GRANTED;
+        }
+
+        audit.keyRegistered(iamSubjectId, row.getRelationshipType(), Instant.now(clock));
+        return SetKeyResult.SAVED;
+    }
+
+    /**
+     * Clearing. There is no conflict check, because there is no key to collide with, and as with
+     * registering the standing is left untouched. Written and audited only when a key was actually removed, so re-saving an
+     * already-empty field is a quiet no-op.
+     */
+    private SetKeyResult clearKey(String iamSubjectId, MemberRelationship row) {
+        if (row.getPublicKey() == null) {
+            return SetKeyResult.SAVED;
+        }
+
+        if (repository.updatePublicKey(row.getId(), null) == 0) {
+            return SetKeyResult.NOT_GRANTED;
+        }
+
+        audit.keyCleared(iamSubjectId, row.getRelationshipType(), Instant.now(clock));
+        return SetKeyResult.SAVED;
+    }
+
     private Optional<MemberRelationship> held(String iamSubjectId, String relationshipType) {
         if (!catalog.isGoverned(relationshipType)) {
             return Optional.empty();

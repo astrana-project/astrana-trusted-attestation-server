@@ -88,7 +88,7 @@ public static class SecurityHeaders
         // Explicitly off, matching the other two implementations. The legacy XSS auditor this header
         // once switched on is a source of vulnerabilities of its own in the browsers that still have
         // it; 0 disables it rather than leaving the browser to its default.
-        headers["X-XSS-Protection"] = "0";
+        headers.XXSSProtection = "0";
 
         // Nothing this application serves should be cached. The self-service page is per-member and
         // the API answers are point-in-time. All three send no-store so nothing is ever cached. The

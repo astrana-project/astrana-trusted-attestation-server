@@ -133,9 +133,7 @@ public sealed class MeModel(
         var website = manifest.Website is null
             ? string.Empty
             : LocalizedFromManifest(manifest.Website, locale, manifest.DefaultLocale);
-        ContactUrl = !string.IsNullOrWhiteSpace(support) ? support
-            : !string.IsNullOrWhiteSpace(website) ? website
-            : null;
+        ContactUrl = new[] { support, website }.FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
 
         if (!resolver.TryResolve(User, out var member))
         {

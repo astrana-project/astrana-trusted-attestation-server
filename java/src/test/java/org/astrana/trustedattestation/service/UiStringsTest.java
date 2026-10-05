@@ -42,8 +42,8 @@ class UiStringsTest {
     void aRegionFallsBackToItsLanguage() {
         // fr-CA is not shipped; fr is. A Canadian member gets French rather than English, which is the
         // whole point of the fallback and the case a lookup written as an exact match would miss.
-        assertThat(STRINGS.all("fr-CA").get("sign_out"))
-                .isEqualTo(STRINGS.all("fr").get("sign_out"));
+        assertThat(STRINGS.all("fr-CA"))
+                .containsEntry("sign_out", STRINGS.all("fr").get("sign_out"));
     }
 
     @Test
@@ -51,8 +51,8 @@ class UiStringsTest {
         // Java language tags use '-', but a Locale rendered with toString() uses '_', and both arrive
         // here depending on which API produced the value. fr_CA silently falling back to English would
         // be invisible to every test that only tried the hyphen form.
-        assertThat(STRINGS.all("fr_CA").get("sign_out"))
-                .isEqualTo(STRINGS.all("fr").get("sign_out"));
+        assertThat(STRINGS.all("fr_CA"))
+                .containsEntry("sign_out", STRINGS.all("fr").get("sign_out"));
     }
 
     @Test
@@ -126,8 +126,8 @@ class UiStringsTest {
     void aTranslatedValueWinsOverTheEnglishItWasBackfilledFrom() {
         // The ordering that makes backfill safe: English first, then the more specific locale over it.
         // Reversed, every member would see English no matter what they asked for.
-        assertThat(STRINGS.all("fr").get("sign_out"))
-                .isNotEqualTo(STRINGS.all("en").get("sign_out"));
+        assertThat(STRINGS.all("fr"))
+                .doesNotContainEntry("sign_out", STRINGS.all("en").get("sign_out"));
     }
 
     // ---------------------------------------------------------------------------------------------

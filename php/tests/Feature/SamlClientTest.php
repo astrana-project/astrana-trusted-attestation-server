@@ -77,7 +77,7 @@ final class SamlClientTest extends TestCase
     /** Seeds the parse result into the exact cache key the client reads, so no network fetch happens. */
     private function seedIdpMetadata(array $parsed): void
     {
-        Cache::put('trusted_attestation.saml.idp-metadata.'.sha1(self::IDP_METADATA_URL), $parsed, 3600);
+        Cache::put('trusted_attestation.saml.idp-metadata.'.hash('sha256', self::IDP_METADATA_URL), $parsed, 3600);
     }
 
     /** @return array{0: string, 1: string} the certificate body and the private key, both PEM-stripped bodies */

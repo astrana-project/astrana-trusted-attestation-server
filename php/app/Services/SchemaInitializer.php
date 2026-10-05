@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Exceptions\ConfigurationException;
+use App\Exceptions\SchemaCreationInProgressException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
-use RuntimeException;
 
 /**
  * Creates the schema on first run, so IT staff only have to deploy the application, create an empty
@@ -190,7 +190,7 @@ final class SchemaInitializer
             usleep($this->raceWaitMicroseconds);
         }
 
-        throw new RuntimeException(
+        throw new SchemaCreationInProgressException(
             'Another instance started creating the Astrana Trusted Attestation schema at the same moment and it is '
             .'still incomplete. Missing: '.implode(', ', $missing).'. This request is refused; the next one checks again.',
             0,

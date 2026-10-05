@@ -70,7 +70,8 @@ class RelationshipServiceTest {
         // rethrows -- the behaviour its out-of-transaction catch relies on. A plain mock manager gives
         // exactly that: a status to hand back, and no-op commit/rollback. Only setKey touches it, so the
         // stub is lenient.
-        lenient().when(transactionManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
+        TransactionStatus status = mock(TransactionStatus.class);
+        lenient().when(transactionManager.getTransaction(any())).thenReturn(status);
         service = new RelationshipService(
                 repository,
                 audit,

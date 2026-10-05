@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Security.Authentication;
 using Astrana.TrustedAttestation.Server.Configuration;
 using Astrana.TrustedAttestation.Server.Contract;
@@ -10,10 +9,7 @@ using Astrana.TrustedAttestation.Server.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Localization;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using StringWithQualityHeaderValue = Microsoft.Net.Http.Headers.StringWithQualityHeaderValue;
 
 // The locales this app ships strings for, read from the shared strings file rather than hardcoded here
 // -- so the offered set and the translated set are one list from one source, the same source the other
@@ -94,27 +90,9 @@ builder.Services.AddSingleton(serviceProvider =>
 // Data
 // ---------------------------------------------------------------------------------------------------
 
-// One codebase, three engines: the ORM abstracts the engine, so an org picks whichever database it
-// already runs regardless of which stack it deployed.
+// One codebase, three engines. See TrustedAttestationDbContext.UseConfiguredEngine.
 builder.Services.AddDbContext<TrustedAttestationDbContext>(options =>
-{
-    var connectionString = settings.Database.ConnectionString;
-
-    switch (settings.Database.Provider)
-    {
-        case DatabaseProvider.SqlServer:
-            options.UseSqlServer(connectionString);
-            break;
-        case DatabaseProvider.PostgreSql:
-            options.UseNpgsql(connectionString);
-            break;
-        case DatabaseProvider.MySql:
-            options.UseMySQL(connectionString);
-            break;
-        default:
-            throw new InvalidOperationException($"Unsupported database provider '{settings.Database.Provider}'.");
-    }
-});
+    TrustedAttestationDbContext.UseConfiguredEngine(options, settings.Database));
 
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 
@@ -158,69 +136,9 @@ builder.Services.AddAntiforgery(ApiEndpoints.ConfigureAntiforgery);
 builder.Services.AddSingleton(uiStrings);
 builder.Services.AddHsts(SecurityHeaders.ConfigureHsts);
 
-// Rendering in the member's language is a requirement, not optional polish, and there is little to
-// localise. Three pages, a handful of controls, the member's own details and their relationship labels.
-builder.Services.Configure<RequestLocalizationOptions>(options =>
-{
-    var supported = localization.Locales.Select(c => new CultureInfo(c)).ToList();
-    options.DefaultRequestCulture = new RequestCulture(localization.DefaultLocale);
-    options.SupportedCultures = supported;
-    options.SupportedUICultures = supported;
-
-    // ASP.NET Core ships three culture providers by default -- query string, then cookie, then
-    // Accept-Language. The query-string provider stays out: a ?ui-culture=de link would let a crafted URL
-    // silently set the language, which the other two implementations do not allow either. The stock cookie
-    // provider also goes, because it parses its own "c=..|uic=.." format; a plain, validated cookie set only
-    // by the language switcher (below) replaces it, kept identical across the three stacks.
-    var queryAndCookie = options.RequestCultureProviders
-        .Where(p => p is QueryStringRequestCultureProvider or CookieRequestCultureProvider)
-        .ToList();
-    foreach (var provider in queryAndCookie)
-    {
-        options.RequestCultureProviders.Remove(provider);
-    }
-
-    // The built-in Accept-Language provider matches by .NET's culture parent chain, which has no rule for
-    // a language shipped in two scripts: a bare "zh" would match nothing here where the other two serve
-    // zh-Hans. It is replaced by a provider that walks the whole header in quality order, every entry it
-    // carries rather than the default cap of three, and matches each with the one rule all three
-    // implementations share (LocalizationSettings.Match).
-    foreach (var accept in options.RequestCultureProviders.OfType<AcceptLanguageHeaderRequestCultureProvider>().ToList())
-    {
-        options.RequestCultureProviders.Remove(accept);
-    }
-
-    options.RequestCultureProviders.Add(new CustomRequestCultureProvider(context =>
-    {
-        if (!StringWithQualityHeaderValue.TryParseList(context.Request.Headers.AcceptLanguage, out var entries))
-        {
-            return Task.FromResult<ProviderCultureResult?>(null);
-        }
-
-        var matched = entries
-            .Where(entry => entry.Quality is null or > 0)
-            .OrderByDescending(entry => entry.Quality ?? 1.0)
-            .Select(entry => localization.Match(entry.Value.Value))
-            .FirstOrDefault(match => match is not null);
-
-        return Task.FromResult(matched is null ? null : new ProviderCultureResult(matched));
-    }));
-
-    // An IAM-provided locale claim wins over the browser's Accept-Language: the org knows which language it
-    // holds this member's record in. Accept-Language remains as the fallback behind it.
-    options.RequestCultureProviders.Insert(0, new ClaimsRequestCultureProvider(localization));
-
-    // The language switcher's explicit choice wins over everything else: a member who picked a language has
-    // said what they want. It is a plain cookie holding just the locale code, validated on write to the
-    // offered set (see /set-language) and constrained again here by SupportedCultures, so an unknown or
-    // no-longer-offered value is ignored and resolution falls through to the claim, then Accept-Language.
-    options.RequestCultureProviders.Insert(0, new CustomRequestCultureProvider(context =>
-    {
-        var cookie = localization.Match(context.Request.Cookies["ata_locale"]);
-        return Task.FromResult<ProviderCultureResult?>(
-            cookie is null ? null : new ProviderCultureResult(cookie));
-    }));
-});
+// The language switcher's cookie, then the identity system's locale claim, then Accept-Language. See
+// RequestLocalization.
+builder.Services.Configure<RequestLocalizationOptions>(options => RequestLocalization.Configure(options, localization));
 
 if (settings.Tls.TerminatedByProxy)
 {
@@ -294,28 +212,8 @@ if (settings.Iam.Protocol == IamProtocol.Saml)
     app.UseSamlFailureHandling(IamAuthentication.SamlModulePath);
 }
 
-// Normalise JSON responses to a bare "application/json". ASP.NET Core appends "; charset=utf-8"; the
-// other two implementations do not, and since JSON is UTF-8 by definition the parameter carries no
-// information -- dropping it makes the manifest and every API response byte-identical across all three.
-// Outermost in the pipeline, so its OnStarting callback sees the content type each endpoint set, just
-// before the headers are written.
-app.Use(async (context, next) =>
-{
-    context.Response.OnStarting(() =>
-    {
-        var contentType = context.Response.ContentType;
-        if (contentType is not null
-            && contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase)
-            && contentType.Contains("charset", StringComparison.OrdinalIgnoreCase))
-        {
-            context.Response.ContentType = "application/json";
-        }
-
-        return Task.CompletedTask;
-    });
-
-    await next();
-});
+// JSON goes out as a bare "application/json", as the other two implementations send it. See JsonContentType.
+app.UseBareJsonContentType();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -336,53 +234,7 @@ app.MapRazorPages();
 
 app.MapSignOut(settings.Iam.Protocol, challengeScheme);
 
-// The language switcher posts here. It stores the chosen locale in a plain cookie, validated against the
-// offered set so a forged value cannot render an unsupported language, and returns to the page the member
-// was on. There is no anti-forgery token, because the switcher is on the public landing page too, which
-// carries no session to hold a token. A cross-site form can still submit the switcher, and the most it
-// changes is the display language. Kept identical across the three stacks.
-app.MapPost("/set-language", async (HttpContext http) =>
-{
-    // The form body only, and only when there is one. A request with no form (no body, or JSON) carries no
-    // locale and no return path, so it sets nothing and lands on the landing page rather than failing.
-    var form = await ReadFormAsync(http.Request);
-    var posted = form?["locale"].ToString();
-
-    // Stored in the shipped spelling, whatever case was posted, so the three implementations agree.
-    var offered = localization.Locales.FirstOrDefault(l => string.Equals(l, posted, StringComparison.OrdinalIgnoreCase));
-    if (offered is not null)
-    {
-        http.Response.Cookies.Append("ata_locale", offered, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Lax,
-            MaxAge = TimeSpan.FromDays(365),
-            Path = "/",
-            IsEssential = true,
-        });
-    }
-
-    // Only a path on this server, by the rule all three implementations apply (see ReturnPath).
-    return Results.LocalRedirect(ReturnPath.Sanitize(form?["next"].ToString()));
-});
-
-static async Task<IFormCollection?> ReadFormAsync(HttpRequest request)
-{
-    if (!request.HasFormContentType)
-    {
-        return null;
-    }
-
-    try
-    {
-        return await request.ReadFormAsync(request.HttpContext.RequestAborted);
-    }
-    catch (InvalidDataException)
-    {
-        // A form Content-Type on a body that is not a form, or one past the form limits. No form, then.
-        return null;
-    }
-}
+// The language switcher posts here. See LanguageSwitchEndpoint.
+app.MapLanguageSwitch(localization);
 
 await app.RunAsync();

@@ -10,6 +10,11 @@ on:
     branches: [master]
   pull_request:
 
+# Read access to the code is all the job needs. SonarQube Cloud decorates the pull request with SONAR_TOKEN, not
+# the GitHub token.
+permissions:
+  contents: read
+
 jobs:
   analyze:
     name: Analyze .NET
@@ -18,7 +23,7 @@ jobs:
       run:
         working-directory: dotnet
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0 # full history, so Sonar can tell new code from old, and for the path check below
 
@@ -38,20 +43,20 @@ jobs:
 
       - name: Set up JDK (the SonarScanner itself runs on a JVM)
         if: steps.scope.outputs.run == 'true'
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
         with:
           java-version: 21
           distribution: temurin
 
       - name: Set up .NET
         if: steps.scope.outputs.run == 'true'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 10.0.x
 
       - name: Cache SonarQube Cloud packages
         if: steps.scope.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
@@ -67,12 +72,16 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          # Program.cs is the start-up composition root, which the unit coverage rule excludes as framework plumbing.
+          # The demonstration is sample data and configuration, not shipped code, so it is not analysed.
           dotnet-sonarscanner begin \
             /k:"astrana-trusted-attestation-server-dotnet" \
             /o:"astrana" \
             /d:sonar.host.url="https://sonarcloud.io" \
             /d:sonar.token="$SONAR_TOKEN" \
-            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.coverage.exclusions="**/src/Astrana.TrustedAttestation.Server/Program.cs" \
+            /d:sonar.exclusions="demo/**"
           dotnet build --no-incremental
           dotnet test --settings coverage.runsettings --collect:"XPlat Code Coverage"
           dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"

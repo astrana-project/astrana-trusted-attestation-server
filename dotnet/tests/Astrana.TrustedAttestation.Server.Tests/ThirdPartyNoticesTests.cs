@@ -18,6 +18,9 @@ public class ThirdPartyNoticesTests
 
     private static readonly string BuildOutput = AppContext.BaseDirectory;
 
+    /// <summary>The asset groups in a dependency manifest target that copy a file into the output.</summary>
+    private static readonly string[] ShippedAssetKinds = ["runtime", "native", "runtimeTargets", "resources"];
+
     [Fact]
     public void The_notices_are_a_static_web_asset_of_the_server()
     {
@@ -105,7 +108,7 @@ public class ThirdPartyNoticesTests
     /// <summary>
     /// "Id Version" for every package the server's dependency manifest copies a file from.
     /// </summary>
-    private static IEnumerable<string> ShippedPackages()
+    private static List<string> ShippedPackages()
     {
         using var manifest = JsonDocument.Parse(
             File.ReadAllText(Path.Combine(BuildOutput, "Astrana.TrustedAttestation.Server.deps.json")));
@@ -122,5 +125,5 @@ public class ThirdPartyNoticesTests
         libraries.GetProperty(name).GetProperty("type").GetString() == "package";
 
     private static bool ShipsAFile(JsonElement target) =>
-        new[] { "runtime", "native", "runtimeTargets", "resources" }.Any(kind => target.TryGetProperty(kind, out _));
+        ShippedAssetKinds.Any(kind => target.TryGetProperty(kind, out _));
 }

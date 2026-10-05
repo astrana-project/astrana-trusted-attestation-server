@@ -87,11 +87,12 @@ public sealed class EfRelationshipStore(
         {
             await db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException exception)
         {
             // Entity Framework expected the update or delete to touch one row and it touched none: the row
-            // was removed after the lookup read it.
-            logger.LogInformation("A relationship was removed between the lookup and the write.");
+            // was removed after the lookup read it. The exception carries a row count and no column values,
+            // so it is safe to log.
+            logger.LogInformation(exception, "A relationship was removed between the lookup and the write.");
             throw new RelationshipVanishedException();
         }
         catch (DbUpdateException exception) when (IsUniqueViolation(exception.InnerException))

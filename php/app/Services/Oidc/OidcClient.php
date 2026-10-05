@@ -78,7 +78,7 @@ final class OidcClient
      */
     private function cacheKey(string $purpose): string
     {
-        return 'trusted_attestation.oidc.'.$purpose.'.'.sha1($this->issuer.'|'.($this->discoveryUrl ?? ''));
+        return 'trusted_attestation.oidc.'.$purpose.'.'.hash('sha256', $this->issuer.'|'.($this->discoveryUrl ?? ''));
     }
 
     /**

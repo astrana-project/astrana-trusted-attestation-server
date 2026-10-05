@@ -52,7 +52,7 @@
 
     @if (Model.SignedOut)
     {
-        <p class="ata-status text-success" role="status">@s["signed_out"]</p>
+        <output class="ata-status d-block mb-3 text-success">@s["signed_out"]</output>
     }
 
     <p class="mb-4">@(s["landing_intro"].Replace("{org}", Model.OrgName))</p>

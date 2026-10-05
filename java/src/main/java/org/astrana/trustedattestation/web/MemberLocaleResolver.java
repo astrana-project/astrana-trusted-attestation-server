@@ -44,6 +44,9 @@ public class MemberLocaleResolver implements LocaleResolver {
     /** The switcher's cookie. Carries a locale tag and nothing else, and is set only by {@code /set-language}. */
     public static final String COOKIE_NAME = "ata_locale";
 
+    /** The OpenID Connect claim, and the SAML attribute of the same name, that carries the member's language. */
+    private static final String LOCALE_CLAIM = "locale";
+
     private final LocalizationSettings localization;
 
     public MemberLocaleResolver(LocalizationSettings localization) {
@@ -94,9 +97,9 @@ public class MemberLocaleResolver implements LocaleResolver {
         // Saml2AuthenticatedPrincipal is still matched. The attribute's first value is read: a language
         // preference has one value, so a multivalued attribute is taken at its first rather than ignored.
         Object locale = switch (authentication.getPrincipal()) {
-            case OidcUser user -> user.getClaims().get("locale");
-            case Saml2ResponseAssertionAccessor assertion -> assertion.getFirstAttribute("locale");
-            case Saml2AuthenticatedPrincipal principal -> principal.getFirstAttribute("locale");
+            case OidcUser user -> user.getClaims().get(LOCALE_CLAIM);
+            case Saml2ResponseAssertionAccessor assertion -> assertion.getFirstAttribute(LOCALE_CLAIM);
+            case Saml2AuthenticatedPrincipal principal -> principal.getFirstAttribute(LOCALE_CLAIM);
             case null, default -> null;
         };
 
@@ -129,7 +132,7 @@ public class MemberLocaleResolver implements LocaleResolver {
 
             try {
                 ranges.addAll(Locale.LanguageRange.parse(entry));
-            } catch (IllegalArgumentException malformed) {
+            } catch (IllegalArgumentException _) {
                 // This entry says nothing usable. The others may.
             }
         }

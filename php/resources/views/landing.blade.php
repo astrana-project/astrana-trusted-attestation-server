@@ -41,7 +41,7 @@
     <p class="ata-field-label text-body-secondary mb-3">{{ $t['landing_title'] }}</p>
 
     @if ($signedOut)
-        <p class="ata-status text-success" role="status">{{ $t['signed_out'] }}</p>
+        <output class="ata-status d-block mb-3 text-success">{{ $t['signed_out'] }}</output>
     @endif
 
     <p class="mb-4">{{ str_replace('{org}', $orgName, $t['landing_intro']) }}</p>

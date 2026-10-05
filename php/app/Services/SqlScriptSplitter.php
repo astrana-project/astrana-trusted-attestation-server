@@ -218,7 +218,7 @@ final class SqlScriptSplitter
         $end = $start + 1;
         $length = strlen($script);
 
-        while ($end < $length && preg_match('/[A-Za-z0-9_]/', $script[$end]) === 1) {
+        while ($end < $length && preg_match('/\w/', $script[$end]) === 1) {
             $end++;
         }
 

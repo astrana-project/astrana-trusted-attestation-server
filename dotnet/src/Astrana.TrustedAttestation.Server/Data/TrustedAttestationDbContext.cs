@@ -1,3 +1,4 @@
+using Astrana.TrustedAttestation.Server.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -16,6 +17,30 @@ namespace Astrana.TrustedAttestation.Server.Data;
 public sealed class TrustedAttestationDbContext(DbContextOptions<TrustedAttestationDbContext> options) : DbContext(options)
 {
     public DbSet<MemberRelationship> MemberRelationships => Set<MemberRelationship>();
+
+    /// <summary>
+    /// One codebase, three engines. The ORM abstracts the engine, so an organisation picks whichever database
+    /// it already runs regardless of which stack it deployed.
+    /// </summary>
+    public static void UseConfiguredEngine(DbContextOptionsBuilder options, DatabaseOptions database)
+    {
+        var connectionString = database.ConnectionString;
+
+        switch (database.Provider)
+        {
+            case DatabaseProvider.SqlServer:
+                options.UseSqlServer(connectionString);
+                break;
+            case DatabaseProvider.PostgreSql:
+                options.UseNpgsql(connectionString);
+                break;
+            case DatabaseProvider.MySql:
+                options.UseMySQL(connectionString);
+                break;
+            default:
+                throw new InvalidOperationException($"Unsupported database provider '{database.Provider}'.");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

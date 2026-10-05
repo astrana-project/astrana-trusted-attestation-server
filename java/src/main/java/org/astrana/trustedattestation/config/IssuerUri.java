@@ -1,7 +1,7 @@
 package org.astrana.trustedattestation.config;
 
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import org.springframework.boot.json.JsonParserFactory;
 
 /**
@@ -31,10 +31,10 @@ final class IssuerUri {
      * The configured issuer, respelt the way its provider states it when the two differ only by a trailing
      * slash. {@code fetch} reads a URL and returns the body, and may throw for an unreachable provider.
      */
-    static String asStatedByProvider(String configured, Function<String, String> fetch) {
+    static String asStatedByProvider(String configured, UnaryOperator<String> fetch) {
         try {
             return reconcile(configured, statedIssuer(fetch.apply(discoveryUrl(configured))));
-        } catch (RuntimeException unreadable) {
+        } catch (RuntimeException _) {
             // Not this code's failure to report: Spring fetches the same document moments later and
             // stops the application with its own, established message.
             return configured;

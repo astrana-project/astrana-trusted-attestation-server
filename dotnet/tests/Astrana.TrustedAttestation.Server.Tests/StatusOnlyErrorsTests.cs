@@ -53,7 +53,7 @@ public class StatusOnlyErrorsTests
         Assert.Equal("nosniff", context.Response.Headers.XContentTypeOptions);
         Assert.Equal("DENY", context.Response.Headers.XFrameOptions);
         Assert.Equal("no-referrer", context.Response.Headers["Referrer-Policy"]);
-        Assert.Equal("0", context.Response.Headers["X-XSS-Protection"]);
+        Assert.Equal("0", context.Response.Headers.XXSSProtection);
         Assert.Contains("no-store", context.Response.Headers.CacheControl.ToString());
         Assert.Null(context.Response.ContentType);
         Assert.Equal(0, context.Response.Body.Length);
@@ -68,7 +68,7 @@ public class StatusOnlyErrorsTests
         {
             response.StatusCode = StatusCodes.Status201Created;
             response.ContentType = "text/html";
-            response.Headers["Location"] = "/somewhere";
+            response.Headers.Location = "/somewhere";
         });
 
         Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);

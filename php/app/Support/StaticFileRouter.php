@@ -48,7 +48,10 @@ final class StaticFileRouter
 
         $segments = self::segments($path);
 
-        return in_array('..', $segments, true)
+        // A segment that starts with a dot covers both ".." and private files such as .htaccess.
+        $dotSegments = array_filter($segments, static fn (string $segment): bool => str_starts_with($segment, '.'));
+
+        return $dotSegments !== []
             || in_array(strtolower(end($segments) ?: ''), self::NOT_SERVED, true);
     }
 
@@ -60,12 +63,6 @@ final class StaticFileRouter
     {
         if ($path === '/' || self::neverServed($path)) {
             return null;
-        }
-
-        foreach (self::segments($path) as $segment) {
-            if (str_starts_with($segment, '.')) {
-                return null;
-            }
         }
 
         $root = realpath($publicRoot);

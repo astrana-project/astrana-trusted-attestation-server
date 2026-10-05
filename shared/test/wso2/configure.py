@@ -13,10 +13,14 @@ system's identifier for the user -- and the app's subject is pinned to the match
 (http://wso2.org/claims/externalid), without the user-store or tenant domain, so the emitted `sub` is exactly
 the fixture UUID while login stays by name. Idempotent: existing members and app are reused.
 
-Prints the issuer and the client id/secret to point the implementations at.
+Prints the issuer and the client id to point the implementations at. The secret is not printed. With
+--credentials-file PATH it is written to PATH, readable only by you, which is how the integration matrix
+reads it.
 """
 
+import argparse
 import json
+import os
 import ssl
 import urllib.error
 import urllib.request
@@ -151,15 +155,41 @@ def ensure_app():
     return oidc.get("clientId"), oidc.get("clientSecret")
 
 
+def write_credentials(path, client_id, client_secret):
+    """Writes the client id and secret to a file only the current user can read. The matrix passes a
+    temporary file, reads it and removes it, so the secret never appears in this script's output."""
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.chmod(path, 0o600)  # the mode above applies only to a new file, and the matrix creates it first
+    with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(f"client_id: {client_id}\nclient_secret: {client_secret}\n")
+
+
+def report_client(client_id, client_secret, credentials_file):
+    """Prints the client id and says where the secret went, without printing the secret itself."""
+    print(f"client_id: {client_id}")
+    if credentials_file:
+        write_credentials(credentials_file, client_id, client_secret)
+        print(f"client_secret: written to {credentials_file}")
+    else:
+        print("client_secret: not shown. Run with --credentials-file PATH to write it to a file only you can read.")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--credentials-file", metavar="PATH",
+                        help="write the OIDC client id and secret to PATH, readable only by you")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
     relax_password_policy()
     for username in SUBJECTS:
         ensure_member(username)
     client_id, client_secret = ensure_app()
     print()
     print(f"issuer: {BASE}/oauth2/token")
-    print(f"client_id: {client_id}")
-    print(f"client_secret: {client_secret}")
+    report_client(client_id, client_secret, args.credentials_file)
     print("subject-claim for a WSO2 deployment: sub (the app subject is pinned to externalId = the UUID)")
 
 

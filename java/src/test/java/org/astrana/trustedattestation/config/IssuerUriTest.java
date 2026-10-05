@@ -7,7 +7,7 @@ import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ class IssuerUriTest {
     /** What the throwaway provider states as its issuer, set per test. */
     private static final AtomicReference<String> STATED = new AtomicReference<>();
 
-    private static final Function<String, String> FETCH =
+    private static final UnaryOperator<String> FETCH =
             url -> RestClient.create().get().uri(url).retrieve().body(String.class);
 
     @BeforeAll
@@ -117,7 +117,7 @@ class IssuerUriTest {
     @Test
     void anUnreadableDiscoveryDocumentLeavesTheConfiguredValueAlone() {
         // Fail-fast on an unreachable IdP is Spring's job and stays Spring's: this only ever respells.
-        Function<String, String> dead = url -> {
+        UnaryOperator<String> dead = url -> {
             throw new IllegalStateException("connection refused");
         };
 

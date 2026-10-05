@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.security.saml2.provider.service.authentication.logout.Saml2LogoutRequest;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistration;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistrationRepository;
@@ -57,10 +58,12 @@ final class CookieSaml2LogoutRequestRepository implements Saml2LogoutRequestRepo
 
     @Override
     public Saml2LogoutRequest loadLogoutRequest(HttpServletRequest request) {
-        Map<String, String> fields = COOKIE.read(request);
-        if (fields == null || !relayStateMatches(request.getParameter("RelayState"), fields.get(RELAY_STATE))) {
+        Optional<Map<String, String>> stored = COOKIE.read(request)
+                .filter(saved -> relayStateMatches(request.getParameter("RelayState"), saved.get(RELAY_STATE)));
+        if (stored.isEmpty()) {
             return null;
         }
+        Map<String, String> fields = stored.get();
         RelyingPartyRegistration registration = registrations.findByRegistrationId(fields.get("registrationId"));
         if (registration == null) {
             return null;

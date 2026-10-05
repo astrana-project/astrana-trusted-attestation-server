@@ -98,6 +98,15 @@ public class MeController {
         return values.getOrDefault(defaultLocale, "");
     }
 
+    /** The support URL when set, otherwise the website when set, otherwise null. */
+    private static String contactUrl(String support, String website) {
+        if (!support.isBlank()) {
+            return support;
+        }
+
+        return website.isBlank() ? null : website;
+    }
+
     @GetMapping("/me")
     public String me(Authentication authentication, Locale locale, HttpServletRequest request, Model model) {
         // Rendering in the member's language is a requirement, not optional polish. The locale arrives
@@ -124,8 +133,7 @@ public class MeController {
         // text. Resolved for the member's locale, the same way the organisation's name is.
         String support = localized(manifest.supportUrl(), tag, manifest.defaultLocale());
         String website = localized(manifest.website(), tag, manifest.defaultLocale());
-        String contactUrl = !support.isBlank() ? support : !website.isBlank() ? website : null;
-        model.addAttribute("contactUrl", contactUrl);
+        model.addAttribute("contactUrl", contactUrl(support, website));
 
         // The software's own attribution, which the server has no setting to remove.
         model.addAttribute("attribution", attribution);

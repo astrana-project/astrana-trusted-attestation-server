@@ -52,7 +52,7 @@ public class SignInFailureTests
     };
 
     [Theory]
-    [MemberData(nameof(NoUsableSubject))]
+    [MemberData(nameof(NoUsableSubject), DisableDiscoveryEnumeration = true)]
     public void An_assertion_with_no_usable_subject_is_refused_with_no_session(Claim[] claims)
     {
         var result = SignInResultFor(claims);

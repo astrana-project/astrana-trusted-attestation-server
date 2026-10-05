@@ -16,9 +16,9 @@ public class SignOutEndpointTests
 {
     private const string Challenge = OpenIdConnectDefaults.AuthenticationScheme;
 
-    private static HttpContext Anonymous() => new DefaultHttpContext();
+    private static DefaultHttpContext Anonymous() => new DefaultHttpContext();
 
-    private static HttpContext SignedIn() => new DefaultHttpContext
+    private static DefaultHttpContext SignedIn() => new DefaultHttpContext
     {
         User = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "alice")], "test")),
     };

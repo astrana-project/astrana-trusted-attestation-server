@@ -49,9 +49,11 @@ public static class SamlFailureHandling
 
                 // Warning, not error: refusing an invalid assertion is this endpoint working. The reason
                 // is logged because an operator debugging a real login failure needs it; it is not sent
-                // to the caller, who is not owed an explanation of which check failed.
+                // to the caller, who is not owed an explanation of which check failed. The path is logged in
+                // its escaped form, so a line break or any other control character in it arrives as %0D, %0A
+                // and the like and cannot forge a log line.
                 logger.LogWarning(exception, "A SAML assertion was refused at {Path}.",
-                    context.Request.Path);
+                    context.Request.Path.ToUriComponent());
 
                 if (!context.Response.HasStarted)
                 {

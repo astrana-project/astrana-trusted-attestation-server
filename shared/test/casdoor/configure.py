@@ -9,14 +9,19 @@ Creates the four test members (alice/bob/carol/dave, password `password`) in the
 each with its Casdoor user id set to the fixed UUID the conformance fixtures grant against (SUBJECTS in
 shared/test/conformance/check.py) -- Casdoor's OIDC `sub` is the user id, so no subject-claim override is needed --
 and a confidential OIDC application carrying the three implementations' redirect URIs, with a fixed client
-id/secret so the matrix needs nothing extracted. Idempotent: existing members and app are updated in place.
+id/secret. Idempotent: existing members and app are updated in place.
+
+Prints the issuer and the client id. The secret is not printed. With --credentials-file PATH it is written to
+PATH, readable only by you, which is how the integration matrix reads it.
 
 Authenticates as the built-in admin (admin/123) for a session cookie; touches no database and hardcodes no
 per-instance secret.
 """
 
+import argparse
 import http.cookiejar
 import json
+import os
 import urllib.error
 import urllib.request
 
@@ -122,7 +127,34 @@ def ensure_app():
         print("  created OIDC app: ata")
 
 
+def write_credentials(path, client_id, client_secret):
+    """Writes the client id and secret to a file only the current user can read. The matrix passes a
+    temporary file, reads it and removes it, so the secret never appears in this script's output."""
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.chmod(path, 0o600)  # the mode above applies only to a new file, and the matrix creates it first
+    with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(f"client_id: {client_id}\nclient_secret: {client_secret}\n")
+
+
+def report_client(client_id, client_secret, credentials_file):
+    """Prints the client id and says where the secret went, without printing the secret itself."""
+    print(f"client_id: {client_id}")
+    if credentials_file:
+        write_credentials(credentials_file, client_id, client_secret)
+        print(f"client_secret: written to {credentials_file}")
+    else:
+        print("client_secret: not shown. Run with --credentials-file PATH to write it to a file only you can read.")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--credentials-file", metavar="PATH",
+                        help="write the OIDC client id and secret to PATH, readable only by you")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
     login()
     ensure_org()
     ensure_app()
@@ -130,8 +162,7 @@ def main():
         ensure_user(username)
     print()
     print(f"issuer: {BASE}")
-    print(f"client_id: {CLIENT_ID}")
-    print(f"client_secret: {CLIENT_SECRET}")
+    report_client(CLIENT_ID, CLIENT_SECRET, args.credentials_file)
     print("subject-claim for a Casdoor deployment: sub (the OIDC sub is the user id = the fixture UUID)")
 
 

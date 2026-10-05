@@ -17,7 +17,11 @@ public class LogoDataTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("ata-logo-tests").FullName;
 
-    public void Dispose() => Directory.Delete(_root, recursive: true);
+    public void Dispose()
+    {
+        Directory.Delete(_root, recursive: true);
+        GC.SuppressFinalize(this);
+    }
 
     // The light logo's setting, which every case but the dark-logo refusal resolves under.
     private static string? Resolve(string? configured, string contentRoot) =>

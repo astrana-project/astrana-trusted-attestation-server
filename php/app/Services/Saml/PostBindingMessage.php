@@ -74,12 +74,7 @@ final class PostBindingMessage
      */
     public static function verify(string $encoded, array $certificates): self
     {
-        $xml = base64_decode($encoded, true);
-        if ($xml === false || trim($xml) === '') {
-            return self::refused(null, 'the message is not base64');
-        }
-
-        $document = self::parse($xml);
+        $document = self::decode($encoded);
         if (is_string($document)) {
             return self::refused(null, $document);
         }
@@ -90,35 +85,30 @@ final class PostBindingMessage
             return self::refused(null, 'the message is not a LogoutRequest or a LogoutResponse');
         }
 
-        $structure = self::checkStructure($document, $root);
-        if ($structure !== null) {
-            return self::refused($kind, $structure);
-        }
-
-        $algorithms = self::checkAlgorithms($document);
-        if ($algorithms !== null) {
-            return self::refused($kind, $algorithms);
-        }
-
-        try {
-            // The xpath names the root's own signature, the only one the structure checks have allowed, so the
-            // library verifies that one and nothing else. Every certificate the identity provider publishes
-            // for signing is tried, as the library does for an assertion.
-            $valid = Utils::validateSign($document, null, null, 'sha1', "/samlp:{$kind}/ds:Signature", $certificates);
-        } catch (\Throwable $exception) {
-            return self::refused($kind, 'the signature could not be checked: '.$exception->getMessage());
-        }
-
-        if (! $valid) {
-            return self::refused($kind, "the signature does not verify against the identity provider's certificate");
-        }
-
-        return new self($kind, null);
+        // Each check runs only when the one before it found nothing to refuse, so the structural checks
+        // still come before any cryptography. The first reason found is the one reported.
+        return new self(
+            $kind,
+            self::checkStructure($document, $root)
+                ?? self::checkAlgorithms($document)
+                ?? self::checkSignature($document, $kind, $certificates),
+        );
     }
 
     private static function refused(?string $kind, string $reason): self
     {
         return new self($kind, $reason);
+    }
+
+    /** The posted field decoded and parsed, or the reason it is refused. */
+    private static function decode(string $encoded): DOMDocument|string
+    {
+        $xml = base64_decode($encoded, true);
+        if ($xml === false || trim($xml) === '') {
+            return 'the message is not base64';
+        }
+
+        return self::parse($xml);
     }
 
     /**
@@ -233,5 +223,25 @@ final class PostBindingMessage
         }
 
         return null;
+    }
+
+    /**
+     * Returns the reason for refusal when the root's signature does not verify against the identity
+     * provider's certificates, or null when it does.
+     *
+     * @param  list<string>  $certificates
+     */
+    private static function checkSignature(DOMDocument $document, string $kind, array $certificates): ?string
+    {
+        try {
+            // The xpath names the root's own signature, the only one the structure checks have allowed, so the
+            // library verifies that one and nothing else. Every certificate the identity provider publishes
+            // for signing is tried, as the library does for an assertion.
+            $valid = Utils::validateSign($document, null, null, 'sha1', "/samlp:{$kind}/ds:Signature", $certificates);
+        } catch (\Throwable $exception) {
+            return 'the signature could not be checked: '.$exception->getMessage();
+        }
+
+        return $valid ? null : "the signature does not verify against the identity provider's certificate";
     }
 }

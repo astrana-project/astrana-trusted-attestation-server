@@ -5,6 +5,9 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
 
+// The one log file every file-based channel below writes to.
+$logFile = storage_path('logs/laravel.log');
+
 return [
 
     /*
@@ -60,14 +63,14 @@ return [
 
         'single' => [
             'driver' => 'single',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => $logFile,
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
         ],
 
         'daily' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => $logFile,
             'level' => env('LOG_LEVEL', 'debug'),
             'max_files' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
@@ -75,7 +78,7 @@ return [
 
         'monthly' => [
             'driver' => 'monthly',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => $logFile,
             'level' => env('LOG_LEVEL', 'debug'),
             'max_files' => 3,
             'replace_placeholders' => true,
@@ -132,7 +135,7 @@ return [
         ],
 
         'emergency' => [
-            'path' => storage_path('logs/laravel.log'),
+            'path' => $logFile,
         ],
 
     ],

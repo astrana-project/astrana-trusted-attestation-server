@@ -59,9 +59,10 @@ class MeRenderingTest {
         // can read the token from any of them.
         String page = renderWith(employee(null, null));
 
-        assertThat(page).contains("<meta name=\"csrf-token\" content=\"" + TemplateRendering.CSRF_TOKEN + "\"/>");
-        assertThat(page).contains("document.querySelector(\"meta[name='csrf-token']\").content");
-        assertThat(page).contains("headers: { \"X-CSRF-TOKEN\": token }");
+        assertThat(page)
+                .contains("<meta name=\"csrf-token\" content=\"" + TemplateRendering.CSRF_TOKEN + "\"/>")
+                .contains("document.querySelector(\"meta[name='csrf-token']\").content")
+                .contains("headers: { \"X-CSRF-TOKEN\": token }");
     }
 
     @Test

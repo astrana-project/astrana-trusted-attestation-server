@@ -337,7 +337,7 @@ public class TlsRequirementTests
             new TlsOptions { TerminatedByProxy = true },
             request => request.Headers["X-Forwarded-Proto"] = "https");
 
-        Assert.Equal("max-age=31536000", headers["Strict-Transport-Security"]);
+        Assert.Equal("max-age=31536000", headers.StrictTransportSecurity);
     }
 
     [Fact]
@@ -347,7 +347,7 @@ public class TlsRequirementTests
             new TlsOptions(),
             request => request.Scheme = "https");
 
-        Assert.Equal("max-age=31536000", headers["Strict-Transport-Security"]);
+        Assert.Equal("max-age=31536000", headers.StrictTransportSecurity);
     }
 
     [Fact]

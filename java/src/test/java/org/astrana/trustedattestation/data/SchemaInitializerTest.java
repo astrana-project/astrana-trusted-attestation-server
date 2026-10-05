@@ -138,8 +138,9 @@ class SchemaInitializerTest {
         // The first table is there and nothing else, which is exactly the shape a check of that table
         // alone would have accepted.
         schemaHolds(List.of("member_relationships"), List.of());
+        SchemaInitializer initializer = initializer();
 
-        assertThatThrownBy(() -> initializer().initialize())
+        assertThatThrownBy(initializer::initialize)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("incomplete")
                 .hasMessageContaining("audit_log")
@@ -161,8 +162,9 @@ class SchemaInitializerTest {
     void anEmptyDatabaseIsRefusedWhenCreationIsTurnedOff() throws SQLException {
         properties.getDatabase().setCreateSchemaOnStartup(false);
         schemaHolds(List.of(), List.of());
+        SchemaInitializer initializer = initializer();
 
-        assertThatThrownBy(() -> initializer().initialize())
+        assertThatThrownBy(initializer::initialize)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("create-schema-on-startup");
         verify(statement, never()).execute(anyString());
@@ -201,15 +203,16 @@ class SchemaInitializerTest {
         createMeetsAnObjectAnotherInstanceMade();
         schemaStaysIncomplete(1000);
         Duration wait = Duration.ofMillis(100);
+        SchemaInitializer initializer = new SchemaInitializer(dataSource, properties, wait, Duration.ofMillis(5));
         long started = System.nanoTime();
 
-        assertThatThrownBy(() -> new SchemaInitializer(dataSource, properties, wait, Duration.ofMillis(5)).initialize())
+        assertThatThrownBy(initializer::initialize)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("still incomplete")
                 .hasMessageContaining("prune_audit_log");
 
         assertThat(Duration.ofNanos(System.nanoTime() - started)).isGreaterThanOrEqualTo(wait);
-        assertThat(answers.size()).as("looks taken").isLessThan(2 * 1000 - 2);
+        assertThat(answers).as("looks taken").hasSizeLessThan(2 * 1000 - 2);
     }
 
     @Test
@@ -217,12 +220,12 @@ class SchemaInitializerTest {
         schemaHolds(List.of(), List.of());
         createMeetsAnObjectAnotherInstanceMade();
         schemaStaysIncomplete(1000);
+        SchemaInitializer initializer =
+                new SchemaInitializer(dataSource, properties, SchemaInitializer.RACE_WAIT, Duration.ofSeconds(1));
         Thread.currentThread().interrupt();
 
         try {
-            assertThatThrownBy(() -> new SchemaInitializer(
-                                    dataSource, properties, SchemaInitializer.RACE_WAIT, Duration.ofSeconds(1))
-                            .initialize())
+            assertThatThrownBy(initializer::initialize)
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("still incomplete");
             assertThat(answers).as("only one look taken").hasSize(2 * 999);

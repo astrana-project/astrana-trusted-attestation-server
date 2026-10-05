@@ -106,12 +106,11 @@ class OidcIdTokenValidationTest {
     }
 
     @Test
-    void aMultiAudienceTokenWithoutAnAuthorizedPartyIsRefused() {
+    void aMultiAudienceTokenWithoutAnAuthorizedPartyIsRefused() throws Exception {
         // The other half of the same rule: several audiences and no azp is not a valid ID token.
-        assertThatThrownBy(() -> decoder()
-                        .decode(token(
-                                current(claims -> claims.audience(java.util.List.of("some-other-client", CLIENT_ID))))))
-                .isInstanceOf(JwtException.class);
+        String token = token(current(claims -> claims.audience(java.util.List.of("some-other-client", CLIENT_ID))));
+
+        assertRefused(token);
     }
 
     @Test
@@ -127,23 +126,19 @@ class OidcIdTokenValidationTest {
     // ------------------------------------------------------------------------------------------------
 
     @Test
-    void aTokenFromAnotherIssuerIsRefused() {
-        assertThatThrownBy(() ->
-                        decoder().decode(token(current(claims -> claims.issuer("https://evil.example/realms/x")))))
-                .isInstanceOf(JwtException.class);
+    void aTokenFromAnotherIssuerIsRefused() throws Exception {
+        assertRefused(token(current(claims -> claims.issuer("https://evil.example/realms/x"))));
     }
 
     @Test
-    void aTokenForAnotherAudienceIsRefused() {
-        assertThatThrownBy(() -> decoder().decode(token(current(claims -> claims.audience("a-different-client")))))
-                .isInstanceOf(JwtException.class);
+    void aTokenForAnotherAudienceIsRefused() throws Exception {
+        assertRefused(token(current(claims -> claims.audience("a-different-client"))));
     }
 
     @Test
-    void aTokenExpiredBeyondTheClockSkewAllowanceIsRefused() {
+    void aTokenExpiredBeyondTheClockSkewAllowanceIsRefused() throws Exception {
         // Two minutes past expiry, well beyond the leeway.
-        assertThatThrownBy(() -> decoder().decode(token(expiringAt(Instant.now().minusSeconds(120)))))
-                .isInstanceOf(JwtException.class);
+        assertRefused(token(expiringAt(Instant.now().minusSeconds(120))));
     }
 
     @Test
@@ -154,7 +149,14 @@ class OidcIdTokenValidationTest {
 
         String forged = sign(expiringAt(Instant.now().plusSeconds(300)).build(), forgedKey);
 
-        assertThatThrownBy(() -> decoder().decode(forged)).isInstanceOf(JwtException.class);
+        assertRefused(forged);
+    }
+
+    /** The decoder Spring builds for an ID token refuses this one. */
+    private void assertRefused(String token) {
+        JwtDecoder decoder = decoder();
+
+        assertThatThrownBy(() -> decoder.decode(token)).isInstanceOf(JwtException.class);
     }
 
     // ------------------------------------------------------------------------------------------------

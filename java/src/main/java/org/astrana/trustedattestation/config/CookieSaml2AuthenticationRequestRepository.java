@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.security.saml2.provider.service.authentication.AbstractSaml2AuthenticationRequest;
 import org.springframework.security.saml2.provider.service.authentication.Saml2PostAuthenticationRequest;
 import org.springframework.security.saml2.provider.service.authentication.Saml2RedirectAuthenticationRequest;
@@ -75,10 +76,11 @@ final class CookieSaml2AuthenticationRequestRepository
 
     @Override
     public AbstractSaml2AuthenticationRequest loadAuthenticationRequest(HttpServletRequest httpRequest) {
-        Map<String, String> fields = COOKIE.read(httpRequest);
-        if (fields == null) {
+        Optional<Map<String, String>> stored = COOKIE.read(httpRequest);
+        if (stored.isEmpty()) {
             return null; // absent, malformed or tampered: simply no saved request
         }
+        Map<String, String> fields = stored.get();
         RelyingPartyRegistration registration = registrations.findByRegistrationId(fields.get("registrationId"));
         if (registration == null) {
             return null;

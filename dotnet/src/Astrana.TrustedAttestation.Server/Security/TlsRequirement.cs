@@ -109,7 +109,7 @@ internal static class TlsRequirement
 
     private static bool IsHttps(string url) => url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
 
-    private static IEnumerable<string> SplitList(string value) =>
+    private static string[] SplitList(string value) =>
         value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     /// <summary>

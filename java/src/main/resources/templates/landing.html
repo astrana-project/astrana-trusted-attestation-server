@@ -43,8 +43,8 @@
 
     <p class="ata-field-label text-body-secondary mb-3" th:text="${t['landing_title']}">Trusted attestation</p>
 
-    <p class="ata-status text-success" role="status" th:if="${signedOut}"
-       th:text="${t['signed_out']}">You have been signed out.</p>
+    <output class="ata-status d-block mb-3 text-success" th:if="${signedOut}"
+            th:text="${t['signed_out']}">You have been signed out.</output>
 
     <p class="mb-4" th:text="${#strings.replace(t['landing_intro'], '{org}', orgName)}">What this is.</p>
 

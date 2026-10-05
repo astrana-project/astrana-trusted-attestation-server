@@ -37,24 +37,27 @@ class LanguageSwitcherRenderingTest {
     void theLandingPageOffersEachLocaleAsASubmitButtonAndMarksTheCurrentOne() {
         String html = render("landing", "/", ENGLISH_AND_FRENCH, "fr");
 
-        assertThat(html).contains("<div class=\"ata-topbar mb-3\">");
-        assertThat(html).contains("<details class=\"ata-language\">");
-        assertThat(html).contains("<form method=\"post\" action=\"/set-language\" class=\"ata-language-menu\">");
-        assertThat(html).contains("name=\"next\" value=\"/\"");
-
-        // One button per offered locale, each carrying the locale as the submitted value and its own name
-        // as the label. The page is French, so French is the one marked current, in bold and for assistive
-        // technology alike.
-        assertThat(html).contains("name=\"locale\" value=\"en\"").contains(">English</button>");
-        assertThat(html).contains("name=\"locale\" value=\"fr\"").contains(">Français</button>");
-        assertThat(html).containsOnlyOnce("aria-current=\"true\"");
-        assertThat(html).containsOnlyOnce("fw-bold");
+        assertThat(html)
+                .contains("<div class=\"ata-topbar mb-3\">")
+                .contains("<details class=\"ata-language\">")
+                .contains("<form method=\"post\" action=\"/set-language\" class=\"ata-language-menu\">")
+                .contains("name=\"next\" value=\"/\"")
+                // One button per offered locale, each carrying the locale as the submitted value and its own
+                // name as the label. The page is French, so French is the one marked current, in bold and for
+                // assistive technology alike.
+                .contains("name=\"locale\" value=\"en\"")
+                .contains(">English</button>")
+                .contains("name=\"locale\" value=\"fr\"")
+                .contains(">Français</button>")
+                .containsOnlyOnce("aria-current=\"true\"")
+                .containsOnlyOnce("fw-bold");
         assertThat(html.indexOf("fw-bold")).isGreaterThan(html.indexOf("value=\"en\""));
 
         // The summary names the current language, with a hidden label in the page's language for a screen
         // reader to announce first.
-        assertThat(html).contains("<span class=\"visually-hidden\">Langue: </span>");
-        assertThat(html).contains("<span>Français</span>");
+        assertThat(html)
+                .contains("<span class=\"visually-hidden\">Langue: </span>")
+                .contains("<span>Français</span>");
     }
 
     @Test
@@ -69,9 +72,10 @@ class LanguageSwitcherRenderingTest {
     void theSwitcherIsAbsentWhenOnlyOneLocaleIsOffered() {
         String html = render("landing", "/", ENGLISH_ONLY, "en");
 
-        assertThat(html).contains("<div class=\"ata-topbar mb-3\">");
-        assertThat(html).doesNotContain("ata-language");
-        assertThat(html).doesNotContain("/set-language");
+        assertThat(html)
+                .contains("<div class=\"ata-topbar mb-3\">")
+                .doesNotContain("ata-language")
+                .doesNotContain("/set-language");
     }
 
     @Test
@@ -85,10 +89,11 @@ class LanguageSwitcherRenderingTest {
     void theMemberPageCarriesTheSameSwitcherReturningToItself() {
         String html = render("me", "/me", ENGLISH_AND_FRENCH, "en");
 
-        assertThat(html).contains("<details class=\"ata-language\">");
-        assertThat(html).contains("name=\"next\" value=\"/me\"");
-        assertThat(html).contains("<span class=\"visually-hidden\">Language: </span>");
-        assertThat(html).containsOnlyOnce("aria-current=\"true\"");
+        assertThat(html)
+                .contains("<details class=\"ata-language\">")
+                .contains("name=\"next\" value=\"/me\"")
+                .contains("<span class=\"visually-hidden\">Language: </span>")
+                .containsOnlyOnce("aria-current=\"true\"");
     }
 
     @Test

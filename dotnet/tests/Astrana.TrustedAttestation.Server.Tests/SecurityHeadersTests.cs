@@ -39,8 +39,8 @@ public class SecurityHeadersTests
 
         // Content-type sniffing turns a response the server labelled as data into one the browser may
         // decide to execute, and the self-service page is precisely what a clickjacking overlay would sit on.
-        Assert.Equal("nosniff", headers["X-Content-Type-Options"]);
-        Assert.Equal("DENY", headers["X-Frame-Options"]);
+        Assert.Equal("nosniff", headers.XContentTypeOptions);
+        Assert.Equal("DENY", headers.XFrameOptions);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class SecurityHeadersTests
     {
         // Deliberately 0, not "1; mode=block": the legacy auditor is a source of vulnerabilities of its
         // own, and all three implementations disable it explicitly rather than leaving it to the browser.
-        Assert.Equal("0", (await HeadersAfterMiddleware())["X-XSS-Protection"]);
+        Assert.Equal("0", (await HeadersAfterMiddleware()).XXSSProtection);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class SecurityHeadersTests
     {
         // The self-service page is per-member and the API answers are point-in-time. no-store is what keeps
         // that page out of a shared cache.
-        var cacheControl = (await HeadersAfterMiddleware())["Cache-Control"].ToString();
+        var cacheControl = (await HeadersAfterMiddleware()).CacheControl.ToString();
 
         Assert.Contains("no-store", cacheControl);
     }
@@ -132,7 +132,7 @@ public class SecurityHeadersTests
         // application cannot see what lives under its own address.
         var headers = await HeadersAfterHsts(enabled: true, host: "attest.example.org");
 
-        Assert.Equal("max-age=31536000", headers["Strict-Transport-Security"]);
+        Assert.Equal("max-age=31536000", headers.StrictTransportSecurity);
     }
 
     [Fact]

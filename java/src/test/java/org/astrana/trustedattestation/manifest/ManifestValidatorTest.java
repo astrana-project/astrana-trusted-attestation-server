@@ -295,21 +295,22 @@ class ManifestValidatorTest {
     @Test
     void acceptsAManifestWithNoSupportUrl() {
         // Optional: an org that sets no support URL is fine (the empty state then falls back to the website,
-        // or to plain text). The required-fields-only manifest above already omits it; this names the case.
+        // or to plain text). The specification's example with only the support URL taken out, so that is the
+        // one omission under test.
         ManifestDocument manifest = new ManifestDocument(
                 1,
                 "en",
-                Map.of("en", "Acme"),
+                Map.of("en", "Acme Bank", "fr", "Banque Acme"),
+                Map.of("en", "Retail and commercial banking"),
+                Map.of("en", "https://acmebank.example"),
                 null,
+                LOGO,
                 null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                List.of("employee"),
-                "https://a.example/me",
-                "https://a.example/api/v1/attest");
+                Map.of("en", "https://acmebank.example/privacy"),
+                List.of("US", "US-NY"),
+                List.of("employee", "client"),
+                "https://ata.acmebank.example/me",
+                "https://ata.acmebank.example/api/v1/attest");
 
         assertThat(ManifestValidator.validate(manifest, catalog)).isEmpty();
     }

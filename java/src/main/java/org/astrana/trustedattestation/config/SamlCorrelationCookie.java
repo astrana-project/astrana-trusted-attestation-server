@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 
@@ -48,17 +49,17 @@ final class SamlCorrelationCookie {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie("", 0).toString());
     }
 
-    /** The stored fields, or null when the cookie is absent, malformed or tampered with. */
+    /** The stored fields, or nothing when the cookie is absent, malformed or tampered with. */
     @SuppressWarnings("unchecked")
-    Map<String, String> read(HttpServletRequest request) {
+    Optional<Map<String, String>> read(HttpServletRequest request) {
         String value = rawValue(request);
         if (value == null) {
-            return null;
+            return Optional.empty();
         }
         try {
-            return JSON.readValue(Base64.getUrlDecoder().decode(value), Map.class);
-        } catch (Exception e) {
-            return null;
+            return Optional.ofNullable(JSON.readValue(Base64.getUrlDecoder().decode(value), Map.class));
+        } catch (Exception _) {
+            return Optional.empty();
         }
     }
 

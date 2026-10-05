@@ -116,8 +116,8 @@ public class ApiController {
             return unauthorized();
         }
 
-        byte[] body = readBody(request);
-        if (body == null) {
+        Optional<byte[]> body = readBody(request);
+        if (body.isEmpty()) {
             return ResponseEntity.status(CONTENT_TOO_LARGE).build();
         }
 
@@ -127,7 +127,7 @@ public class ApiController {
         // wipe a key. A present string that is empty or holds only spaces, tabs, carriage returns and line
         // feeds is different. It is the member clearing their key to pause the relationship, and it reaches
         // the service as a null key. Any other string that will not parse is a mistyped key, also 400.
-        String raw = readPublicKey(body);
+        String raw = readPublicKey(body.get());
         if (raw == null) {
             return ResponseEntity.badRequest().build();
         }
@@ -193,12 +193,12 @@ public class ApiController {
         // a public_key that is a number, an object or an array reaches this handler as "no key" rather
         // than being turned into a 400 by the JSON layer before the handler runs, which keeps the three
         // implementations in step.
-        byte[] body = readBody(request);
-        if (body == null) {
+        Optional<byte[]> body = readBody(request);
+        if (body.isEmpty()) {
             return ResponseEntity.status(CONTENT_TOO_LARGE).build();
         }
 
-        Optional<byte[]> key = PublicKeys.parse(readPublicKey(body));
+        Optional<byte[]> key = PublicKeys.parse(readPublicKey(body.get()));
 
         if (key.isEmpty()) {
             // A malformed key is answered the same way an unknown one is. Distinguishing the two would
@@ -217,21 +217,21 @@ public class ApiController {
     }
 
     /**
-     * The request body as sent, whatever its Content-Type, or null when it is over {@link #MAX_BODY_BYTES}.
+     * The request body as sent, whatever its Content-Type, or nothing when it is over {@link #MAX_BODY_BYTES}.
      *
      * <p>Read from the servlet input stream rather than bound by the framework, so a body declared as a
      * form, as text or as nothing at all reaches the same reader as one declared as JSON, and the three
      * implementations read the same bytes. A declared length over the cap is refused before a byte is
      * read, and an undeclared one is read only one byte past the cap, enough to know it is over.
      */
-    static byte[] readBody(HttpServletRequest request) {
+    static Optional<byte[]> readBody(HttpServletRequest request) {
         if (request.getContentLengthLong() > MAX_BODY_BYTES) {
-            return null;
+            return Optional.empty();
         }
 
         try {
             byte[] body = request.getInputStream().readNBytes(MAX_BODY_BYTES + 1);
-            return body.length > MAX_BODY_BYTES ? null : body;
+            return body.length > MAX_BODY_BYTES ? Optional.empty() : Optional.of(body);
         } catch (IOException unreadable) {
             throw new UncheckedIOException(unreadable);
         }
@@ -260,18 +260,18 @@ public class ApiController {
                     .onUnmappableCharacter(CodingErrorAction.REPORT)
                     .decode(ByteBuffer.wrap(body))
                     .toString();
-        } catch (CharacterCodingException invalidUtf8) {
+        } catch (CharacterCodingException _) {
             return null;
         }
 
-        if (text.isBlank() || text.startsWith("﻿")) {
+        if (text.isBlank() || text.startsWith("\uFEFF")) {
             return null;
         }
 
         try {
             JsonNode value = JSON.readTree(text).get("public_key");
             return value != null && value.isTextual() ? value.asText() : null;
-        } catch (JsonProcessingException notJson) {
+        } catch (JsonProcessingException _) {
             return null;
         }
     }

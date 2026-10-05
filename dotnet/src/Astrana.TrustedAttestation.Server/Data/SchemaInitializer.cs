@@ -75,7 +75,7 @@ public sealed class SchemaInitializer(
             // winner finishes, so the loser waits for the schema to become complete and carries on.
             if (await BecomesCompleteAsync(cancellationToken))
             {
-                logger.LogInformation("Another instance created the schema first; nothing left to create.");
+                logger.LogInformation(exception, "Another instance created the schema first; nothing left to create.");
                 return;
             }
 

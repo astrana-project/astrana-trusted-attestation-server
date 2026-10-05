@@ -126,7 +126,7 @@ public class LanguageController {
                 return Map.of();
             }
             body = new String(bytes, StandardCharsets.UTF_8);
-        } catch (IOException unreadable) {
+        } catch (IOException _) {
             return Map.of();
         }
 
@@ -143,7 +143,7 @@ public class LanguageController {
                 fields.putIfAbsent(
                         URLDecoder.decode(name, StandardCharsets.UTF_8),
                         URLDecoder.decode(value, StandardCharsets.UTF_8));
-            } catch (IllegalArgumentException malformedEscape) {
+            } catch (IllegalArgumentException _) {
                 // Not a field this endpoint can read.
             }
         }
@@ -158,7 +158,7 @@ public class LanguageController {
 
         try {
             return MediaType.APPLICATION_FORM_URLENCODED.equalsTypeAndSubtype(MediaType.parseMediaType(contentType));
-        } catch (IllegalArgumentException unparseable) {
+        } catch (IllegalArgumentException _) {
             return false;
         }
     }

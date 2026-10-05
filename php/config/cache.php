@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Str;
 
+// The file store's directory under storage/, shared by its entries and its locks.
+$fileCachePath = 'framework/cache/data';
+
 return [
 
     /*
@@ -49,14 +52,14 @@ return [
 
         'file' => [
             'driver' => 'file',
-            'path' => storage_path('framework/cache/data'),
-            'lock_path' => storage_path('framework/cache/data'),
+            'path' => storage_path($fileCachePath),
+            'lock_path' => storage_path($fileCachePath),
         ],
 
         'storage' => [
             'driver' => 'storage',
             'disk' => env('CACHE_STORAGE_DISK'),
-            'path' => env('CACHE_STORAGE_PATH', 'framework/cache/data'),
+            'path' => env('CACHE_STORAGE_PATH', $fileCachePath),
         ],
 
         'memcached' => [

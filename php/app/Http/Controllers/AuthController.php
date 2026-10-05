@@ -155,7 +155,7 @@ final class AuthController extends Controller
     public function signout(Request $request): RedirectResponse
     {
         if (app(MemberIdentityResolver::class)->subject($request) === null) {
-            return redirect('/signed-out');
+            return redirect(self::SIGNED_OUT);
         }
 
         if (self::usesSaml()) {
@@ -178,17 +178,17 @@ final class AuthController extends Controller
         try {
             $endSession = $this->oidc()->endSessionUrl(
                 is_string($idToken) ? $idToken : null,
-                url('/signed-out')
+                url(self::SIGNED_OUT)
             );
         } catch (\Throwable $exception) {
             Log::warning('The IdP could not be told about a sign-out; ended the local session only.', [
                 'reason' => $exception->getMessage(),
             ]);
 
-            return redirect('/signed-out');
+            $endSession = null;
         }
 
-        return $endSession !== null ? redirect()->away($endSession) : redirect('/signed-out');
+        return $endSession !== null ? redirect()->away($endSession) : redirect(self::SIGNED_OUT);
     }
 
     private static function usesSaml(): bool

@@ -59,7 +59,7 @@ public class ApiEndpointsTests
 
     private static readonly TimeProvider Clock = new FixedTimeProvider(Now);
 
-    private static HttpContext SignedIn(string subject = "alice", string name = "Alice Anderson") =>
+    private static DefaultHttpContext SignedIn(string subject = "alice", string name = "Alice Anderson") =>
         new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(
@@ -67,12 +67,12 @@ public class ApiEndpointsTests
         };
 
     // No usable subject at all: the anonymous default principal a DefaultHttpContext carries.
-    private static HttpContext Anonymous() => new DefaultHttpContext();
+    private static DefaultHttpContext Anonymous() => new DefaultHttpContext();
 
     // Present but unusable: a multivalued "sub" is the shape a provider sending an array produces, and the
     // resolver treats it as absent rather than picking an arbitrary half. It must still be a 401, never a
     // 500 or a member keyed by half an identity.
-    private static HttpContext AmbiguousIdentity() =>
+    private static DefaultHttpContext AmbiguousIdentity() =>
         new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(
@@ -80,7 +80,7 @@ public class ApiEndpointsTests
         };
 
     private static int Status(IResult result) =>
-        Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode ?? 0;
+        Assert.IsType<IStatusCodeHttpResult>(result, exactMatch: false).StatusCode ?? 0;
 
     private static T Body<T>(IResult result) => Assert.IsType<Ok<T>>(result).Value!;
 

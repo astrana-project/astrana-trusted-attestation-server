@@ -84,7 +84,7 @@ class SessionContentsTest {
         OidcUser trimmed = SessionContents.oidcUser(fullOidcUser(), KEPT);
 
         assertThat(trimmed.getAuthorities())
-                .filteredOn(authority -> authority instanceof OidcUserAuthority)
+                .filteredOn(OidcUserAuthority.class::isInstance)
                 .singleElement()
                 .satisfies(authority -> assertThat(((OidcUserAuthority) authority).getAttributes())
                         .containsOnlyKeys("sub", "name", "locale"));

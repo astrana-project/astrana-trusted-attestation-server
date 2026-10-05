@@ -222,7 +222,7 @@ public class OidcRelyingPartyTests
     };
 
     [Theory]
-    [MemberData(nameof(NoUsableSubject))]
+    [MemberData(nameof(NoUsableSubject), DisableDiscoveryEnumeration = true)]
     public async Task A_token_with_no_usable_subject_is_refused_and_lands_where_a_failed_sign_in_lands(Claim[] claims)
     {
         // No session: the response is handled here, so the handler never signs the principal in, and the

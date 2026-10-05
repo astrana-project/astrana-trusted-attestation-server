@@ -17,7 +17,8 @@ namespace Astrana.TrustedAttestation.Server.Tests;
 
 /// <summary>
 /// What the route table says about the endpoints, read off the mapped endpoints themselves: the manifest
-/// answers HEAD as well as GET, and every API endpoint carries the request-size cap the server enforces.
+/// answers HEAD as well as GET, every API endpoint carries the request-size cap the server enforces, and the
+/// language switch answers with the redirect its handler returns.
 /// </summary>
 public class EndpointMappingTests
 {
@@ -83,5 +84,30 @@ public class EndpointMappingTests
         Assert.Equal(10, endpoints.Count); // five operations under /api/v1 and again under /api
         Assert.All(endpoints, endpoint =>
             Assert.Equal(PublicKeyBody.MaxBytes, endpoint.Metadata.GetMetadata<IRequestSizeLimitMetadata>()?.MaxRequestBodySize));
+    }
+
+    [Fact]
+    public async Task The_language_switch_answers_a_post_with_the_redirect_its_handler_returns()
+    {
+        // Run through the mapped endpoint, because a handler bound as a plain request delegate would drop the
+        // redirect it returns and answer 200 with no Location.
+        var routes = new RouteTable();
+        routes.MapLanguageSwitch(new LocalizationSettings(
+            configured: [], available: ["en", "fr"], defaultLocale: "en", endonyms: new Dictionary<string, string>()));
+
+        var endpoint = Assert.Single(routes.Endpoints);
+        Assert.Equal(LanguageSwitchEndpoint.Path, endpoint.RoutePattern.RawText);
+        Assert.Equal(["POST"], MethodsOf(endpoint));
+
+        var http = new DefaultHttpContext { RequestServices = routes.ServiceProvider };
+        http.Request.Method = HttpMethods.Post;
+        http.Request.ContentType = "application/x-www-form-urlencoded";
+        http.Request.Body = new MemoryStream("locale=fr&next=%2Fme"u8.ToArray());
+        http.Response.Body = new MemoryStream();
+
+        await endpoint.RequestDelegate!(http);
+
+        Assert.Equal(StatusCodes.Status302Found, http.Response.StatusCode);
+        Assert.Equal("/me", http.Response.Headers.Location);
     }
 }

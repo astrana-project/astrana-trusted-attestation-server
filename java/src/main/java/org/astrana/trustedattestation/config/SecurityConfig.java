@@ -125,6 +125,12 @@ public class SecurityConfig {
     private static final Pattern KNOWN_API_PATH =
             Pattern.compile("^/api(/v1)?/(me|me/relationships/[^/]+/(key|revoke)|attest)$");
 
+    /** Where the sign-out form posts, for both protocols. */
+    static final String SIGN_OUT_URL = "/signout";
+
+    /** Where every sign-out ends, whether or not the identity provider took part. */
+    static final String SIGNED_OUT_URL = "/signed-out";
+
     /**
      * Every path outside {@code /api} that this server answers: the pages, the manifest, the static files,
      * the language switcher, sign-out, and the sign-in and sign-out routes Spring Security owns, each at
@@ -146,18 +152,26 @@ public class SecurityConfig {
      * reaches by an error dispatch this filter does not run on (a {@link OncePerRequestFilter} skips
      * those), so a framework-raised error still gets its status-only answer. A direct request to it is a
      * request for a page that does not exist.
+     *
+     * <p>The fixed paths are a set, and only the routes that end in a registration are a pattern.
      */
-    private static final Pattern KNOWN_PAGE_PATH = Pattern.compile(
-            "^/(|signed-out|license|me|set-language|signout|logout/saml2/slo|\\.well-known/ata-manifest\\.json"
-                    + "|trusted-attestation\\.css|theme-overrides\\.css|favicon\\.svg|THIRD-PARTY-NOTICES\\.txt"
-                    + "|oauth2/authorization/[^/]+|login/oauth2/code/[^/]+|login/saml2/sso/[^/]+"
-                    + "|saml2/authenticate/[^/]+|saml2/service-provider-metadata/[^/]+)$");
+    private static final Set<String> KNOWN_PAGE_PATHS = Set.of(
+            "/",
+            SIGNED_OUT_URL,
+            "/license",
+            "/me",
+            "/set-language",
+            SIGN_OUT_URL,
+            SamlRequestParameterScope.SINGLE_LOGOUT_PATH,
+            "/.well-known/ata-manifest.json",
+            "/trusted-attestation.css",
+            "/theme-overrides.css",
+            "/favicon.svg",
+            "/THIRD-PARTY-NOTICES.txt");
 
-    /** Where the sign-out form posts, for both protocols. */
-    static final String SIGN_OUT_URL = "/signout";
-
-    /** Where every sign-out ends, whether or not the identity provider took part. */
-    static final String SIGNED_OUT_URL = "/signed-out";
+    /** The sign-in and metadata routes Spring Security owns, each ending in one registration. */
+    private static final Pattern KNOWN_REGISTRATION_PATH = Pattern.compile("^/(oauth2/authorization|login/oauth2/code"
+            + "|login/saml2/sso|saml2/authenticate|saml2/service-provider-metadata)/[^/]+$");
 
     /**
      * The one Cache-Control value all three implementations send: nothing this server answers is to be
@@ -237,7 +251,7 @@ public class SecurityConfig {
                         // The software's own licence page, at the fixed path the footer links to. Public
                         // like the landing page and for the same reason: a licence is a public statement,
                         // readable before anyone has an account.
-                        .requestMatchers("/", "/signed-out", "/error", "/license")
+                        .requestMatchers("/", SIGNED_OUT_URL, "/error", "/license")
                         .permitAll()
 
                         // The language switcher posts here from the landing page as well as the self-service
@@ -426,7 +440,8 @@ public class SecurityConfig {
         boolean api = path.equals("/api") || path.startsWith("/api/");
         return api
                 ? KNOWN_API_PATH.matcher(path).matches()
-                : KNOWN_PAGE_PATH.matcher(path).matches();
+                : KNOWN_PAGE_PATHS.contains(path)
+                        || KNOWN_REGISTRATION_PATH.matcher(path).matches();
     }
 
     /**
@@ -580,7 +595,7 @@ public class SecurityConfig {
      * exactly one registered provider, which is the normal case. An Astrana Trusted Attestation Server
      * belongs to one organisation, so there is one identity system to sign in against and no meaningful
      * choice to offer. A deployment with several registrations is not supported. Its entry point is
-     * Spring's provider-selection page at /login, which this server answers 404 (see KNOWN_PAGE_PATH).
+     * Spring's provider-selection page at /login, which this server answers 404 (see KNOWN_PAGE_PATHS).
      */
     private static AuthenticationEntryPoint loginEntryPoint(
             Protocol protocol,
@@ -594,9 +609,7 @@ public class SecurityConfig {
                     RelyingPartyRegistration.class,
                     registration -> ((RelyingPartyRegistration) registration).getRegistrationId());
 
-            return ids.size() == 1
-                    ? new LoginUrlAuthenticationEntryPoint("/saml2/authenticate/" + ids.getFirst())
-                    : new LoginUrlAuthenticationEntryPoint("/login");
+            return entryPoint(ids, "/saml2/authenticate/");
         }
 
         ClientRegistrationRepository repository = oidcRegistrations.getIfAvailable();
@@ -605,9 +618,12 @@ public class SecurityConfig {
                 ClientRegistration.class,
                 registration -> ((ClientRegistration) registration).getRegistrationId());
 
-        return ids.size() == 1
-                ? new LoginUrlAuthenticationEntryPoint("/oauth2/authorization/" + ids.getFirst())
-                : new LoginUrlAuthenticationEntryPoint("/login");
+        return entryPoint(ids, "/oauth2/authorization/");
+    }
+
+    /** The one registration's own sign-in start, or Spring's /login when there is not exactly one. */
+    private static AuthenticationEntryPoint entryPoint(List<String> ids, String signInStart) {
+        return new LoginUrlAuthenticationEntryPoint(ids.size() == 1 ? signInStart + ids.getFirst() : "/login");
     }
 
     /**
