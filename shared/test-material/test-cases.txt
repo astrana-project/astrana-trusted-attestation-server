@@ -1,0 +1,406 @@
+# Astrana Trusted Attestation Gherkin Test Cases
+#
+# Behavioural scenarios covering gaps the persona set cannot represent on its own:
+# concurrency, database-role permission enforcement, malformed input, start-up
+# fail-fast, manifest field allowlisting, branding fallback, and Docker demonstration setup.
+#
+# References below name records in `docs/adr` (decision record 31, and so on) unless the
+# reference names another document explicitly.
+#
+# Where a scenario says the application fails to start, PHP, which has no start-up,
+# refuses every request instead (decision record 31).
+#
+# Persona names referenced here are defined in `personas.md` / `personas.json`.
+
+Feature: Relationship key lifecycle, unkeyed status
+  As a member who has been granted a relationship but has not set a key,
+  I need the self-service page and application programming interface (API)
+  to represent that state correctly.
+
+  Background:
+    Given an organisation has called grant_member_relationship for "Amelia Ashby"
+      And the relationship_type is "employee"
+      And no key has been set for that relationship
+
+  Scenario: A granted-but-unkeyed relationship shows correctly on the self-service page
+    When Amelia signs in to the self-service page
+    Then she sees the "employee" relationship listed
+      And its status is "unkeyed"
+      And there is a control to set a key for it
+
+  Scenario: GET /me reflects unkeyed status
+    When Amelia calls GET /me
+    Then the response includes a relationship with relationship_type "employee"
+      And that relationship's status is "unkeyed"
+      And that relationship's public_key is null
+
+  Scenario: An unkeyed relationship cannot be queried via /attest
+    Given no public key exists for Amelia's "employee" relationship
+    When any caller attempts POST /attest with a guessed or empty key
+    Then the response is exactly { "valid": false }
+      And no information about the unkeyed relationship is revealed
+
+  Scenario: Setting a key transitions the relationship out of unkeyed
+    When Amelia submits a newly generated public key via PUT /me/relationships/employee/key
+    Then the response status is 200
+      And the relationship's status is "active"
+      And the relationship no longer appears as "unkeyed"
+
+
+Feature: Public key uniqueness enforcement (409 Conflict)
+  As the system, I must prevent the same public key from being registered
+  against more than one relationship, because keys are shown to verifying
+  Astrana instances and are not secret.
+
+  Scenario: Registering a key already used by another relationship is rejected
+    Given "Amelia Ashby" has an active "employee" relationship with public key K1
+      And "Blake Barton" holds a separate "volunteer" relationship with no key set
+    When Blake attempts PUT /me/relationships/volunteer/key with public key K1
+    Then the response status is 409
+      And the response body is empty
+      And Blake's "volunteer" relationship remains unkeyed
+
+  Scenario: Registering a key already used by the same member's other relationship is rejected
+    Given "Naledi Nkosi" holds both an "employee" relationship keyed with K1
+      And a "client" relationship with no key set
+    When Naledi attempts PUT /me/relationships/client/key with public key K1
+    Then the response status is 409
+      And her "client" relationship remains unkeyed
+
+  Scenario: Re-submitting the same key a relationship already has is not a conflict
+    Given "Amelia Ashby" has an active "employee" relationship with public key K1
+    When Amelia submits PUT /me/relationships/employee/key with public key K1 again
+    Then the response status is 200
+      And no 409 is returned
+      And the relationship's status is unchanged
+
+
+Feature: Self-revoke, distinct from organisation-initiated revoke
+  As a member, I can revoke a relationship I hold without needing the organisation's
+  permission, but I cannot undo the revocation or extend the relationship myself.
+
+  Scenario: A member can self-revoke an active relationship
+    Given "Naledi Nkosi" holds an active "employee" relationship
+    When Naledi calls POST /me/relationships/employee/revoke
+    Then the response status is 204
+      And the relationship's status becomes "revoked"
+      And an audit_log entry is written with event_type "relationship_self_revoked"
+      And the audit_log entry's actor is null
+
+  Scenario: Self-revoke is idempotent
+    Given "Naledi Nkosi" already self-revoked her "employee" relationship
+    When Naledi calls POST /me/relationships/employee/revoke again
+    Then the response status is 204
+      And no second audit_log entry is written for this action
+
+  Scenario: Setting a key does not lift a member's own revocation
+    Given "Naledi Nkosi" self-revoked her "employee" relationship
+    When Naledi submits a new key via PUT /me/relationships/employee/key
+    Then the response status is 200
+      And the returned status is still "revoked"
+      And revoked_at is unchanged
+
+  Scenario: Only the organisation can restore a self-revoked relationship
+    Given "Naledi Nkosi" self-revoked her "employee" relationship
+    When the organisation calls extend_member_relationship for Naledi's "employee" relationship
+    Then the relationship's status becomes "active"
+      And an audit_log entry is written with event_type "relationship_extended_by_org"
+
+  Scenario: Self-revoke and organisation-revoke produce distinguishable audit trails
+    Given "Frank Fischer" had his "tenant" relationship revoked by the organisation
+      And "Naledi Nkosi" self-revoked her "employee" relationship
+    When the audit_log is inspected for both events
+    Then Frank's entry has event_type "relationship_revoked_by_org" with a non-null actor
+      And Naledi's entry has event_type "relationship_self_revoked" with a null actor
+
+
+Feature: PUT is not an upsert
+  As the system, I must never let a member create a relationship that
+  was not granted by the organisation, because only the organisation vouches for a relationship.
+
+  Scenario: PUT against an ungranted relationship_type fails
+    Given "Blake Barton" has never been granted a "director" relationship
+    When Blake attempts PUT /me/relationships/director/key with a freshly generated key
+    Then the response status is 404
+      And no "director" row is created for Blake
+      And no key is registered
+
+  Scenario: A member cannot self-grant by guessing a relationship_type that exists in the enum
+    Given "director" is a valid value in the governed relationship_type enum
+      And Blake has never been granted it
+    When Blake attempts PUT /me/relationships/director/key
+    Then the response status is 404
+
+
+Feature: DELETE works on unkeyed relationships
+  As a member, I can decline a relationship I was granted but never keyed,
+  the same way I can remove a keyed one.
+
+  Scenario: DELETE succeeds on a granted-but-unkeyed relationship
+    Given "Amelia Ashby" was granted an "employee" relationship
+      And she never set a key for it
+    When Amelia calls DELETE /me/relationships/employee/key
+    Then the response status is 204
+      And the relationship row no longer exists
+
+  Scenario: DELETE still answers 404 for a relationship_type never granted at all
+    Given "Blake Barton" was never granted a "director" relationship
+    When Blake calls DELETE /me/relationships/director/key
+    Then the response status is 404
+
+
+Feature: Concurrent grant race condition
+  As the system, I must not allow two concurrent grants to create duplicate
+  rows for the same (member, relationship_type) pair.
+
+  Scenario: Simultaneous grant_member_relationship calls for the same pairing
+    Given no "employee" relationship exists for "Chidi Chukwu"
+    When two concurrent calls to grant_member_relationship are made
+      | iam_subject_id | relationship_type |
+      | chidi.chukwu   | employee           |
+      | chidi.chukwu   | employee           |
+    Then exactly one call succeeds
+      And the other fails on the (iam_subject_id, relationship_type) unique constraint
+      And exactly one "employee" row exists for Chidi afterward
+
+
+Feature: Database role-level access control
+  As the system, organisation-only fields must be structurally unwritable by the
+  application's own database role, not merely unwritten by convention.
+
+  Scenario: The application role cannot directly update revoked_at
+    Given the application's database role has only UPDATE (public_key) on member_relationships
+    When the application role attempts a raw UPDATE setting revoked_at directly
+    Then the database rejects the statement with a permissions error
+
+  Scenario: The application role cannot directly update relationship_type or relationship_subtype
+    When the application role attempts a raw UPDATE setting relationship_type
+    Then the database rejects the statement with a permissions error
+
+  Scenario: The application role can only reach revoked_at via the self-revoke procedure
+    When the application role calls member_self_revoke_relationship
+    Then the call succeeds
+
+  Scenario: The organisation role has no direct table access, only EXECUTE on procedures
+    Given the organisation role is granted EXECUTE on grant_member_relationship, revoke_member_relationship, and extend_member_relationship
+    When the organisation role attempts a raw UPDATE or INSERT directly against member_relationships
+    Then the database rejects the statement with a permissions error
+
+
+Feature: Audit log append-only enforcement
+  As the system, the audit trail must be structurally tamper-resistant,
+  not merely conventionally unedited.
+
+  Scenario: No role can UPDATE an existing audit_log row
+    When any application or organisation role attempts to UPDATE a row in audit_log
+    Then the database rejects the statement with a permissions error
+
+  Scenario: No role can DELETE an audit_log row outside of pruning
+    When any application or organisation role attempts to DELETE a row in audit_log directly
+    Then the database rejects the statement with a permissions error
+
+  Scenario: Only prune_audit_log can remove audit_log rows, and only by age
+    Given audit_log contains rows older and newer than the retention window
+    When prune_audit_log is called with the configured retention period
+    Then only rows older than the retention window are removed
+      And rows within the retention window remain untouched
+
+
+Feature: Audit log pruning correctness across scheduling mechanisms
+  As an organisation, I need pruning to run and to work, whichever
+  implementation and hosting tier I am on.
+
+  Scenario Outline: Pruning removes only expired rows, per stack
+    Given the "<stack>" implementation is running
+      And its scheduling mechanism is "<mechanism>"
+      And audit_log has rows older than the configured retention period
+    When the scheduled prune runs
+    Then rows older than the retention period are deleted
+      And rows within the retention period are retained
+
+    Examples:
+      | stack           | mechanism                                   |
+      | .NET             | BackgroundService                            |
+      | Java             | @Scheduled                                    |
+      | PHP/Laravel      | request-triggered opportunistic check         |
+
+  Scenario: PHP's request-triggered pruning eventually runs even under low traffic
+    Given a PHP/Laravel deployment with very infrequent incoming traffic
+      And audit_log has rows past the retention window
+    When enough requests eventually arrive to trigger the opportunistic check
+    Then pruning runs and removes the expired rows
+      And no separate process was required
+
+
+Feature: Malformed input handling
+  As the system, malformed requests must be answered predictably and without
+  leaking information, consistent with the flat-response philosophy.
+
+  Scenario: /attest answers a key of the wrong length as not on record
+    When POST /attest is called with a key that is not 32 raw bytes
+    Then the response status is 200
+      And the response body is exactly { "valid": false }
+
+  Scenario: /attest answers invalid base64 as not on record
+    When POST /attest is called with a public_key field that is not valid base64
+    Then the response status is 200
+      And the response body is exactly { "valid": false }
+
+  Scenario: PUT rejects a malformed key
+    Given "Amelia Ashby" holds a granted "employee" relationship
+    When Amelia calls PUT /me/relationships/employee/key with an invalid key format
+    Then the response status is 400
+      And no key is registered
+
+  Scenario: PUT rejects a syntactically valid but wrong-length key
+    When Amelia submits a 16-byte value instead of a 32-byte Ed25519 public key
+    Then the response status is 400
+
+
+Feature: TLS is mandatory at start-up
+  As the system, Astrana Trusted Attestation must never run without TLS, because
+  credentials, identity and access management (IAM) tokens, and keys all pass through it.
+
+  Scenario: The application refuses to start without TLS configured
+    Given no TLS certificate is configured and no TLS-terminating proxy is declared
+    When the application is started
+    Then it fails to start
+      And no plain HTTP traffic is served
+
+  Scenario: The application starts normally with valid TLS configured
+    Given a valid TLS certificate is configured, or a TLS-terminating proxy is declared
+    When the application is started
+    Then it starts successfully
+      And every request reaches it over HTTPS, directly or through the declared proxy
+
+
+Feature: IAM and single sign-on (SSO) misconfiguration fails at start-up, where detectable
+  As the system, I must catch what can be caught before first use, the
+  same fail-fast principle as TLS, applied to IAM and SSO configuration.
+  Only what can be checked without a live sign-in is caught at start-up.
+
+  Scenario: An unreachable discovery URL fails start-up
+    Given the configured OIDC discovery URL cannot be reached
+    When the application is started
+    Then it fails to start
+      And a clear error identifies the discovery URL as the cause
+
+  Scenario: A malformed configuration value fails start-up
+    Given the configured issuer, client ID, or redirect URI is syntactically invalid
+    When the application is started
+    Then it fails to start
+      And a clear error identifies which value is malformed
+
+  Scenario: The application starts normally with valid, reachable IAM configuration
+    Given a reachable discovery URL and syntactically valid configuration values
+    When the application is started
+    Then it starts successfully
+
+  # The start-up check of the identity provider covers discovery only (decision record 31).
+  Scenario: A syntactically valid but wrong client secret is not caught at start-up
+    Given the configured client secret is syntactically valid but incorrect
+    When the application is started
+    Then it starts successfully
+      And the misconfiguration surfaces only at the first sign-in attempt
+
+
+Feature: The manifest endpoint never leaks private configuration
+  As the system, the public, unauthenticated manifest endpoint must only
+  ever return the explicit allowlist of public fields, never a blanket
+  serialisation of configuration. This protects the IAM client secret and
+  database details specifically.
+
+  Scenario: The manifest response contains only the public field allowlist
+    Given a server with both public and private configuration set
+    When an anonymous caller requests /.well-known/ata-manifest.json
+    Then the response contains only name, description, logo_data, logo_data_dark,
+      website, privacy_notice_url, support_url, jurisdictions, relationship_types,
+      default_locale, enrollment_url, attestation_url, and manifest_version
+      And no other field is present
+
+  Scenario: The manifest response never contains the IAM client secret
+    Given a server with a configured IAM client secret
+    When an anonymous caller requests /.well-known/ata-manifest.json
+    Then the client secret does not appear anywhere in the response
+
+  Scenario: The manifest response never contains database connection details
+    Given a server with configured database connection details
+    When an anonymous caller requests /.well-known/ata-manifest.json
+    Then no database host, credential, or connection string appears anywhere in the response
+
+  Scenario: The manifest response never contains the post-logout redirect URL or the audit and prune settings
+    Given a server with a configured post-logout redirect URL, audit
+      log retention period, and prune schedule time
+    When an anonymous caller requests /.well-known/ata-manifest.json
+    Then none of these private settings appear anywhere in the response
+
+
+Feature: Generic default branding falls back correctly, and organisation branding always takes precedence once configured
+  As the system, the landing page and the self-service page must never look
+  broken or blank before an organisation has configured its own branding, and
+  the organisation's own branding must always win once it exists.
+
+  Scenario: Generic Astrana Trusted Attestation branding shows before logo_data is configured
+    Given a freshly deployed server with logo_data unset
+    When the landing page is requested
+    Then the shipped generic Astrana Trusted Attestation logo is displayed
+      And no broken image or blank branding area appears
+
+  Scenario: Favicon is the shipped generic Astrana Trusted Attestation icon until the organisation replaces it
+    Given a freshly deployed server with its favicon.svg unchanged
+    When the landing page or the self-service page is requested
+    Then the shipped generic Astrana Trusted Attestation favicon is served
+
+  Scenario: Organisation branding takes precedence once logo_data is configured
+    Given a server with logo_data configured to the organisation's own logo
+    When the landing page is requested
+    Then the organisation's own logo is displayed, not the generic Astrana Trusted Attestation logo
+
+  Scenario: Favicon is the organisation's own once it replaces favicon.svg
+    Given a server whose favicon.svg the organisation has replaced with its own icon
+    When the landing page or the self-service page is requested
+    Then the organisation's icon is served as the favicon, whatever logo_data holds
+
+  Scenario: Colour and font overrides apply without a rebuild on .NET and PHP
+    Given a .NET or PHP server with its deployed CSS override file edited to set
+      a custom button colour and font
+    When the landing page or the self-service page is requested, with no application rebuild performed
+    Then the custom colour and font are reflected in the rendered page
+      And on Java, which packages the override file into its jar, the same edit
+      takes effect after a rebuild, or when a proxy serves the edited copy
+
+
+Feature: The Docker demonstration compose file provides a zero-configuration evaluation path
+  As someone evaluating the project, docker-compose up must produce a fully
+  working demonstration with no manual configuration, and the published image
+  must stay application-only, never silently bundling a database.
+
+  Scenario Outline: docker-compose up produces a working demonstration with no manual configuration
+    Given the "<stack>" implementation's demonstration docker-compose.yml
+    When "docker-compose up" is run with no prior configuration
+    Then the application, "<database>", a TLS proxy and a demonstration Keycloak instance all start successfully
+      And the application connects to "<database>" without manual intervention
+      And the application successfully authenticates against the demonstration Keycloak instance
+
+    Examples:
+      | stack  | database        |
+      | .NET   | MS SQL Server    |
+      | Java   | PostgreSQL       |
+      | PHP    | MySQL            |
+
+  Scenario Outline: the published Docker Hub image never bundles a database
+    Given the published "<stack>" image on Docker Hub
+    When the image's contents are inspected
+    Then no database server is present inside the image
+      And the application requires database connection details via environment variables to start
+
+    Examples:
+      | stack |
+      | .NET   |
+      | Java   |
+      | PHP    |
+
+  Scenario: the demonstration Keycloak instance is never mistaken for a production-ready configuration
+    Given the demonstration docker-compose.yml's Keycloak service running in start-dev mode
+    Then the service configuration is documented as disposable and insecure
+      And no guidance anywhere suggests reusing its configuration for a real deployment

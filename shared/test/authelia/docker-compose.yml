@@ -1,0 +1,24 @@
+# Authelia as a dev IdP for the conformance matrix (OIDC).
+#
+# Authelia refuses a session-cookie domain that is a bare host, an IP, or `localhost` (it must contain a
+# period), and it requires the portal URL to be HTTPS. So it is served over TLS on the loopback wildcard
+# domain authelia.127.0.0.1.nip.io (nip.io resolves *.127.0.0.1.nip.io to 127.0.0.1, from the host browser
+# and from inside the app containers alike), with the session cookie scoped to 127.0.0.1.nip.io.
+#
+# Authelia's OIDC `sub` is an opaque generated id that cannot be set to the fixture UUID. Instead
+# each member carries the UUID in an `extra.ata_subject` attribute, the OIDC claims policy emits it as the
+# `ata_subject` claim, and the apps take their subject from that claim -- the same shape the WSO2 externalId
+# setup uses.
+name: authelia
+services:
+  authelia:
+    image: authelia/authelia:4.39.20
+    ports:
+      - "9091:9091"
+    volumes:
+      - ./:/config
+    environment:
+      # Fills in the secret references in configuration.yml from the files in generated/, which
+      # shared/test/generate-idp-material.sh creates. Run it before starting this stack directly.
+      X_AUTHELIA_CONFIG_FILTERS: template
+    restart: unless-stopped

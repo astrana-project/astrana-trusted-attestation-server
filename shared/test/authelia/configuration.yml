@@ -1,0 +1,132 @@
+---
+# Every secret and key below is read from shared/test/authelia/generated/, mounted at /config/generated, which
+# shared/test/generate-idp-material.sh creates on each machine and Git ignores. Authelia's template filter
+# (X_AUTHELIA_CONFIG_FILTERS=template in docker-compose.yml) replaces each secret reference with that file's content
+# before the configuration is read, so this file holds no secret itself.
+theme: "light"
+
+log:
+  level: "info"
+
+server:
+  address: "tcp://:9091"
+  tls:
+    certificate: "/config/generated/tls.crt"
+    key: "/config/generated/tls.key"
+
+# Authelia refuses to start when the clock is more than three seconds from its NTP server's. The Docker Desktop
+# virtual machine's clock can drift further than that after the host sleeps, so the check is logged, not fatal.
+ntp:
+  disable_failure: true
+
+# One-factor (password) is enough; this is a conformance IdP, not a 2FA demo.
+access_control:
+  default_policy: "one_factor"
+
+authentication_backend:
+  file:
+    path: "/config/users_database.yml"
+    password:
+      algorithm: "argon2"
+    # Register the custom attribute each member carries (their fixture UUID) so the OIDC claims policy can
+    # emit it. Without this Authelia does not treat ata_subject as a known attribute.
+    extra_attributes:
+      ata_subject:
+        multi_valued: false
+        value_type: "string"
+
+identity_validation:
+  reset_password:
+    jwt_secret: '{{ secret "/config/generated/reset-password-jwt-secret" }}'
+
+session:
+  secret: '{{ secret "/config/generated/session-secret" }}'
+  cookies:
+    - domain: "127.0.0.1.nip.io"
+      authelia_url: "https://authelia.127.0.0.1.nip.io:9091"
+
+# The database is encrypted with the storage key, so it lives beside the key and is created on the first start.
+storage:
+  encryption_key: '{{ secret "/config/generated/storage-encryption-key" }}'
+  local:
+    path: "/config/generated/db.sqlite3"
+
+notifier:
+  filesystem:
+    filename: "/config/generated/notification.txt"
+
+identity_providers:
+  oidc:
+    hmac_secret: '{{ secret "/config/generated/oidc-hmac-secret" }}'
+    # A custom scope carrying the subject claim. A custom claim is only emitted when a granted scope maps to
+    # it (the id_token list below only controls placement), so the client requests this scope.
+    scopes:
+      ata:
+        claims:
+          - "ata_subject"
+    jwks:
+      - key_id: "ata"
+        algorithm: "RS256"
+        use: "sig"
+        key: |
+          {{ secret "/config/generated/oidc-issuer.key" | indent 10 | trim }}
+    claims_policies:
+      # Emit the member's stable subject (their fixture UUID, stored as an extra attribute) into the id
+      # token. Authelia's own `sub` is an opaque generated id that cannot be set; the apps read this claim
+      # as the subject instead (subject-claim = ata_subject), the same shape the WSO2 externalId setup uses.
+      ata_policy:
+        id_token:
+          - "ata_subject"
+        custom_claims:
+          ata_subject:
+            attribute: "ata_subject"
+    # One client per implementation. Authelia enforces a single token-endpoint auth method per client, but
+    # the three apps don't agree: .NET (Microsoft OIDC) sends the secret in the body (client_secret_post) and
+    # offers no built-in way to switch, while Java (Spring) and PHP (hardcoded HTTP Basic) use
+    # client_secret_basic. Most IdPs accept either, so a shared client works elsewhere; Authelia is strict,
+    # so each app gets its own client with its native method. Same secret and everything else across all
+    # three -- only the id, redirect URI, and auth method differ.
+    clients:
+      - client_id: "ata-authelia-dotnet"
+        client_name: "ATA (.NET)"
+        # pbkdf2-sha512 hash of 'ata-authelia-secret-change-in-real-deployments' (the secret the matrix uses).
+        client_secret: &ata_secret "$pbkdf2-sha512$310000$j3..i/j97y8lpZjeXDsUaw$LCkPV/2OPvcPzY2e7qHGejLgMrbPjRBS5zQgn0dVNbWtnuo5Bb/9BOGKVFtbGyD6trP3vClN/.LkmAF86MS.Tg"
+        redirect_uris:
+          - "https://localhost:15443/signin-oidc"
+        token_endpoint_auth_method: "client_secret_post"
+        public: false
+        authorization_policy: "one_factor"
+        consent_mode: "implicit"
+        require_pkce: false
+        scopes: &ata_scopes ["openid", "profile", "email", "offline_access", "ata"]
+        grant_types: &ata_grant_types ["authorization_code", "refresh_token"]
+        response_types: &ata_response_types ["code"]
+        claims_policy: "ata_policy"
+      - client_id: "ata-authelia-java"
+        client_name: "ATA (Java)"
+        client_secret: *ata_secret
+        redirect_uris:
+          - "https://localhost:16443/login/oauth2/code/keycloak"
+        token_endpoint_auth_method: "client_secret_basic"
+        public: false
+        authorization_policy: "one_factor"
+        consent_mode: "implicit"
+        require_pkce: false
+        scopes: *ata_scopes
+        grant_types: *ata_grant_types
+        response_types: *ata_response_types
+        claims_policy: "ata_policy"
+      - client_id: "ata-authelia-php"
+        client_name: "ATA (PHP)"
+        client_secret: *ata_secret
+        redirect_uris:
+          - "https://localhost:17443/auth/callback"
+        token_endpoint_auth_method: "client_secret_basic"
+        public: false
+        authorization_policy: "one_factor"
+        consent_mode: "implicit"
+        require_pkce: false
+        scopes: *ata_scopes
+        grant_types: *ata_grant_types
+        response_types: *ata_response_types
+        claims_policy: "ata_policy"

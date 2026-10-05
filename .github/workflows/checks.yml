@@ -1,0 +1,23 @@
+name: Checks
+
+on:
+  pull_request:
+
+jobs:
+  dco:
+    name: Sign-off
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 .github/scripts/dco_check.py "origin/${{ github.base_ref }}"
+
+  changelog:
+    name: Changelog accuracy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 .github/scripts/changelog_check.py "origin/${{ github.base_ref }}"

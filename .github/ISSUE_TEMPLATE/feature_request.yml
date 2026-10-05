@@ -1,0 +1,45 @@
+name: Feature request
+description: Suggest an improvement or a new feature
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What are you trying to do, and what makes it hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: dropdown
+    id: contract-impact
+    attributes:
+      label: Does this change the contract or observable behaviour?
+      description: >
+        A change to the contract or to observable behaviour goes into the contract and all three implementations
+        together, and is versioned under Semantic Versioning. An internal change goes into the affected implementation
+        only, as a patch release of it.
+      options:
+        - "No, internal or per-implementation only"
+        - "Yes, affects the contract or observable behaviour"
+        - Not sure
+    validations:
+      required: true
+  - type: checkboxes
+    id: implementations
+    attributes:
+      label: Which implementations would this affect?
+      options:
+        - label: .NET
+        - label: Java
+        - label: PHP
+        - label: Shared (contract, schema or interface)
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

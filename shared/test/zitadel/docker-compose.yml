@@ -1,0 +1,64 @@
+# Another identity provider for exercising the implementations against something other than Keycloak and
+# Authentik.
+# Self-hosted (Go, open source), so no paid tenant, and enough unlike the others -- its own login UI, its
+# own claim handling, snowflake user ids -- to shake out any assumption an implementation makes about one
+# provider. Published on 9003 to avoid Authentik's 9002 and WSO2 Identity Server's 9443.
+#
+#   docker compose up -d          # then: python configure.py
+#
+# On first start Zitadel provisions a machine service account and writes its personal access token to
+# ./machinekey/pat.txt (git-ignored); configure.py reads that to drive the management API. See configure.py.
+name: trusted-attestation-zitadel
+
+services:
+  zitadel-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: zitadel
+    volumes: [zitadel-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d zitadel"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  zitadel:
+    image: ghcr.io/zitadel/zitadel:v2.66.1
+    command: 'start-from-init --masterkey "MasterkeyNeedsToHave32Characters" --tlsMode disabled'
+    environment:
+      # The externally-reachable identity. Everything Zitadel puts in a token or a discovery document --
+      # the issuer, the endpoints -- is built from these, so they must match how a browser reaches it.
+      ZITADEL_EXTERNALSECURE: "false"
+      ZITADEL_EXTERNALDOMAIN: localhost
+      ZITADEL_EXTERNALPORT: "9003"
+      ZITADEL_TLS_ENABLED: "false"
+
+      ZITADEL_DATABASE_POSTGRES_HOST: zitadel-postgres
+      ZITADEL_DATABASE_POSTGRES_PORT: "5432"
+      ZITADEL_DATABASE_POSTGRES_DATABASE: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: zitadel
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: postgres
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: postgres
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
+
+      # The initial human admin, for the console at http://localhost:9003/ui/console if you want to look.
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: zitadel-admin
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: "Password1!"
+      # A machine service account whose personal access token is written to the file below, so the API can
+      # be driven without an interactive login. Long-lived: this is a throwaway dev instance.
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_USERNAME: admin-sa
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_MACHINE_NAME: admin-sa
+      ZITADEL_FIRSTINSTANCE_ORG_MACHINE_PAT_EXPIRATIONDATE: "2099-01-01T00:00:00Z"
+      ZITADEL_FIRSTINSTANCE_PATPATH: /machinekey/pat.txt
+    ports: ["9003:8080"]
+    volumes:
+      - ./machinekey:/machinekey
+    depends_on:
+      zitadel-postgres: { condition: service_healthy }
+
+volumes:
+  zitadel-db:

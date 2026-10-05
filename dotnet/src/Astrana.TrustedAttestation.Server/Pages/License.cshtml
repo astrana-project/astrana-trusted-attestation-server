@@ -1,0 +1,63 @@
+@page "/license"
+@model LicenseModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+@* The licence page is the software's own, so its content is English and its direction fixed: it renders the
+   attribution's project name, licence and trademark notices, which are not locale-keyed. No organisation
+   branding and no language switcher. This is a statement about the software, not about the organisation
+   running it. *@
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@Model.Attribution.ProjectName</title>
+    <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
+    <link rel="stylesheet" href="~/trusted-attestation.css" />
+    @* The organisation's own colours and fonts, editable without a rebuild. Loaded after the main
+       stylesheet so its custom properties win. *@
+    <link rel="stylesheet" href="~/theme-overrides.css" />
+</head>
+<body class="py-4 px-3">
+<main class="card ata-page mx-auto p-4">
+    <h1 class="fs-5 mb-3">@Model.Attribution.ProjectName</h1>
+    @* Everything below comes from the contract's attribution.json, so all three implementations say the
+       same thing and changing it is one edit. *@
+    <p>@Model.Attribution.LicenseNotice</p>
+    @foreach (var paragraph in Model.Attribution.LicenseText)
+    {
+        <p>@paragraph</p>
+    }
+    <p>@Model.Attribution.TrademarkNotice</p>
+    @* Not from attribution.json: the notices are written by each implementation's build from its own packages. *@
+    <p>
+        This software includes third-party components under their own licences, listed with their copyright notices
+        and licence texts in <a href="~/THIRD-PARTY-NOTICES.txt">THIRD-PARTY-NOTICES.txt</a>.
+    </p>
+    <p class="mb-0">
+        Source code and documentation:
+        <a href="@Model.Attribution.SourceUrl" rel="noopener" target="_blank">@Model.Attribution.SourceUrl.Replace("https://", "")</a>.
+        Project:
+        <a href="@Model.Attribution.ProjectUrl" rel="noopener" target="_blank">@Model.Attribution.ProjectUrl.Replace("https://", "")</a>.
+    </p>
+</main>
+
+@* The software's own attribution, which the server has no setting to remove. *@
+<footer class="ata-page ata-attribution mx-auto mt-4 text-body-secondary">
+    <a href="@Model.Attribution.ProjectUrl" rel="noopener" target="_blank">@Model.Attribution.ProjectName</a>
+    @if (!string.IsNullOrWhiteSpace(Model.Attribution.LicenseNotice))
+    {
+        <text> &middot; </text>
+        @if (Model.Attribution.LicenseUrl is not null)
+        {
+            <a href="@Model.Attribution.LicenseUrl" rel="noopener" target="_blank">@Model.Attribution.LicenseLabel</a>
+        }
+        else
+        {
+            <span>@Model.Attribution.LicenseLabel</span>
+        }
+    }
+</footer>
+</body>
+</html>

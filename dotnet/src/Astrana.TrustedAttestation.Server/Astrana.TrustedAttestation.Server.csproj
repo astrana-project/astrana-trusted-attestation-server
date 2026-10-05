@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Astrana.TrustedAttestation.Server</RootNamespace>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- The pages must render in the member's own language (decision record 34 in docs/adr), so the
+         invariant-globalization trim is not available to us. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Local development reads its credentials from user secrets, which live outside the repository
+         and are read only when the environment is Development. -->
+    <UserSecretsId>astrana-trusted-attestation-server</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />
+    <PackageReference Include="MySql.EntityFrameworkCore" Version="10.0.9" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.11.0" />
+    <!-- Brought in by the SQL Server driver for the Windows sign-in broker, which the server never uses, because it
+         signs in to SQL Server with a username and password. The package, its managed assembly and its native runtime
+         libmsalruntime alike, is under Microsoft licence terms that do not allow it to be distributed, so none of its
+         files are copied into the output. The version is the one Microsoft.Data.SqlClient brings in. Move it with that
+         driver. -->
+    <PackageReference Include="Microsoft.Identity.Client.NativeInterop" Version="0.20.6" ExcludeAssets="native;runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The governed enum, canonical DDL, and UI strings are embedded straight from the single source
+         under /shared rather than restated in C# or kept as per-implementation copies. Decision record 14 in
+         docs/adr requires implementations to read relationship-types.json rather than write the list into
+         code, so the vocabulary cannot drift between the three stacks. Paths resolve to the monorepo's
+         shared/ three levels up from this project directory. -->
+    <EmbeddedResource Include="..\..\..\shared\contract\relationship-types.json" LogicalName="Astrana.TrustedAttestation.Server.Contract.relationship-types.json" />
+    <EmbeddedResource Include="..\..\..\shared\contract\attribution.json" LogicalName="Astrana.TrustedAttestation.Server.Contract.attribution.json" />
+    <EmbeddedResource Include="..\..\..\shared\schema\schema-mssql.sql" LogicalName="Astrana.TrustedAttestation.Server.Schema.schema-mssql.sql" />
+    <EmbeddedResource Include="..\..\..\shared\schema\schema-mysql.sql" LogicalName="Astrana.TrustedAttestation.Server.Schema.schema-mysql.sql" />
+    <EmbeddedResource Include="..\..\..\shared\schema\schema-postgres.sql" LogicalName="Astrana.TrustedAttestation.Server.Schema.schema-postgres.sql" />
+    <EmbeddedResource Include="..\..\..\shared\ui\ui-strings.json" LogicalName="Astrana.TrustedAttestation.Server.Resources.ui-strings.json" />
+  </ItemGroup>
+
+  <!-- The member-facing stylesheet, favicon, and theme overrides are shared across all three
+       implementations; the single source is /shared/ui. They are copied into wwwroot at build time so no
+       committed duplicate lives here (the copies are git-ignored). -->
+  <Target Name="CopySharedUiAssets" BeforeTargets="BeforeBuild;BeforeRebuild">
+    <ItemGroup>
+      <_SharedUiAsset Include="..\..\..\shared\ui\dist\trusted-attestation.css" />
+      <_SharedUiAsset Include="..\..\..\shared\ui\favicon.svg" />
+      <_SharedUiAsset Include="..\..\..\shared\ui\theme-overrides.css" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_SharedUiAsset)" DestinationFolder="$(MSBuildProjectDirectory)\wwwroot" SkipUnchangedFiles="true" />
+  </Target>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Astrana.TrustedAttestation.Server.Tests" />
+  </ItemGroup>
+
+  <Import Project="..\..\build\ThirdPartyNotices.targets" />
+
+</Project>

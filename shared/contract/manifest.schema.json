@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://astrana.org/schemas/ata-manifest-v1.json",
+  "title": "Astrana Trusted Attestation instance manifest",
+  "description": "The manifest every server publishes at /.well-known/ata-manifest.json, with no authentication, over HTTPS. The path is permanent and never versioned. An organisation's own website can point to it with a link whose rel is ata-manifest. That name is as fixed as the path. A server validates its manifest at start-up, or on every request where there is no start-up step as in PHP, and serves nothing while it is invalid or incomplete. The reasoning is in docs/adr, decision record 30.",
+  "type": "object",
+  "examples": [
+    {
+      "manifest_version": 1,
+      "default_locale": "en",
+      "name": { "en": "Acme Bank", "fr": "Banque Acme" },
+      "description": { "en": "Retail and commercial banking", "fr": "Banque de détail et commerciale" },
+      "website": { "en": "https://acmebank.example", "fr": "https://acmebank.example/fr" },
+      "support_url": { "en": "https://acmebank.example/contact" },
+      "logo_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA",
+      "logo_data_dark": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA",
+      "privacy_notice_url": { "en": "https://acmebank.example/privacy", "fr": "https://acmebank.example/fr/privacy" },
+      "jurisdictions": ["US", "US-NY", "US-CA"],
+      "relationship_types": ["employee", "client"],
+      "enrollment_url": "https://ata.acmebank.example/",
+      "attestation_url": "https://ata.acmebank.example/api/v1/attest"
+    }
+  ],
+  "required": ["manifest_version", "default_locale", "name", "relationship_types", "enrollment_url", "attestation_url"],
+  "additionalProperties": false,
+  "dependentRequired": {
+    "logo_data_dark": ["logo_data"]
+  },
+  "properties": {
+    "manifest_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Integer, not a URL segment, because the manifest path itself is never versioned."
+    },
+    "default_locale": {
+      "$ref": "#/$defs/localeTag",
+      "description": "Fallback locale used when a consumer's preferred locale is absent from the locale-keyed objects. Set even when only one locale is offered."
+    },
+    "name": {
+      "$ref": "#/$defs/localizedString",
+      "description": "Organisation name. A proper noun, so a consumer shows it as the organisation wrote it and never machine-translates it."
+    },
+    "description": {
+      "$ref": "#/$defs/localizedString",
+      "description": "Short description of the organisation. Astrana may machine-translate it on the consumer's side when the consumer's locale is absent, as long as it says clearly that the text is a machine translation (see decision record 34)."
+    },
+    "website": {
+      "$ref": "#/$defs/localizedUrl"
+    },
+    "support_url": {
+      "$ref": "#/$defs/localizedUrl",
+      "description": "Optional. A contact or support page, keyed by locale. When a member holds no relationship yet, the self-service page links the organisation's name to this page. Without it, the name links to website. With neither, the name shows as plain text."
+    },
+    "logo_data": {
+      "type": "string",
+      "description": "Optional. The organisation's logo as a base64 data URI, embedded rather than linked, so that showing it puts no request on the organisation's server. Not locale-keyed. This is the light-mode and default logo, rendered whenever no dark-scheme preference applies. Keep it icon-sized, not a banner, because its bytes go straight into the manifest. Until an organisation sets one, the pages show a shipped generic mark.",
+      "pattern": "^data:image/(png|jpeg|gif|webp|svg\\+xml);base64,[A-Za-z0-9+/]+={0,2}$",
+      "maxLength": 65536
+    },
+    "logo_data_dark": {
+      "type": "string",
+      "description": "Optional dark-mode variant of logo_data, embedded the same way. A consumer rendering the organisation's branding in a dark context uses this. logo_data stays the default and fallback, so this is valid only alongside it. Not locale-keyed.",
+      "pattern": "^data:image/(png|jpeg|gif|webp|svg\\+xml);base64,[A-Za-z0-9+/]+={0,2}$",
+      "maxLength": 65536
+    },
+    "privacy_notice_url": {
+      "$ref": "#/$defs/localizedUrl",
+      "description": "The organisation's own privacy notice, not one Astrana Trusted Attestation generates."
+    },
+    "jurisdictions": {
+      "type": "array",
+      "description": "Optional. ISO 3166-1 alpha-2 country codes and, where relevant, ISO 3166-2 subdivision codes such as US-NY, for where the organisation operates or is registered. A public fact about the organisation, stated for the verifying peer to judge. The server never interprets or weighs it. It has nothing to do with the jurisdiction an Astrana owner declares in their own instance, which never leaves that instance.",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
+      },
+      "uniqueItems": true
+    },
+    "relationship_types": {
+      "type": "array",
+      "description": "The relationship types this organisation issues, from the fixed vocabulary. Never locale-keyed, because these are fixed identifiers. Must stay in sync with relationship-types.json.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "advisor",
+          "apprentice",
+          "business_owner",
+          "citizen",
+          "client",
+          "contractor",
+          "director",
+          "donor",
+          "employee",
+          "graduate",
+          "intellectual_property_holder",
+          "licensed_professional",
+          "member",
+          "official",
+          "organiser",
+          "partner",
+          "property_owner",
+          "religious_leader",
+          "resident",
+          "shareholder",
+          "student",
+          "tenant",
+          "trustee",
+          "veteran",
+          "volunteer"
+        ]
+      }
+    },
+    "enrollment_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "description": "The public landing page, where a prospective member signs in, not the authenticated self-service page. One URL, not locale-keyed."
+    },
+    "attestation_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "description": "The exact endpoint a verifying peer calls (POST). A full URL, not a base address to add a path to."
+    }
+  },
+  "$defs": {
+    "localeTag": {
+      "type": "string",
+      "pattern": "^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$"
+    },
+    "localizedString": {
+      "type": "object",
+      "description": "Locale-keyed object. Keys are locale tags, and the key named by default_locale must be present.",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/localeTag"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "localizedUrl": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "$ref": "#/$defs/localeTag"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https://"
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+# --- .NET ---
+[Bb]in/
+[Oo]bj/
+*.user
+
+# --- .NET test coverage output ---
+TestResults/
+
+# --- Java and Maven ---
+target/
+
+# --- Coverage reports (produced in CI) ---
+/php/coverage.xml
+/php/storage/coverage.xml
+
+# --- PHP and Composer ---
+/php/vendor/
+vendor/
+/php/.phpunit.result.cache
+
+# --- Shared inputs copied into an implementation at build time. The originals live in shared/. ---
+# Shared UI assets the .NET build copies into the web root
+/dotnet/src/Astrana.TrustedAttestation.Server/wwwroot/trusted-attestation.css
+/dotnet/src/Astrana.TrustedAttestation.Server/wwwroot/favicon.svg
+/dotnet/src/Astrana.TrustedAttestation.Server/wwwroot/theme-overrides.css
+# The third-party notices the .NET build writes into the web root
+/dotnet/src/Astrana.TrustedAttestation.Server/wwwroot/THIRD-PARTY-NOTICES.txt
+# Copied by php/scripts/sync-shared-assets.php
+/php/contract/
+/php/schema/
+/php/resources/ui-strings.json
+/php/public/trusted-attestation.css
+/php/public/favicon.svg
+/php/public/theme-overrides.css
+# The third-party notices composer install writes into the PHP web root
+/php/public/THIRD-PARTY-NOTICES.txt
+
+# --- Node (SCSS build for shared/ui) ---
+node_modules/
+
+# --- Python (test harness under shared/test) ---
+__pycache__/
+*.pyc
+.venv/
+
+# --- Editors and OS noise ---
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Reports from the test suites run in shared/test/ci ---
+/shared/test/ci/reports/
+
+# --- Local PHP environment file (secrets) ---
+/php/.env
+
+# --- Development keys and certificates, generated on each machine and never committed ---
+/java/dev/
+/java/saml/
+/php/saml/
+/dotnet/src/Astrana.TrustedAttestation.Server/saml/
+# The integration matrix's identity provider keys, certificates and secrets (shared/test/generate-idp-material.sh),
+# and Authelia's database, which is encrypted with one of those secrets
+/shared/test/*/generated/
+
+# --- Working-state documents kept out of the repository ---
+/.working-state/

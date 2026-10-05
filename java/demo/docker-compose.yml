@@ -1,0 +1,109 @@
+# The self-contained demonstration. It runs this implementation, its database (PostgreSQL), a proxy that
+# terminates TLS and a throwaway Keycloak. Start it with one command from the java folder, with no other
+# repositories checked out:
+#
+#     docker compose -f demo/docker-compose.yml up --build
+#
+# Then open https://localhost:16443 and sign in as alice with the password "password". See demo/README.md
+# for what is insecure here and why that is fine for a demonstration and for nothing else.
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    # start-dev, only ever for a demonstration. No TLS, an embedded database and an administrator
+    # created from environment variables. It exists only so the demonstration needs no identity system of
+    # its own. Never make it reachable from a network you do not trust.
+    command: ["start-dev", "--import-realm", "--http-port=8081"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+
+      # Browser-facing addresses and the token issuer are fixed to localhost, because that is the name a
+      # person's browser can use. Server-to-server endpoints stay dynamic, so the application's container
+      # can fetch what it needs through the gateway below. Without the split, no single hostname works for
+      # both the browser and the application's container.
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: trusted_attestation
+      POSTGRES_USER: trusted_attestation
+      POSTGRES_PASSWORD: trusted-attestation-demo-password
+    # Not published to the host. Only the application talks to it.
+
+  # Forwards localhost:8081 from inside the application's network out to the published Keycloak port, so
+  # the issuer address the application checks tokens against is the same one the member's browser uses.
+  # This works because the application shares this container's network (network_mode below).
+  gateway:
+    image: alpine/socat
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - socat TCP-LISTEN:8081,fork,reuseaddr TCP:host.docker.internal:8081
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  app:
+    build:
+      context: ../..
+      dockerfile: java/Dockerfile
+    network_mode: "service:gateway"
+    depends_on:
+      - gateway
+      - db
+      - keycloak
+    # The application refuses to start against an identity provider it cannot reach, so a
+    # misconfigured deployment fails at start-up rather than at the first member's sign-in. On first
+    # start Keycloak takes about a minute to import the realm, so the application's first attempts to
+    # start fail. The restart policy keeps restarting it until Keycloak is ready, as a production
+    # orchestrator would.
+    restart: on-failure
+    volumes:
+      # The demonstration's whole configuration, as a file rather than thirty environment variables.
+      # Spring reads locale-keyed lists and maps from environment variables unreliably, and can end up
+      # with a manifest that has no name. See demo/application.yaml.
+      - ./application.yaml:/app/config/application.yaml:ro
+
+  # Grants the demonstration relationships once the application has created the schema. It runs once,
+  # waits for the last procedure the schema creates, grants the relationships only if the table is
+  # empty, then exits. See seed.sql for what each member gets.
+  seed:
+    image: postgres:17
+    depends_on:
+      - db
+    environment:
+      PGPASSWORD: trusted-attestation-demo-password
+    volumes:
+      - ./seed.sql:/seed.sql:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      # $$ rather than $, because compose interpolates single dollars as its own variables.
+      - |
+        psql="psql -h db -U trusted_attestation -d trusted_attestation -tA"
+        for i in $$(seq 1 120); do
+          if [ "$$($$psql -c "SELECT count(*) FROM pg_proc WHERE proname = 'prune_audit_log'" 2>/dev/null)" = "1" ]; then
+            if [ "$$($$psql -c "SELECT count(*) FROM member_relationships")" = "0" ]; then
+              $$psql -v ON_ERROR_STOP=1 -f /seed.sql && echo "demonstration relationships granted"
+            else
+              echo "demonstration relationships already present"
+            fi
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "the schema never appeared" >&2
+        exit 1
+
+  proxy:
+    image: caddy:2
+    ports:
+      - "16443:16443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - app

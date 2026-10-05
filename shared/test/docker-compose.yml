@@ -1,0 +1,79 @@
+# The identity provider and databases that the three Astrana Trusted Attestation implementations
+# use for local development and the conformance suite.
+#
+#   docker compose up -d keycloak          # the identity provider only
+#   docker compose --profile postgres up -d
+#   docker compose --profile mysql up -d
+#   docker compose --profile mssql up -d
+#
+# Database ports are mapped high (55432, 53306, 51433) so they cannot collide with a
+# PostgreSQL, MySQL or SQL Server already installed on the developer's machine.
+#
+# The Keycloak administration console is at http://localhost:8081/ (admin / admin).
+# Realm "trusted-attestation-dev" is imported automatically from ./keycloak/trusted-attestation-dev-realm.json.
+
+name: trusted-attestation-dev
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm", "--http-port=8081"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+
+      # Browser-facing URLs and the token issuer are pinned to localhost, because that is the name a
+      # person's browser can use. Server-to-server endpoints stay dynamic, so an app in a bridged
+      # container that fetches discovery via host.docker.internal gets token and JWKS URLs it can
+      # actually reach, while the issuer it validates against is still the one the browser saw.
+      #
+      # Without this split, an app reachable from a browser and an IdP reachable from a container have
+      # no single hostname in common, and one side or the other breaks.
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+
+  postgres:
+    image: postgres:17
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: trusted_attestation
+      POSTGRES_PASSWORD: trusted-attestation-dev-password
+      POSTGRES_DB: trusted_attestation
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trusted_attestation -d trusted_attestation"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mysql:
+    image: mysql:8.4
+    profiles: ["mysql"]
+    environment:
+      MYSQL_ROOT_PASSWORD: trusted-attestation-dev-root
+      MYSQL_USER: trusted_attestation
+      MYSQL_PASSWORD: trusted-attestation-dev-password
+      MYSQL_DATABASE: trusted_attestation
+    ports:
+      - "53306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -utrusted_attestation -ptrusted-attestation-dev-password"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: ["mssql"]
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Trusted-Attestation-Dev-Password1"
+      MSSQL_PID: Developer
+    ports:
+      - "51433:1433"

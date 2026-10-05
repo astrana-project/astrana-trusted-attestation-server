@@ -1,0 +1,84 @@
+@page "/"
+@model IndexModel
+@{
+    var s = Model.Strings;
+    var culture = System.Globalization.CultureInfo.CurrentUICulture;
+    Layout = null;
+}
+<!DOCTYPE html>
+@* dir keys on the same explicit right-to-left set the other two implementations use (see TextDirection),
+   not the framework's broader IsRightToLeft, so all three lay out the same locales right to left. *@
+<html lang="@culture.Name" dir="@Astrana.TrustedAttestation.Server.Services.TextDirection.Of(culture)">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    @* The landing page is deliberately indexable -- it is what enrollment_url points at, and a
+       prospective member finding it through search is the point. Only /me carries noindex. *@
+    <title>@Model.OrgName | @s["landing_title"]</title>
+    <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
+    <link rel="stylesheet" href="~/trusted-attestation.css" />
+    @* The organisation's own colours and fonts, editable without a rebuild. Loaded after the main
+       stylesheet so its custom properties win. *@
+    <link rel="stylesheet" href="~/theme-overrides.css" />
+</head>
+<body class="py-4 px-3">
+<div class="ata-topbar mb-3">
+    <partial name="_LanguageSwitcher" />
+</div>
+<main class="card ata-page mx-auto p-4">
+    <div class="d-flex align-items-center gap-3 mb-4 ata-brand">
+        @* Exactly one h1, always. With a logo the image carries the name and the heading is kept for
+           document structure and assistive technology; without one the shipped generic mark is
+           decorative and the name shows as the heading, so the page still looks finished. *@
+        @if (!string.IsNullOrWhiteSpace(Model.OrgLogo))
+        {
+            <picture>
+                @if (!string.IsNullOrWhiteSpace(Model.OrgLogoDark))
+                {
+                    <source srcset="@Model.OrgLogoDark" media="(prefers-color-scheme: dark)" />
+                }
+                <img class="ata-brand-logo" src="@Model.OrgLogo" alt="" aria-hidden="true" />
+            </picture>
+            <h1 class="fs-5 mb-0 visually-hidden">@Model.OrgName</h1>
+        }
+        else
+        {
+            <img class="ata-brand-logo" src="~/favicon.svg" alt="" aria-hidden="true" />
+            <h1 class="fs-5 mb-0">@Model.OrgName</h1>
+        }
+    </div>
+
+    <p class="ata-field-label text-body-secondary mb-3">@s["landing_title"]</p>
+
+    @if (Model.SignedOut)
+    {
+        <p class="ata-status text-success" role="status">@s["signed_out"]</p>
+    }
+
+    <p class="mb-4">@(s["landing_intro"].Replace("{org}", Model.OrgName))</p>
+
+    <div class="d-flex flex-wrap gap-3">
+        <a class="btn btn-primary" href="/me">@s["landing_sign_in"]</a>
+        <a class="btn btn-sm btn-outline-secondary" href="@Model.Attribution.ProjectUrl"
+           rel="noopener" target="_blank">@s["landing_learn_more"]</a>
+    </div>
+</main>
+
+@* The software's own attribution, which the server has no setting to remove. *@
+<footer class="ata-page ata-attribution mx-auto mt-4 text-body-secondary">
+    <a href="@Model.Attribution.ProjectUrl" rel="noopener" target="_blank">@Model.Attribution.ProjectName</a>
+    @if (!string.IsNullOrWhiteSpace(Model.Attribution.LicenseNotice))
+    {
+        <text> &middot; </text>
+        @if (Model.Attribution.LicenseUrl is not null)
+        {
+            <a href="@Model.Attribution.LicenseUrl" rel="noopener" target="_blank">@s["licence_link"]</a>
+        }
+        else
+        {
+            <span>@s["licence_link"]</span>
+        }
+    }
+</footer>
+</body>
+</html>

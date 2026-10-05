@@ -1,0 +1,113 @@
+# Releases every implementation whose changelog carries a version that is not released yet, on each push to master
+# (decision record 38). For each one it pushes the image astrana/ata-<implementation> with three tags (the full
+# version, MAJOR.MINOR and latest). It then tags the commit <implementation>-v<version> and creates a GitHub release
+# with that version's changelog section and the software bill of materials.
+#
+# The workflow skips any version that already has a tag, so a merge releases only the implementations whose version
+# changed. The image is pushed before the tag is created, so a failed push leaves no tag and the next run tries again.
+#
+# Set two repository secrets. DOCKERHUB_USERNAME is the Docker Hub user. DOCKERHUB_TOKEN is a Docker Hub access token
+# that can push to the astrana namespace.
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release (${{ matrix.implementation }})
+    # Only master releases. A manual run started from any other branch does nothing, so a feature branch's
+    # changelog can never publish an image or create a tag.
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        implementation: [dotnet, java, php]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read the version from the changelog
+        id: info
+        run: python3 .github/scripts/release_info.py ${{ matrix.implementation }} release-notes.md
+
+      - name: Check whether this version is already released
+        id: tag
+        env:
+          TAG: ${{ steps.info.outputs.tag }}
+        run: |
+          if git rev-parse --quiet --verify "refs/tags/$TAG" > /dev/null; then
+            echo "released=true" >> "$GITHUB_OUTPUT"
+            echo "$TAG is already released. Nothing to do."
+          else
+            echo "released=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check the Docker Hub credentials are set
+        if: steps.tag.outputs.released == 'false'
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [ -z "$DOCKERHUB_USERNAME" ] || [ -z "$DOCKERHUB_TOKEN" ]; then
+            echo "::error::Set the DOCKERHUB_USERNAME and DOCKERHUB_TOKEN repository secrets to publish images."
+            exit 1
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.tag.outputs.released == 'false'
+
+      - uses: docker/login-action@v3
+        if: steps.tag.outputs.released == 'false'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Describe the image
+        id: meta
+        if: steps.tag.outputs.released == 'false'
+        uses: docker/metadata-action@v5
+        with:
+          images: astrana/ata-${{ matrix.implementation }}
+          tags: |
+            type=raw,value=${{ steps.info.outputs.version }}
+            type=raw,value=${{ steps.info.outputs.minor }}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Astrana Trusted Attestation Server (${{ steps.info.outputs.title }})
+            org.opencontainers.image.version=${{ steps.info.outputs.version }}
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.description=The project's own code is licensed under the MIT License. The image also contains third-party components under their own licences, listed in THIRD-PARTY-NOTICES.txt, which the server serves at /THIRD-PARTY-NOTICES.txt, and in the software bill of materials attached to the GitHub release.
+
+      - name: Build and publish the image
+        if: steps.tag.outputs.released == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.implementation }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=release-${{ matrix.implementation }}
+          cache-to: type=gha,scope=release-${{ matrix.implementation }},mode=max
+
+      - name: Tag the commit and create the GitHub release
+        if: steps.tag.outputs.released == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.info.outputs.tag }}
+          TITLE: ${{ steps.info.outputs.title }}
+        run: >-
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-notes.md "${{
+          matrix.implementation }}/sbom.json#Software bill of materials (CycloneDX)"

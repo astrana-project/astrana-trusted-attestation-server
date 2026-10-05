@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "_note": "The software's own attribution, shown in the footer of every page and on the /license page of every deployment. Organisation branding comes from the manifest, not from here. The server has no setting to change or remove this attribution. All three implementations read this file, so edit the notice here. Keep the licence text identical to LICENSE.md and the trademark notice consistent with TRADEMARKS.md.",
+
+  "project_name": "Astrana Trusted Attestation Server",
+  "project_url": "https://astrana.org",
+  "source_url": "https://github.com/astrana-project/astrana-trusted-attestation-server",
+
+  "license": {
+    "label": "Licence",
+    "notice": "Copyright (c) 2026 Darin Morris and contributors. Free and open source software, licensed under the MIT License.",
+    "url": "/license",
+    "text": [
+      "Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:",
+      "The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.",
+      "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."
+    ],
+    "trademark_notice": "The name Astrana and the Astrana logos and other brand features are trademarks of Darin Morris. They are not covered by the licence and may not be used without prior written permission, except for nominative use permitted by law, for example stating truthfully that software implements, or is compatible with, Astrana Trusted Attestation."
+  }
+}

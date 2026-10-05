@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What counts as this project's code, for coverage purposes.
+
+  Without this, the report counted everything the build generates: AssemblyInfo, GlobalUsings, the
+  assembly-attributes file, and the Razor compiler's output. That is 240 lines of code nobody wrote and
+  no test should be asserting anything about. Including it does not merely add noise: it moves the
+  headline number in whichever direction the generator happens to lean, so the figure stops describing
+  the tests at all.
+
+  Pass this file to `dotnet test` with its settings flag, alongside the XPlat code coverage collector, as
+  .github/workflows/sonar-dotnet.yml does. The flags are described rather than shown, because XML forbids
+  a double hyphen inside a comment.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <!-- OpenCover, the format the SonarQube Cloud workflow reads. -->
+          <Format>opencover</Format>
+
+          <!--
+            What a code generator wrote, by the attribute generators stamp on it.
+
+            Deliberately NOT CompilerGeneratedAttribute, which is far broader: the C# compiler stamps it
+            on synthesised members of our own classes, including every lambda and async state machine,
+            and on the class it wraps around top-level statements. Excluding it removed Program.cs
+            entirely and moved the headline figure nine points, which is a flattering number rather
+            than a fairer one. Program.cs is this project's composition root, not somebody else's code,
+            and it should be counted even though only the conformance suite exercises it.
+          -->
+          <ExcludeByAttribute>GeneratedCodeAttribute,ExcludeFromCodeCoverageAttribute</ExcludeByAttribute>
+
+          <!-- And by path, for generated files carrying no attribute of their own. -->
+          <ExcludeByFile>**/obj/**/*.cs,**/*.g.cs,**/*.Designer.cs</ExcludeByFile>
+
+          <!-- The tests are not the subject. -->
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

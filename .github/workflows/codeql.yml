@@ -1,0 +1,45 @@
+# CodeQL code scanning, in GitHub's advanced setup, so that it runs the security-extended queries on an
+# explicit list of languages that includes the GitHub Actions workflows. It scans each pull request before it
+# is merged, and so before it is released, because every merge to master publishes a release.
+#
+# Each language is analysed without a build. CodeQL has no PHP support, so the SonarQube Cloud analysis covers
+# the PHP implementation instead. The weekly run picks up new queries on unchanged code.
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyse:
+    name: Analyse (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [actions, csharp, java-kotlin, javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

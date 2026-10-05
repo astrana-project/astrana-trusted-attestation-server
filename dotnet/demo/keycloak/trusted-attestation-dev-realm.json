@@ -1,0 +1,265 @@
+{
+  "realm": "trusted-attestation-dev",
+  "displayName": "Trusted Attestation Development Realm",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en", "fr", "de"],
+  "defaultLocale": "en",
+  "clients": [
+    {
+      "clientId": "trusted-attestation",
+      "name": "Astrana Trusted Attestation Server",
+      "description": "Shared development client for all three Astrana Trusted Attestation implementations.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "trusted-attestation-dev-secret",
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "https://localhost:15443/signin-oidc",
+        "https://localhost:16443/login/oauth2/code/keycloak",
+        "https://localhost:17443/auth/callback"
+      ],
+      "webOrigins": ["https://localhost:15443", "https://localhost:16443", "https://localhost:17443"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://localhost:15443/signout-callback-oidc##https://localhost:15443/##https://localhost:15443##https://localhost:16443/##https://localhost:16443##https://localhost:17443/##https://localhost:17443##https://localhost:15443/signed-out##https://localhost:16443/signed-out##https://localhost:17443/signed-out"
+      },
+      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access", "microprofile-jwt"],
+      "protocolMappers": []
+    },
+    {
+      "clientId": "https://localhost:15443/Saml2",
+      "name": "Trusted Attestation (SAML) https://localhost:15443/Saml2",
+      "enabled": true,
+      "protocol": "saml",
+      "frontchannelLogout": true,
+      "redirectUris": ["https://localhost:15443/Saml2/Acs"],
+      "attributes": {
+        "saml_assertion_consumer_url_post": "https://localhost:15443/Saml2/Acs",
+        "saml_single_logout_service_url_post": "https://localhost:15443/Saml2/Logout",
+        "saml_name_id_format": "persistent",
+        "saml_force_name_id_format": "true",
+        "saml.authnstatement": "true",
+        "saml.server.signature": "true",
+        "saml.assertion.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.encrypt": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "name",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "name",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "iam-subject-id-nameid",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-attribute-nameid-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "iam_subject_id",
+            "mapper.nameid.format": "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "https://localhost:16443/saml2/service-provider-metadata/keycloak",
+      "name": "Trusted Attestation (SAML) https://localhost:16443/saml2/service-provider-metadata/keycloak",
+      "enabled": true,
+      "protocol": "saml",
+      "frontchannelLogout": true,
+      "redirectUris": ["https://localhost:16443/login/saml2/sso/keycloak"],
+      "attributes": {
+        "saml_assertion_consumer_url_post": "https://localhost:16443/login/saml2/sso/keycloak",
+        "saml_single_logout_service_url_post": "https://localhost:16443/logout/saml2/slo",
+        "saml_name_id_format": "persistent",
+        "saml_force_name_id_format": "true",
+        "saml.authnstatement": "true",
+        "saml.server.signature": "true",
+        "saml.assertion.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.encrypt": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "name",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "name",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "iam-subject-id-nameid",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-attribute-nameid-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "iam_subject_id",
+            "mapper.nameid.format": "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "https://localhost:17443/auth/saml/metadata",
+      "name": "Trusted Attestation (SAML) https://localhost:17443/auth/saml/metadata",
+      "enabled": true,
+      "protocol": "saml",
+      "frontchannelLogout": true,
+      "redirectUris": ["https://localhost:17443/auth/saml/acs"],
+      "attributes": {
+        "saml_assertion_consumer_url_post": "https://localhost:17443/auth/saml/acs",
+        "saml_single_logout_service_url_post": "https://localhost:17443/auth/saml/logout",
+        "saml_single_logout_service_url_redirect": "https://localhost:17443/auth/saml/logout",
+        "saml_name_id_format": "persistent",
+        "saml_force_name_id_format": "true",
+        "saml.authnstatement": "true",
+        "saml.server.signature": "true",
+        "saml.assertion.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml.encrypt": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "name",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "attribute.name": "name",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "iam-subject-id-nameid",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-attribute-nameid-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "iam_subject_id",
+            "mapper.nameid.format": "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Anderson",
+      "email": "alice@example.org",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "id": "11111111-1111-4111-8111-111111111111",
+      "attributes": {
+        "iam_subject_id": ["11111111-1111-4111-8111-111111111111"]
+      }
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Brown",
+      "email": "bob@example.org",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "id": "22222222-2222-4222-8222-222222222222",
+      "attributes": {
+        "iam_subject_id": ["22222222-2222-4222-8222-222222222222"]
+      }
+    },
+    {
+      "username": "carol",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Carol",
+      "lastName": "Clark",
+      "email": "carol@example.org",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "id": "33333333-3333-4333-8333-333333333333",
+      "attributes": {
+        "iam_subject_id": ["33333333-3333-4333-8333-333333333333"]
+      }
+    },
+    {
+      "username": "dave",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Dave",
+      "lastName": "Davis",
+      "email": "dave@example.org",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "id": "44444444-4444-4444-8444-444444444444",
+      "attributes": {
+        "iam_subject_id": ["44444444-4444-4444-8444-444444444444"]
+      }
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "name": "declarative-user-profile",
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\": [{\"name\": \"username\", \"displayName\": \"${username}\", \"validations\": {\"length\": {\"min\": 3, \"max\": 255}, \"username-prohibited-characters\": {}, \"up-username-not-idn-homograph\": {}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"email\", \"displayName\": \"${email}\", \"validations\": {\"email\": {}, \"length\": {\"max\": 255}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"firstName\", \"displayName\": \"${firstName}\", \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\"]}, \"multivalued\": false}, {\"name\": \"lastName\", \"displayName\": \"${lastName}\", \"validations\": {\"length\": {\"max\": 255}, \"person-name-prohibited-characters\": {}}, \"permissions\": {\"view\": [\"admin\", \"user\"], \"edit\": [\"admin\"]}, \"multivalued\": false}], \"groups\": [{\"name\": \"user-metadata\", \"displayHeader\": \"User metadata\", \"displayDescription\": \"Attributes, which refer to user metadata\"}], \"unmanagedAttributePolicy\": \"ENABLED\"}"
+          ]
+        }
+      }
+    ]
+  }
+}

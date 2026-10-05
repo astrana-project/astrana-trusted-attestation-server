@@ -1,0 +1,98 @@
+/*
+ * Astrana Trusted Attestation organisation theme overrides.
+ *
+ * Edit this file to restyle the landing page, the self-service page and the licence page. It is plain
+ * CSS custom properties, loaded after the main stylesheet. On .NET and PHP the deployed copy is a file
+ * you edit in place, and it applies the next time a page is loaded, with no rebuild, no recompilation and
+ * no tooling. Java packages this file into its jar at build, so on Java either edit it in shared/ui and
+ * rebuild, or have your proxy serve your own copy at /theme-overrides.css.
+ *
+ * It ships with nothing set. The shipped palette is built to WCAG 2.1 AA in both light and dark, which
+ * conformant deployments are required to meet, so an organisation that is happy with the defaults needs
+ * to change nothing here. Everything below is a commented example. Uncomment a block and set your own
+ * values for it to take effect.
+ *
+ * Light and dark are both supported, and neither is configured here. The page follows the member's own
+ * operating-system setting through prefers-color-scheme, decided in the main stylesheet, with no switch
+ * and no script. That is also the one rule to keep in mind when overriding. A value set outside a
+ * prefers-color-scheme block applies in BOTH modes, so anything that must differ between light and dark,
+ * backgrounds and text colour above all, has to be set inside the matching prefers-color-scheme block, or
+ * you will pin the page to one mode's colour in the other. The button and font examples below are the
+ * same in both modes and are safe to set once. The background example shows the two-mode form.
+ */
+
+/*
+ * The action colour, on the "Save Key" button and the "Sign In" button. Bootstrap reads a button's
+ * colours from custom properties set on its own class, so override them on .btn-primary, not on :root.
+ * Set the resting, hover, active and disabled shades together, and the focus ring as the red, green and
+ * blue values of the resting colour, or the button keeps the shipped colour in the states you leave out.
+ * The values below are the shipped ones.
+ *
+ * CONTRAST WARNING, read before changing. The button label on this colour is white, so a pale tint makes
+ * it unreadable and drops the page below AA. Keep a ratio of at least 4.5:1 against white for every
+ * shade (check at https://webaim.org/resources/contrastchecker/). If your brand colour is too light, use
+ * its darker shade here and keep the bright one for the logo. The shipped #0b5ed7 clears it at 5.84:1
+ * and its hover shade at 7.38:1, in both modes.
+ */
+/*
+.btn-primary {
+  --bs-btn-bg: #0b5ed7;
+  --bs-btn-border-color: #0b5ed7;
+  --bs-btn-hover-bg: #0950b7;
+  --bs-btn-hover-border-color: #094bac;
+  --bs-btn-active-bg: #094bac;
+  --bs-btn-active-border-color: #0846a1;
+  --bs-btn-disabled-bg: #0b5ed7;
+  --bs-btn-disabled-border-color: #0b5ed7;
+  --bs-btn-focus-shadow-rgb: 48, 118, 221;
+}
+*/
+
+/*
+ * The destructive action, on the "Remove Relationship" button. A deep red, so it reads as destructive at
+ * a glance. Change it only if your palette has its own danger colour, set the same properties on
+ * .btn-danger, and check every shade the same way. The shipped #bb2d3b clears 4.5:1 against white at
+ * 5.91:1 and its hover shade at 7.51:1, in both modes. The values below are the shipped ones.
+ */
+/*
+.btn-danger {
+  --bs-btn-bg: #bb2d3b;
+  --bs-btn-border-color: #bb2d3b;
+  --bs-btn-hover-bg: #9f2632;
+  --bs-btn-hover-border-color: #96242f;
+  --bs-btn-active-bg: #96242f;
+  --bs-btn-active-border-color: #8c222c;
+  --bs-btn-disabled-bg: #bb2d3b;
+  --bs-btn-disabled-border-color: #bb2d3b;
+  --bs-btn-focus-shadow-rgb: 197, 77, 88;
+}
+*/
+
+:root {
+  /*
+     * Font stack. The default uses whatever the member's own device treats as native, which is fastest
+     * and most familiar. If you set a brand font, list system fallbacks after it. These pages never load
+     * fonts from the network, so a font the member does not have installed falls through to the next.
+     */
+  /* --bs-body-font-family: "Your Brand Font", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; */
+}
+
+/*
+ * Backgrounds and body text differ between light and dark, so they belong in the matching block rather
+ * than on :root. Set both, or the mode you leave out keeps the shipped colour. Whatever you choose,
+ * keep body text at 4.5:1 or better against the background behind it.
+ */
+/*
+@media (prefers-color-scheme: light) {
+    :root {
+        --bs-body-bg: #f6f7f9;
+        --bs-body-color: #16181d;
+    }
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bs-body-bg: #14161a;
+        --bs-body-color: #e7e9ee;
+    }
+}
+*/

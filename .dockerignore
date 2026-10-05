@@ -1,0 +1,59 @@
+# The build context is the repository root, so shared/ is included. Send only source. The image build recreates build
+# output, dependencies and the copies from shared/.
+.git/
+# Editor settings and the working-state documents kept out of the repository are not source either.
+.working-state/
+.vs/
+.vscode/
+.idea/
+# The images use shared/contract, shared/schema, shared/third-party and shared/ui. The test suites and their material
+# hold development certificates, realm files and test credentials, so they never enter an image.
+shared/test/
+shared/test-material/
+# Demonstration stacks and the development keys and certificates are not application code.
+*/demo/
+php/saml/
+java/saml/
+java/dev/
+dotnet/src/**/saml/
+# Development configuration names the demonstration's client secret and passwords, so it never enters an image.
+dotnet/src/**/appsettings.Development.json
+java/src/main/resources/application-dev*.yml
+# Tests, their results and coverage, the SonarQube Cloud settings, build output and dependencies are not application
+# code either.
+php/tests/
+php/phpunit.xml
+php/.phpunit.result.cache
+php/coverage.xml
+php/storage/coverage.xml
+php/sonar-project.properties
+**/bin/
+**/obj/
+**/target/
+**/node_modules/
+**/__pycache__/
+
+# The PHP image gets its Composer packages from the vendor build stage, and copies in the shared inputs and writes the
+# third-party notices during the build.
+php/vendor/
+php/contract/
+php/schema/
+php/resources/ui-strings.json
+php/public/trusted-attestation.css
+php/public/favicon.svg
+php/public/theme-overrides.css
+php/public/THIRD-PARTY-NOTICES.txt
+# Runtime state from a developer machine never ships. A compiled Blade view would shadow the template in the image, and
+# sessions, caches, logs and the local .env are not source.
+php/storage/framework/views/*.php
+php/storage/framework/cache/data/
+php/storage/framework/sessions/*
+php/storage/logs/*.log
+php/bootstrap/cache/*.php
+php/.env
+
+# The .NET build copies in the shared web assets and writes the third-party notices.
+dotnet/src/Astrana.TrustedAttestation.Server/wwwroot/trusted-attestation.css
+dotnet/src/Astrana.TrustedAttestation.Server/wwwroot/favicon.svg
+dotnet/src/Astrana.TrustedAttestation.Server/wwwroot/theme-overrides.css
+dotnet/src/Astrana.TrustedAttestation.Server/wwwroot/THIRD-PARTY-NOTICES.txt

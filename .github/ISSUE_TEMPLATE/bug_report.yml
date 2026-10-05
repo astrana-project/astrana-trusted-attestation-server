@@ -1,0 +1,74 @@
+name: Bug report
+description: Report a defect in one or more of the implementations
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. **Do not use this form for security vulnerabilities**. Report those
+        privately (see the security policy in `SECURITY.md`).
+
+        The three implementations are meant to behave identically, so a behaviour that differs between
+        them is itself a bug worth reporting.
+  - type: checkboxes
+    id: implementations
+    attributes:
+      label: Affected implementations
+      options:
+        - label: .NET
+        - label: Java
+        - label: PHP
+        - label: Shared (contract, schema or interface)
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: The implementation's version from its CHANGELOG, such as 1.0.0, or the commit hash.
+    validations:
+      required: true
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database engine
+      options:
+        - Not applicable
+        - PostgreSQL
+        - MySQL
+        - SQL Server
+        - Several or all
+  - type: input
+    id: idp
+    attributes:
+      label: Identity provider and protocol, if relevant
+      description: Such as Keycloak over OpenID Connect, or SimpleSAMLphp over SAML.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: dropdown
+    id: cross-impl
+    attributes:
+      label: Does it reproduce on the other implementations?
+      description: A difference between implementations is treated as high priority.
+      options:
+        - Not checked
+        - "Yes, same behaviour on the others"
+        - "No, only this implementation"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      render: shell

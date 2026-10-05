@@ -1,0 +1,26 @@
+# Casdoor as a dev IdP (OIDC + SAML) for the conformance matrix, with its own Postgres (the image has no
+# sqlite driver). Casdoor seeds a "built-in" organisation and an "app-built-in" application on first boot.
+#
+# Casdoor emits the subject (OIDC sub or SAML NameID) as the fixed fixture UUID (see configure.py).
+services:
+  casdoor-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: casdoor
+      POSTGRES_PASSWORD: casdoor
+      POSTGRES_DB: casdoor
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U casdoor"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  casdoor:
+    image: casbin/casdoor:latest
+    depends_on:
+      casdoor-db:
+        condition: service_healthy
+    ports:
+      - "8010:8000"
+    volumes:
+      - ./app.conf:/conf/app.conf:ro

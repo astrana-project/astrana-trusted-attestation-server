@@ -1,0 +1,28 @@
+# WSO2 Identity Server as a dev IdP, for the conformance matrix (OIDC and SAML).
+#
+# WSO2 Identity Server serves on its own default HTTPS port 9443. The three implementations serve on
+# 15443, 16443 and 17443, so an identity provider can keep its native port and its self-referential issuer
+# and metadata addresses. Default administrator credentials are admin/admin. The dev instance uses the
+# embedded H2 database the image ships with, which is fine for a throwaway test identity provider.
+#
+# WSO2 emits the subject (OIDC sub or SAML NameID) as the fixed fixture UUID that
+# shared/test/conformance/check.py grants relationships against, through a per-application subject claim
+# and SCIM2 user attributes (see configure.py and configure-saml.py).
+services:
+  wso2is:
+    # Built from the stock 7.1.0 image with a fresh TLS certificate (see Dockerfile): the shipped demo
+    # certificate expired in January 2026, which the apps refuse on the backchannel.
+    build:
+      context: .
+    image: ata-wso2is:7.1.0
+    ports:
+      - "9443:9443"
+    environment:
+      # Keep the JVM modest for a dev box running several stacks at once.
+      JVM_MEM_OPTS: "-Xms512m -Xmx1024m"
+    healthcheck:
+      test: ["CMD", "curl", "-sfk", "https://localhost:9443/api/health-check/v1.0/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 120s

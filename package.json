@@ -1,0 +1,12 @@
+{
+  "name": "astrana-trusted-attestation-server",
+  "private": true,
+  "description": "Repository-wide formatting for documentation, contract, configuration and UI sources. The three implementations are built from their own folders.",
+  "scripts": {
+    "format": "prettier --write . --log-level warn",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.0"
+  }
+}

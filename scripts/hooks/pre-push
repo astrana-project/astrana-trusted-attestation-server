@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+# astrana-trusted-attestation-server pre-push hook, installed by scripts/setup.sh --hooks (scripts\setup.ps1 -Hooks).
+# Runs the sign-off and changelog checks on the branch being pushed, in about a second.
+# Skip once with git push --no-verify.
+
+cd "$(git rev-parse --show-toplevel)" || exit 0
+[ -f .github/scripts/dco_check.py ] && [ -f .github/scripts/changelog_check.py ] || exit 0
+
+# Only when the push includes HEAD. Pushing another branch, a tag or a deletion is not this hook's business.
+head="$(git rev-parse HEAD)"
+pushing_head=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" = "$head" ] && pushing_head=yes
+done
+[ -n "$pushing_head" ] || exit 0
+
+# On Windows "python3" can be a Store shortcut that only prints a message, so try each candidate.
+py=""
+for candidate in python3 python py; do
+  if "$candidate" -c "import sys" >/dev/null 2>&1; then py="$candidate"; break; fi
+done
+[ -n "$py" ] || { echo "pre-push: python is not installed, skipping (continuous integration runs these checks)"; exit 0; }
+
+base=""
+for candidate in origin/master master; do
+  if git rev-parse --verify --quiet "$candidate" >/dev/null; then base="$candidate"; break; fi
+done
+[ -n "$base" ] || { echo "pre-push: no master to compare against, skipping (continuous integration runs these checks)"; exit 0; }
+
+echo "pre-push: comparing against $base at $(git log -1 --format='%h, %cr' "$base")"
+status=0
+"$py" .github/scripts/dco_check.py "$base" || status=1
+"$py" .github/scripts/changelog_check.py "$base" || status=1
+[ "$status" -eq 0 ] || echo "push stopped, fix the above or skip once with git push --no-verify"
+exit "$status"
