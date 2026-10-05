@@ -1,0 +1,20 @@
+# SimpleSAMLphp as an independent SAML 2.0 IdP -- a second SAML IdP alongside Keycloak, so SAML parity is
+# tested against more than one implementation of the protocol. Form login (no browser needed), four members
+# (alice/bob/carol/dave, password: password), each with its persistent NameID pinned to the fixture UUID.
+#
+#   docker compose -f shared/test/simplesamlphp/docker-compose.yml up -d --build
+#
+# IdP metadata: http://localhost:9005/saml2/idp/metadata.php -- point an implementation's SAML metadata URL
+# at that, in SAML mode. The integration matrix's --idp simplesamlphp profile does this.
+name: trusted-attestation-simplesamlphp
+
+services:
+  idp:
+    build: .
+    volumes:
+      - ./config/config.php:/var/simplesamlphp/config/config.php:ro
+      - ./config/authsources.php:/var/simplesamlphp/config/authsources.php:ro
+      - ./metadata/saml20-idp-hosted.php:/var/simplesamlphp/metadata/saml20-idp-hosted.php:ro
+      - ./metadata/saml20-sp-remote.php:/var/simplesamlphp/metadata/saml20-sp-remote.php:ro
+    ports:
+      - "9005:80"

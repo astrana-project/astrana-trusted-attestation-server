@@ -1,0 +1,150 @@
+# Runs the conformance, differential and accessibility suites against all three implementations, in the
+# stack defined by shared/test/ci/docker-compose.ci.yml. On a pull request the report is an artifact of the
+# run. On every push to master the report is also published to GitHub Pages, so the current state of master
+# is public.
+#
+# The workflow runs on every pull request so that it always reports a result and can be a required check.
+# It builds the stack and runs the suites only when the change touches an implementation or shared/.
+name: Integration
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  COMPOSE_FILE: shared/test/ci/docker-compose.ci.yml
+  REPORTS: shared/test/ci/reports
+
+jobs:
+  suites:
+    name: Conformance, differential and accessibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Check whether this change touches an implementation or shared/
+        id: scope
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^(shared/|dotnet/|java/|php/|\.github/workflows/integration\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No implementation or shared files changed. Nothing to test."
+          fi
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        if: steps.scope.outputs.run == 'true'
+
+      - name: Build the .NET image
+        if: steps.scope.outputs.run == 'true'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: dotnet/Dockerfile
+          tags: ata-dotnet:ci
+          load: true
+          cache-from: type=gha,scope=dotnet
+          cache-to: type=gha,scope=dotnet,mode=max
+
+      - name: Build the Java image
+        if: steps.scope.outputs.run == 'true'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: java/Dockerfile
+          tags: ata-java:ci
+          load: true
+          cache-from: type=gha,scope=java
+          cache-to: type=gha,scope=java,mode=max
+
+      - name: Build the PHP image
+        if: steps.scope.outputs.run == 'true'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: php/Dockerfile
+          tags: ata-php:ci
+          load: true
+          cache-from: type=gha,scope=php
+          cache-to: type=gha,scope=php,mode=max
+
+      - name: Build the suite image
+        if: steps.scope.outputs.run == 'true'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: shared/test/ci
+          file: shared/test/ci/Dockerfile.suite
+          tags: ata-suite:ci
+          load: true
+          cache-from: type=gha,scope=suite
+          cache-to: type=gha,scope=suite,mode=max
+
+      - name: Start the stack
+        if: steps.scope.outputs.run == 'true'
+        run: docker compose up -d --no-build keycloak postgres dotnet-app java-app php-app proxy
+
+      - name: Run the suites
+        if: steps.scope.outputs.run == 'true'
+        run: docker compose run --rm --no-deps suite bash ci/run-suites.sh /reports
+
+      - name: Collect container logs
+        if: always() && steps.scope.outputs.run == 'true'
+        run: |
+          mkdir -p "$REPORTS"
+          docker compose logs --no-color > "$REPORTS/compose.log" 2>&1 || true
+
+      - name: Add the report to the run summary
+        if: always() && steps.scope.outputs.run == 'true'
+        run: |
+          if [ -f "$REPORTS/conformance-report.md" ]; then
+            cat "$REPORTS/conformance-report.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload the report
+        if: always() && steps.scope.outputs.run == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: conformance-report
+          path: ${{ env.REPORTS }}
+          if-no-files-found: warn
+
+      - name: Stop the stack
+        if: always() && steps.scope.outputs.run == 'true'
+        run: docker compose down -v
+
+  publish:
+    name: Publish the master report
+    # Publish whatever the suites produced, pass or fail, so the page always shows the real state of master.
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: suites
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: conformance-report
+          path: site
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

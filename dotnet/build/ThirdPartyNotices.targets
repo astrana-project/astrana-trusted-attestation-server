@@ -1,0 +1,33 @@
+<Project>
+
+  <!-- THIRD-PARTY-NOTICES.txt, written into the web root on every build from the packages the build restored, so the
+       server serves it at /THIRD-PARTY-NOTICES.txt beside the licence page and publishing carries it into the image.
+       The writer is ThirdPartyNotices.cs, run as an inline task. The written file is ignored by Git. -->
+  <UsingTask TaskName="WriteThirdPartyNotices" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Packages ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <PackageRoot Required="true" />
+      <SharedDirectory Required="true" />
+      <Implementation Required="true" />
+      <OutputFile Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Class" Language="cs" Source="$(MSBuildThisFileDirectory)ThirdPartyNotices.cs" />
+    </Task>
+  </UsingTask>
+
+  <!-- After the package assets are resolved, which is what names the files each package contributes, and before the
+       web root is gathered into static web assets, so a first build serves the file as well as a later one. -->
+  <Target Name="WriteThirdPartyNotices" AfterTargets="ResolvePackageAssets" BeforeTargets="ResolveStaticWebAssetsInputs">
+    <WriteThirdPartyNotices
+      Packages="@(RuntimeCopyLocalItems);@(NativeCopyLocalItems);@(ResourceCopyLocalItems);@(RuntimeTargetsCopyLocalItems)"
+      PackageRoot="$(NuGetPackageRoot)"
+      SharedDirectory="$(MSBuildThisFileDirectory)..\..\shared"
+      Implementation=".NET"
+      OutputFile="$(MSBuildProjectDirectory)\wwwroot\THIRD-PARTY-NOTICES.txt" />
+    <ItemGroup>
+      <Content Include="wwwroot\THIRD-PARTY-NOTICES.txt" Exclude="@(Content)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

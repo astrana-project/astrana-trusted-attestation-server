@@ -1,0 +1,176 @@
+# The self-contained demonstration. It runs this implementation, its database (SQL Server), a proxy that
+# terminates TLS and a throwaway Keycloak. Start it with one command from the dotnet folder, with no
+# other repositories checked out:
+#
+#     docker compose -f demo/docker-compose.yml up --build
+#
+# Then open https://localhost:15443 and sign in as alice with the password "password". See demo/README.md
+# for what is insecure here and why that is fine for a demonstration and for nothing else.
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    # start-dev, only ever for a demonstration. No TLS, an embedded database and an administrator
+    # created from environment variables. It exists only so the demonstration needs no identity system of
+    # its own. Never make it reachable from a network you do not trust.
+    command: ["start-dev", "--import-realm", "--http-port=8081"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+
+      # Browser-facing addresses and the token issuer are fixed to localhost, because that is the name a
+      # person's browser can use. Server-to-server endpoints stay dynamic, so the application's container
+      # can fetch what it needs through the gateway below. Without the split, no single hostname works for
+      # both the browser and the application's container.
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Trusted-Attestation-Demo-Password1"
+      MSSQL_PID: Developer
+    # Not published to the host. Only the application talks to it.
+
+  # SQL Server's image creates no database, unlike the PostgreSQL and MySQL images the other two
+  # demonstrations use. This container runs once. It waits for SQL Server, creates the database, then
+  # exits.
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      - db
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      # $$ rather than $, because compose interpolates single dollars as its own variables, which
+      # empties $(seq ...) without a warning and turns the retry loop into nothing.
+      - |
+        for i in $$(seq 1 60); do
+          /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P "Trusted-Attestation-Demo-Password1" -C \
+            -Q "IF DB_ID('trusted_attestation') IS NULL CREATE DATABASE trusted_attestation" && exit 0
+          sleep 2
+        done
+        echo "SQL Server never became ready" >&2
+        exit 1
+
+  # Forwards localhost:8081 from inside the application's network out to the published Keycloak port, so
+  # the issuer address the application checks tokens against is the same one the member's browser uses.
+  # This works because the application shares this container's network (network_mode below).
+  gateway:
+    image: alpine/socat
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - socat TCP-LISTEN:8081,fork,reuseaddr TCP:host.docker.internal:8081
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  app:
+    build:
+      context: ../..
+      dockerfile: dotnet/Dockerfile
+    network_mode: "service:gateway"
+    # The application refuses to start against an identity provider it cannot reach, so a
+    # misconfigured deployment fails at start-up rather than at the first member's sign-in. On first
+    # start Keycloak takes about a minute to import the realm, so the application's first attempts to
+    # start fail. The restart policy keeps restarting it until Keycloak is ready, as a production
+    # orchestrator would.
+    restart: on-failure
+    depends_on:
+      - gateway
+      - db-init
+      - keycloak
+    environment:
+      # The application speaks plain HTTP inside the compose network, and the proxy below holds the
+      # certificate. This setting tells the application so, because it refuses to start unless either
+      # this or an https endpoint is configured.
+      ASPNETCORE_URLS: http://+:8080
+      TrustedAttestation__Tls__TerminatedByProxy: "true"
+
+      TrustedAttestation__Database__Provider: SqlServer
+      TrustedAttestation__Database__ConnectionString:
+        "Server=db;Database=trusted_attestation;User
+        Id=sa;Password=Trusted-Attestation-Demo-Password1;TrustServerCertificate=True"
+      TrustedAttestation__Database__CreateSchemaOnStartup: "true"
+
+      TrustedAttestation__Iam__Protocol: Oidc
+      TrustedAttestation__Iam__Authority: http://localhost:8081/realms/trusted-attestation-dev
+      TrustedAttestation__Iam__ClientId: trusted-attestation
+      TrustedAttestation__Iam__ClientSecret: trusted-attestation-dev-secret
+      # Plain HTTP metadata is allowed only to match the start-dev Keycloak. Never allow it in
+      # production.
+      TrustedAttestation__Iam__RequireHttpsMetadata: "false"
+
+      TrustedAttestation__Manifest__ManifestVersion: "1"
+      TrustedAttestation__Manifest__DefaultLocale: en
+      # The organisation's name in each language (see decision record 30 in docs/adr, and
+      # shared/contract/manifest.schema.json, where name is an object keyed by locale). A member sees the
+      # name in their own language, or in DefaultLocale where their language is missing. The page title
+      # and the revoke text both use that name.
+      TrustedAttestation__Manifest__Name__en: Demo Organisation
+      TrustedAttestation__Manifest__Name__es: Organización de demostración
+      TrustedAttestation__Manifest__Name__fr: Organisation de démonstration
+      TrustedAttestation__Manifest__Name__de: Demo-Organisation
+      TrustedAttestation__Manifest__Name__ru: Демонстрационная организация
+      TrustedAttestation__Manifest__Name__zh-Hans: 演示组织
+      TrustedAttestation__Manifest__Name__ja: デモ組織
+      TrustedAttestation__Manifest__Name__ko: 데모 조직
+      TrustedAttestation__Manifest__Name__hi: डेमो संगठन
+      TrustedAttestation__Manifest__Name__ar: منظمة تجريبية
+      TrustedAttestation__Manifest__Name__he: ארגון הדגמה
+      TrustedAttestation__Manifest__Name__fa: سازمان نمونه
+      TrustedAttestation__Manifest__Description__en: A disposable Astrana Trusted Attestation demonstration
+      TrustedAttestation__Manifest__Website__en: https://localhost:15443/
+      TrustedAttestation__Manifest__PrivacyNoticeUrl__en: https://localhost:15443/
+      # The organisation's own logo, embedded as a data URI (logo_data in manifest.schema.json). This
+      # sample branding makes the header show this wordmark instead of the built-in generic mark. A real
+      # deployment points LogoData at its own image file or gives its own data URI.
+      TrustedAttestation__Manifest__LogoData: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTIgNDgiIHdpZHRoPSIyNTIiIGhlaWdodD0iNDgiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzEyQTU5NCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwRTdDNjYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHg9IjIiIHk9IjQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcng9IjExIiBmaWxsPSJ1cmwoI2cpIi8+CiAgPGcgZmlsbD0iI2ZmZmZmZiI+CiAgICA8cmVjdCB4PSIxMiIgeT0iMjciIHdpZHRoPSI1LjUiIGhlaWdodD0iOSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjE5LjI1IiB5PSIyMSIgd2lkdGg9IjUuNSIgaGVpZ2h0PSIxNSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjI2LjUiIHk9IjE1IiB3aWR0aD0iNS41IiBoZWlnaHQ9IjIxIiByeD0iMi43NSIvPgogIDwvZz4KICA8dGV4dCBpZD0id20iIHg9IjU0IiB5PSIzMSIgZm9udC1mYW1pbHk9IidTZWdvZSBVSScsICdIZWx2ZXRpY2EgTmV1ZScsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIxIiBsZXR0ZXItc3BhY2luZz0iMC4yIj48dHNwYW4gZmlsbD0iIzBFN0M2NiIgZm9udC13ZWlnaHQ9IjcwMCI+RGVtbzwvdHNwYW4+PHRzcGFuIGZpbGw9IiMxRjI5MzciIGZvbnQtd2VpZ2h0PSI2MDAiPiBPcmdhbmlzYXRpb248L3RzcGFuPjwvdGV4dD4KPC9zdmc+Cg=="
+      TrustedAttestation__Manifest__LogoDataDark: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTIgNDgiIHdpZHRoPSIyNTIiIGhlaWdodD0iNDgiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzJBRDRCRCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxMkE1OTQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHg9IjIiIHk9IjQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcng9IjExIiBmaWxsPSJ1cmwoI2cpIi8+CiAgPGcgZmlsbD0iIzBiMmIyNSI+CiAgICA8cmVjdCB4PSIxMiIgeT0iMjciIHdpZHRoPSI1LjUiIGhlaWdodD0iOSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjE5LjI1IiB5PSIyMSIgd2lkdGg9IjUuNSIgaGVpZ2h0PSIxNSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjI2LjUiIHk9IjE1IiB3aWR0aD0iNS41IiBoZWlnaHQ9IjIxIiByeD0iMi43NSIvPgogIDwvZz4KICA8dGV4dCBpZD0id20iIHg9IjU0IiB5PSIzMSIgZm9udC1mYW1pbHk9IidTZWdvZSBVSScsICdIZWx2ZXRpY2EgTmV1ZScsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIxIiBsZXR0ZXItc3BhY2luZz0iMC4yIj48dHNwYW4gZmlsbD0iIzJERDRCRiIgZm9udC13ZWlnaHQ9IjcwMCI+RGVtbzwvdHNwYW4+PHRzcGFuIGZpbGw9IiNDN0NERDYiIGZvbnQtd2VpZ2h0PSI2MDAiPiBPcmdhbmlzYXRpb248L3RzcGFuPjwvdGV4dD4KPC9zdmc+Cg=="
+      # The relationship types this demonstration organisation issues, from the fixed vocabulary. The
+      # manifest check refuses a server that lists none.
+      TrustedAttestation__Manifest__RelationshipTypes__0: employee
+      TrustedAttestation__Manifest__RelationshipTypes__1: client
+      TrustedAttestation__Manifest__RelationshipTypes__2: licensed_professional
+      TrustedAttestation__Manifest__EnrollmentUrl: https://localhost:15443/
+      TrustedAttestation__Manifest__AttestationUrl: https://localhost:15443/api/v1/attest
+
+  # Grants the demonstration relationships once the application has created the schema. It runs once,
+  # waits for the last procedure the schema creates, grants the relationships only if the table is
+  # empty, then exits. See seed.sql for what each member gets.
+  seed:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    depends_on:
+      - db-init
+    volumes:
+      - ./seed.sql:/seed.sql:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      # $$ rather than $, because compose interpolates single dollars as its own variables.
+      - |
+        sqlcmd="/opt/mssql-tools18/bin/sqlcmd -S db -U sa -P Trusted-Attestation-Demo-Password1 -d trusted_attestation -C -h -1 -W"
+        for i in $$(seq 1 120); do
+          if [ "$$($$sqlcmd -Q "SET NOCOUNT ON; SELECT CASE WHEN OBJECT_ID('prune_audit_log', 'P') IS NULL THEN 0 ELSE 1 END" 2>/dev/null | tr -d '[:space:]')" = "1" ]; then
+            if [ "$$($$sqlcmd -Q "SET NOCOUNT ON; SELECT count(*) FROM member_relationships" | tr -d '[:space:]')" = "0" ]; then
+              $$sqlcmd -b -i /seed.sql && echo "demonstration relationships granted"
+            else
+              echo "demonstration relationships already present"
+            fi
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "the schema never appeared" >&2
+        exit 1
+
+  proxy:
+    image: caddy:2
+    ports:
+      - "15443:15443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - app

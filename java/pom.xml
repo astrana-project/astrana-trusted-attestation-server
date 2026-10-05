@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>4.1.1</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>org.astrana</groupId>
+  <artifactId>trusted-attestation-server</artifactId>
+  <version>1.0.0</version>
+  <name>Astrana Trusted Attestation Server</name>
+  <description>Spring Boot implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)</description>
+  <!--
+    The project's own address, licence and repository, stated here because the Spring Boot parent would
+    otherwise lend this project its own, and the software bill of materials reads them from this file.
+  -->
+  <url>https://github.com/astrana-project/astrana-trusted-attestation-server</url>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/license/mit</url>
+    </license>
+  </licenses>
+  <scm>
+    <url>https://github.com/astrana-project/astrana-trusted-attestation-server</url>
+    <connection>scm:git:https://github.com/astrana-project/astrana-trusted-attestation-server.git</connection>
+    <developerConnection>scm:git:git@github.com:astrana-project/astrana-trusted-attestation-server.git</developerConnection>
+  </scm>
+
+  <properties>
+    <!--
+      "Latest available" means the latest long-term support release, not the newest release full stop.
+      Building on an interim release would work against the institutional stability this design targets:
+      banks and government departments run software for years without upgrading.
+    -->
+    <java.version>25</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!--
+      Security patches ahead of the Spring Boot parent. Each pins the patch release that fixes published
+      advisories in the version the parent, or OpenSAML for Bouncy Castle, would otherwise bring in. Remove
+      a line once the parent manages that version or a newer one.
+    -->
+    <tomcat.version>11.0.25</tomcat.version>
+    <jackson-bom.version>3.1.7</jackson-bom.version>
+    <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+    <bouncycastle.version>1.85</bouncycastle.version>
+  </properties>
+
+  <!--
+    OpenSAML brings in Bouncy Castle. Its three modules are held to one version, because Bouncy Castle
+    supports only matching versions of them together.
+  -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcprov-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcpkix-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcutil-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <!--
+      OpenID Connect sign-in against the organisation's own identity provider. Astrana Trusted Attestation
+      keeps no user list of its own.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-client</artifactId>
+    </dependency>
+
+    <!--
+      SAML 2.0, which decision record 2 in docs/adr requires alongside OpenID Connect. Spring Security implements it
+      directly, so this is the same project's own module rather than a third-party service provider toolkit.
+      Which protocol an instance speaks is a deployment choice (trusted-attestation.iam.protocol). Both are
+      wired, and only one is active.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security-saml2</artifactId>
+    </dependency>
+
+    <!--
+      Jackson 2, which the application programming interface controller, the SAML correlation cookie and a
+      test use directly. Spring Boot itself has moved to Jackson 3, and Jackson 2 otherwise arrives only
+      through OpenSAML, so it is declared here rather than left to depend on OpenSAML keeping it. The
+      Spring Boot parent still manages its version, through jackson-2-bom.version above.
+    -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <!-- The landing page, the self-service page and the licence page. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-thymeleaf</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <!--
+      All three engines, so an org keeps whichever database it already runs. Hibernate abstracts the
+      engine; only the driver differs, and an unused driver on the classpath costs nothing.
+    -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.mysql</groupId>
+      <artifactId>mysql-connector-j</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.microsoft.sqlserver</groupId>
+      <artifactId>mssql-jdbc</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!--
+      An in-memory database for one test only: the one that runs the repository's key update through
+      Hibernate and reads back the SQL it executed, to pin that the statement names public_key and nothing
+      else, the one column the documented application role may write. Never on the runtime classpath.
+    -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <repositories>
+    <!--
+      Spring Security's SAML support is built on OpenSAML, which Shibboleth publishes from its own
+      repository rather than to Maven Central. An organisation building this behind a corporate mirror
+      needs the mirror to proxy this host as well; it is the one dependency in any of the three
+      implementations that does not come from its ecosystem's default registry.
+
+      Only needed when trusted-attestation.iam.protocol is SAML. An OIDC-only deployment can delete both this
+      repository and the spring-boot-starter-security-saml2 dependency.
+    -->
+    <repository>
+      <id>shibboleth-releases</id>
+      <url>https://build.shibboleth.net/maven/releases/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <build>
+    <resources>
+      <!--
+        The dev profiles stay in src/main/resources for development but are left out of the jar, so a jar
+        built for deployment carries no development configuration. spring-boot:run reads them from the
+        source folder instead, see the spring-boot-maven-plugin below.
+      -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <excludes>
+          <exclude>application-dev*.yml</exclude>
+        </excludes>
+      </resource>
+      <!--
+        The governed vocabulary, canonical schema, interface strings and shared web assets are packaged
+        straight from the repository's single source under /shared rather than restated in Java or kept as
+        per-implementation copies. Record 14 in docs/adr has every implementation read
+        relationship-types.json rather than restate the list, so the vocabulary cannot drift between the
+        three implementations. Paths are relative to this module (java/), so ../shared resolves to the
+        repository's shared/ directory.
+      -->
+      <resource>
+        <directory>../shared/contract</directory>
+        <targetPath>contract</targetPath>
+      </resource>
+      <resource>
+        <directory>../shared/schema</directory>
+        <targetPath>schema</targetPath>
+      </resource>
+      <resource>
+        <directory>../shared/ui</directory>
+        <includes>
+          <include>ui-strings.json</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>../shared/ui/dist</directory>
+        <targetPath>static</targetPath>
+        <includes>
+          <include>trusted-attestation.css</include>
+        </includes>
+      </resource>
+      <resource>
+        <directory>../shared/ui</directory>
+        <targetPath>static</targetPath>
+        <includes>
+          <include>favicon.svg</include>
+          <include>theme-overrides.css</include>
+        </includes>
+      </resource>
+    </resources>
+
+    <plugins>
+      <!--
+        spring-boot:run puts only the build output on the classpath, which leaves out the dev profiles,
+        so the source resources folder is added as well. That is what lets `./mvnw spring-boot:run
+        -Dspring-boot.run.profiles=dev` find application-dev.yml. The packaged jar is unaffected.
+
+        The jar tools, spring-boot-jarmode-tools, are left out of the jar. They extract its layers, which
+        nothing here does: the image runs the jar as it is.
+      -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <additionalClasspathElements>
+            <additionalClasspathElement>${project.basedir}/src/main/resources</additionalClasspathElement>
+          </additionalClasspathElements>
+          <includeTools>false</includeTools>
+        </configuration>
+      </plugin>
+
+      <!--
+        THIRD-PARTY-NOTICES.txt, written into the jar's static resources on every build from the
+        dependencies the build resolved, so the server serves it at /THIRD-PARTY-NOTICES.txt beside the
+        licence page. The runtime class path is listed first, then build/ThirdPartyNotices.java, a
+        single-file program with nothing but the JDK on its class path, reads each jar and its POM.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>third-party-class-path</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>build-classpath</goal>
+            </goals>
+            <configuration>
+              <includeScope>runtime</includeScope>
+              <outputFile>${project.build.directory}/third-party-class-path.txt</outputFile>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>third-party-notices</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${java.home}/bin/java</executable>
+              <arguments>
+                <argument>${project.basedir}/build/ThirdPartyNotices.java</argument>
+                <argument>${project.build.directory}/third-party-class-path.txt</argument>
+                <argument>${settings.localRepository}</argument>
+                <argument>${project.basedir}/../shared</argument>
+                <argument>${project.build.outputDirectory}/static/THIRD-PARTY-NOTICES.txt</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Coverage, measured rather than assumed. The tests ran and passed with nothing recording which
+        paths they touched, so any analysis reading this project saw zero, and a test count on its own
+        says nothing about what is covered. The report is written on every `./mvnw test`, so it exists
+        whether or not anybody remembers to ask for it.
+      -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>0.8.13</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Formatting, enforced rather than requested. palantir-java-format keeps four-space indentation and
+        120 columns, the shape enterprise Java already has. `./mvnw spotless:apply` formats, `./mvnw
+        spotless:check` verifies, and the check is bound to `verify` so an unformatted tree fails the build
+        locally as well as in continuous integration.
+      -->
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>3.10.3</version>
+        <configuration>
+          <java>
+            <palantirJavaFormat>
+              <version>2.101.0</version>
+            </palantirJavaFormat>
+            <removeUnusedImports />
+            <formatAnnotations />
+          </java>
+        </configuration>
+        <executions>
+          <execution>
+            <id>check</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

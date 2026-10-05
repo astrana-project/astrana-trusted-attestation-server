@@ -1,0 +1,50 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Handle X-XSRF-Token Header
+    RewriteCond %{HTTP:x-xsrf-token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Never served as files: anything under a path segment that starts with a dot, and robots.txt and
+    # favicon.ico, Laravel skeleton names the other two implementations do not serve. They go to the
+    # application, which answers HTTP 404 - Not Found as it does for any path it does not know, and which
+    # serves /.well-known/ata-manifest.json itself. The container's router (server.php) and web.config
+    # under IIS hand the same paths to the application, so the answer is the same however it is deployed.
+    RewriteCond %{REQUEST_URI} (^|/)\. [OR]
+    RewriteCond %{REQUEST_URI} (^|/)(robots\.txt|favicon\.ico)$ [NC]
+    RewriteRule ^ index.php [L]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Static assets under public/ (the stylesheet, the favicon) are served by Apache directly and never reach
+# Laravel, so App\Http\Middleware\SecurityHeaders does not set these on them. This matches what Kestrel and
+# Tomcat send on their static assets. setifempty fills the gap only on responses that lack the header, the
+# files Apache serves itself, and leaves the framework's own header untouched on dynamic responses, so the
+# application's Cache-Control (which Symfony formats its own way) is not overwritten here. HSTS is absent,
+# because it belongs to the TLS-terminating layer, as the PHP installation page (docs/installation/php.md)
+# says. Under IIS, web.config sets the same headers. An Nginx or panel-managed host has neither file and
+# sets them at that layer instead, as that page shows.
+<IfModule mod_headers.c>
+    Header setifempty X-Content-Type-Options "nosniff"
+    Header setifempty X-Frame-Options "DENY"
+    Header setifempty Referrer-Policy "no-referrer"
+    Header setifempty X-XSS-Protection "0"
+    Header setifempty Cache-Control "no-cache, no-store, max-age=0, must-revalidate"
+</IfModule>

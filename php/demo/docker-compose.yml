@@ -1,0 +1,150 @@
+# The self-contained demonstration. It runs this implementation, its database (MySQL), a proxy that
+# terminates TLS and a throwaway Keycloak. Start it with one command from the php folder, with no other
+# repositories checked out:
+#
+#     docker compose -f demo/docker-compose.yml up --build
+#
+# Then open https://localhost:17443 and sign in as alice with the password "password". See demo/README.md
+# for what is insecure here and why that is fine for a demonstration and for nothing else.
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    # start-dev, only ever for a demonstration. No TLS, an embedded database and an administrator
+    # created from environment variables. It exists only so the demonstration needs no identity system of
+    # its own. Never make it reachable from a network you do not trust.
+    command: ["start-dev", "--import-realm", "--http-port=8081"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+
+      # Browser-facing addresses and the token issuer are fixed to localhost, because that is the name a
+      # person's browser can use. Server-to-server endpoints stay dynamic, so when the application reads
+      # the discovery document through host.docker.internal, it gets token and key set addresses it can
+      # reach. The issuer it checks stays the one the browser saw.
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: trusted_attestation
+      MYSQL_USER: trusted_attestation
+      MYSQL_PASSWORD: trusted-attestation-demo-password
+      MYSQL_ROOT_PASSWORD: trusted-attestation-demo-root
+    # Not published to the host. Only the application talks to it.
+
+  app:
+    build:
+      context: ../..
+      dockerfile: php/Dockerfile
+    # The demonstration runs the code built into the image, not a mounted copy of the source, so it also
+    # tests the image.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - db
+      - keycloak
+    # The application refuses every request while it cannot reach the identity provider, so a
+    # misconfigured deployment shows on its first request rather than at the first member's sign-in. On
+    # first start Keycloak takes about a minute to import the realm, and the application answers once it
+    # is ready. The restart policy brings the application back if its process ever exits.
+    restart: on-failure
+    environment:
+      APP_URL: https://localhost:17443
+      # A fixed demonstration key, fine here and nowhere else, because it encrypts a demonstration session
+      # on localhost. A real deployment generates its own with `php artisan key:generate`. It must decode
+      # to exactly 32 bytes. Any other length fails, with an error about ciphers that does not mention the
+      # key.
+      APP_KEY: base64:ZGVtby1rZXktMzItYnl0ZXMtYWFhYWFhYWFhYWFhYWE=
+
+      # The application speaks plain HTTP inside the compose network, and the proxy below holds the
+      # certificate. This setting tells the application so, because without it the application refuses
+      # every request.
+      TRUSTED_ATTESTATION_TLS_TERMINATED_BY_PROXY: "true"
+
+      # File-backed, not database-backed. Laravel's stock settings put sessions and cache in database
+      # tables, and the Astrana Trusted Attestation schema has no such tables. Its data model is
+      # member_relationships and audit_log, nothing else. Left as a database store, the cache fails on
+      # the first request.
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+
+      # The issuer is what tokens carry and where the browser is sent, so it is the name a person can
+      # reach. The discovery document is read over the container network instead.
+      TRUSTED_ATTESTATION_IAM_ISSUER: http://localhost:8081/realms/trusted-attestation-dev
+      TRUSTED_ATTESTATION_IAM_DISCOVERY_URL: http://host.docker.internal:8081/realms/trusted-attestation-dev/.well-known/openid-configuration
+      TRUSTED_ATTESTATION_IAM_CLIENT_ID: trusted-attestation
+      TRUSTED_ATTESTATION_IAM_CLIENT_SECRET: trusted-attestation-dev-secret
+      # Plain HTTP metadata is allowed only to match the start-dev Keycloak. Never allow it in production.
+      TRUSTED_ATTESTATION_IAM_REQUIRE_HTTPS_METADATA: "false"
+
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_DATABASE: trusted_attestation
+      DB_USERNAME: trusted_attestation
+      DB_PASSWORD: trusted-attestation-demo-password
+      TRUSTED_ATTESTATION_CREATE_SCHEMA: "true"
+
+      TRUSTED_ATTESTATION_MANIFEST_DEFAULT_LOCALE: en
+      TRUSTED_ATTESTATION_MANIFEST_NAME: '{"en":"Demo Organisation"}'
+      TRUSTED_ATTESTATION_MANIFEST_DESCRIPTION: '{"en":"A disposable Astrana Trusted Attestation demonstration"}'
+      TRUSTED_ATTESTATION_MANIFEST_WEBSITE: '{"en":"https://localhost:17443/"}'
+      TRUSTED_ATTESTATION_MANIFEST_PRIVACY_NOTICE_URL: '{"en":"https://localhost:17443/"}'
+      # The organisation's own logo, embedded as a data URI (the manifest's logo_data). This sample
+      # branding makes the header show this wordmark instead of the built-in generic mark. A real
+      # deployment points this at its own image file or pastes its own data URI.
+      TRUSTED_ATTESTATION_MANIFEST_LOGO: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTIgNDgiIHdpZHRoPSIyNTIiIGhlaWdodD0iNDgiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzEyQTU5NCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwRTdDNjYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHg9IjIiIHk9IjQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcng9IjExIiBmaWxsPSJ1cmwoI2cpIi8+CiAgPGcgZmlsbD0iI2ZmZmZmZiI+CiAgICA8cmVjdCB4PSIxMiIgeT0iMjciIHdpZHRoPSI1LjUiIGhlaWdodD0iOSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjE5LjI1IiB5PSIyMSIgd2lkdGg9IjUuNSIgaGVpZ2h0PSIxNSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjI2LjUiIHk9IjE1IiB3aWR0aD0iNS41IiBoZWlnaHQ9IjIxIiByeD0iMi43NSIvPgogIDwvZz4KICA8dGV4dCBpZD0id20iIHg9IjU0IiB5PSIzMSIgZm9udC1mYW1pbHk9IidTZWdvZSBVSScsICdIZWx2ZXRpY2EgTmV1ZScsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIxIiBsZXR0ZXItc3BhY2luZz0iMC4yIj48dHNwYW4gZmlsbD0iIzBFN0M2NiIgZm9udC13ZWlnaHQ9IjcwMCI+RGVtbzwvdHNwYW4+PHRzcGFuIGZpbGw9IiMxRjI5MzciIGZvbnQtd2VpZ2h0PSI2MDAiPiBPcmdhbmlzYXRpb248L3RzcGFuPjwvdGV4dD4KPC9zdmc+Cg=="
+      TRUSTED_ATTESTATION_MANIFEST_LOGO_DARK: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTIgNDgiIHdpZHRoPSIyNTIiIGhlaWdodD0iNDgiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzJBRDRCRCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxMkE1OTQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHg9IjIiIHk9IjQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcng9IjExIiBmaWxsPSJ1cmwoI2cpIi8+CiAgPGcgZmlsbD0iIzBiMmIyNSI+CiAgICA8cmVjdCB4PSIxMiIgeT0iMjciIHdpZHRoPSI1LjUiIGhlaWdodD0iOSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjE5LjI1IiB5PSIyMSIgd2lkdGg9IjUuNSIgaGVpZ2h0PSIxNSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjI2LjUiIHk9IjE1IiB3aWR0aD0iNS41IiBoZWlnaHQ9IjIxIiByeD0iMi43NSIvPgogIDwvZz4KICA8dGV4dCBpZD0id20iIHg9IjU0IiB5PSIzMSIgZm9udC1mYW1pbHk9IidTZWdvZSBVSScsICdIZWx2ZXRpY2EgTmV1ZScsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIxIiBsZXR0ZXItc3BhY2luZz0iMC4yIj48dHNwYW4gZmlsbD0iIzJERDRCRiIgZm9udC13ZWlnaHQ9IjcwMCI+RGVtbzwvdHNwYW4+PHRzcGFuIGZpbGw9IiNDN0NERDYiIGZvbnQtd2VpZ2h0PSI2MDAiPiBPcmdhbmlzYXRpb248L3RzcGFuPjwvdGV4dD4KPC9zdmc+Cg=="
+      # The relationship types this demonstration organisation issues, from the fixed vocabulary. The
+      # manifest check refuses a server that lists none.
+      TRUSTED_ATTESTATION_MANIFEST_RELATIONSHIP_TYPES: employee,client,licensed_professional
+      TRUSTED_ATTESTATION_MANIFEST_ENROLLMENT_URL: https://localhost:17443/
+      TRUSTED_ATTESTATION_MANIFEST_ATTESTATION_URL: https://localhost:17443/api/v1/attest
+
+  # Grants the demonstration relationships once the application has created the schema. PHP creates
+  # the schema on its first request, so this container requests the manifest every two seconds, for up
+  # to ten minutes, until the last procedure the schema creates exists. The application answers once
+  # Keycloak is reachable, so nobody needs to open a page. It runs once, grants the relationships only
+  # if the table is empty, then exits. Like the other two demonstrations, it exits with a failure if the
+  # schema never appears. See seed.sql for what each member gets.
+  seed:
+    image: mysql:8.4
+    depends_on:
+      - db
+      - app
+    volumes:
+      - ./seed.sql:/seed.sql:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      # $$ rather than $, because compose interpolates single dollars as its own variables.
+      - |
+        mysql="mysql -h db -u trusted_attestation -ptrusted-attestation-demo-password -N -s trusted_attestation"
+        for i in $$(seq 1 300); do
+          if [ "$$($$mysql -e "SELECT count(*) FROM information_schema.routines WHERE routine_schema = 'trusted_attestation' AND routine_name = 'prune_audit_log'" 2>/dev/null)" = "1" ]; then
+            if [ "$$($$mysql -e "SELECT count(*) FROM member_relationships" 2>/dev/null)" = "0" ]; then
+              $$mysql < /seed.sql 2>/dev/null && echo "demonstration relationships granted"
+            else
+              echo "demonstration relationships already present"
+            fi
+            exit 0
+          fi
+          curl -s -o /dev/null http://app:8000/.well-known/ata-manifest.json
+          sleep 2
+        done
+        echo "the schema never appeared" >&2
+        exit 1
+
+  proxy:
+    image: caddy:2
+    ports:
+      - "17443:17443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - app

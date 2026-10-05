@@ -1,0 +1,36 @@
+# Build output and dependencies
+node_modules/
+[Bb]in/
+[Oo]bj/
+TestResults/
+java/target/
+php/vendor/
+php/storage/
+php/bootstrap/cache/
+
+# Generated or tool-managed files (the tool that writes them sets their format)
+**/sbom.json
+package-lock.json
+php/composer.json
+shared/ui/dist/
+
+# Prettier would reformat the Thymeleaf templates and change the whitespace between inline elements, which shows in
+# the rendered page. It cannot parse Razor or Blade, so those need no entry.
+java/src/main/resources/templates/
+
+# Shared inputs copied into an implementation at build time. The originals live in shared/.
+dotnet/src/Astrana.TrustedAttestation.Server/wwwroot/
+php/contract/
+php/schema/
+php/resources/ui-strings.json
+php/public/*.css
+
+# The licence text, kept word for word
+LICENSE.md
+
+# Not part of the repository
+.working-state/
+
+# Reports from the integration matrix. The suite run writes shared/test/ci/reports/, which Prettier skips because it
+# is in .gitignore.
+shared/test/reports/

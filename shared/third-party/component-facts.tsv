@@ -1,0 +1,51 @@
+# Facts about third-party components that their own package metadata leaves out or states imprecisely.
+#
+# Read by the .NET and Java builds when they write THIRD-PARTY-NOTICES.txt, and by scripts/complete-sbom.py when it
+# completes a software bill of materials. One fact per line, three fields separated by tabs: the component (a NuGet
+# package identifier, or a Maven groupId:artifactId), the field and the value. Lines starting with # are comments.
+#
+# Fields:
+#   licence       The SPDX licence expression, where the package states none or states it imprecisely.
+#   licence-name  The licence's name, for a licence that has no SPDX identifier.
+#   licence-url   Where that licence can be read.
+#   licence-file  A file in licences/ holding the component's own licence text, for a component that names its licence
+#                 without shipping a copy of it.
+#   source        Where the component's source code can be obtained.
+#   copyright     The copyright line of the component's own licence, for a component whose package carries none and
+#                 whose licence requires the notice to be kept.
+#   scope         "excluded" for a component the dependency graph names but the published output does not contain.
+
+K4os.Compression.LZ4	licence	MIT
+K4os.Compression.LZ4.Streams	licence	MIT
+K4os.Hash.xxHash	licence	MIT
+K4os.Compression.LZ4	copyright	Copyright (c) 2017 Milosz Krajewski
+K4os.Compression.LZ4.Streams	copyright	Copyright (c) 2017 Milosz Krajewski
+K4os.Hash.xxHash	copyright	Copyright (c) 2017 Milosz Krajewski
+Microsoft.IdentityModel.Tokens.Saml	licence	MIT
+Microsoft.IdentityModel.Xml	licence	MIT
+
+Microsoft.Data.SqlClient.SNI.runtime	licence-name	Microsoft Software License Terms for Microsoft.Data.SqlClient.SNI
+Microsoft.Data.SqlClient.SNI.runtime	scope	excluded
+Microsoft.Identity.Client.NativeInterop	licence-name	Microsoft Software License Terms for Microsoft.Identity.Client.NativeInterop
+Microsoft.Identity.Client.NativeInterop	scope	excluded
+
+NETStandard.Library	licence-name	Microsoft .NET Library License
+NETStandard.Library	licence-url	https://go.microsoft.com/fwlink/?LinkId=329770
+NETStandard.Library	scope	excluded
+Microsoft.NETCore.Platforms	licence-name	Microsoft .NET Library License
+Microsoft.NETCore.Platforms	licence-url	https://go.microsoft.com/fwlink/?LinkId=329770
+Microsoft.NETCore.Platforms	scope	excluded
+
+MySql.Data	licence	GPL-2.0-only WITH Universal-FOSS-exception-1.0
+MySql.Data	source	https://github.com/mysql/mysql-connector-net
+MySql.EntityFrameworkCore	licence	GPL-2.0-only WITH Universal-FOSS-exception-1.0
+MySql.EntityFrameworkCore	source	https://github.com/mysql/mysql-connector-net
+com.mysql:mysql-connector-j	licence	GPL-2.0-only WITH Universal-FOSS-exception-1.0
+com.mysql:mysql-connector-j	source	https://github.com/mysql/mysql-connector-j
+
+Npgsql	licence-file	Npgsql.txt
+Npgsql.EntityFrameworkCore.PostgreSQL	licence-file	Npgsql.txt
+
+org.antlr:antlr4-runtime	copyright	Copyright (c) 2012-2022 The ANTLR Project. All rights reserved.
+org.ow2.asm:asm	copyright	Copyright (c) 2000-2011 INRIA, France Telecom
+com.sun.istack:istack-commons-runtime	copyright	Copyright (c) 2017 Oracle and/or its affiliates. All rights reserved.

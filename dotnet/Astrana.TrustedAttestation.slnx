@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Astrana.TrustedAttestation.Server.Tests/Astrana.TrustedAttestation.Server.Tests.csproj" />
+  </Folder>
+</Solution>

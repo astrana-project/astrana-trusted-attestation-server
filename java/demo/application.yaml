@@ -1,0 +1,69 @@
+# The demonstration's whole configuration, mounted into the container at /app/config/application.yaml,
+# where Spring reads it as external configuration over the packaged defaults.
+#
+# A file rather than environment variables, because Spring's relaxed binding for locale-keyed maps
+# (name.en) and lists (relationship-types) through environment variables is fragile enough to produce a
+# manifest with no name. YAML here also reads exactly like the reference configuration in
+# src/main/resources, so an operator can compare the two.
+
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/trusted_attestation
+    username: trusted_attestation
+    password: trusted-attestation-demo-password
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8081/realms/trusted-attestation-dev
+            user-name-attribute: preferred_username
+        registration:
+          keycloak:
+            client-id: trusted-attestation
+            client-secret: trusted-attestation-dev-secret
+            authorization-grant-type: authorization_code
+            scope: openid, profile, email
+
+trusted-attestation:
+  # Plain HTTP inside the compose network, and the bundled Caddy proxy holds the certificate. That is the
+  # proxy-terminated deployment shape, stated explicitly, because the application refuses to start if
+  # neither this nor server.ssl.* is configured.
+  tls:
+    terminated-by-proxy: true
+    # The demonstration runs on localhost. A browser that accepts Strict-Transport-Security for localhost
+    # applies it to every port there, which would force https on unrelated applications on the same
+    # machine, so the header is not sent. A real deployment leaves this at its default of true.
+    hsts-enabled: false
+
+  database:
+    provider: POSTGRESQL
+    create-schema-on-startup: true
+
+  manifest:
+    manifest-version: 1
+    default-locale: en
+    name:
+      en: Demo Organisation
+    description:
+      en: A disposable Astrana Trusted Attestation demonstration
+    website:
+      en: https://localhost:16443/
+    privacy-notice-url:
+      en: https://localhost:16443/
+    # The organisation's own logo, embedded as a data URI. Illustrative branding for the demonstration,
+    # which exercises the custom-logo path, so the header shows this wordmark in place of the shipped
+    # generic mark. A real deployment would point logo-data at its own image file or paste its own data URI.
+    logo-data: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTIgNDgiIHdpZHRoPSIyNTIiIGhlaWdodD0iNDgiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzEyQTU5NCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwRTdDNjYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHg9IjIiIHk9IjQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcng9IjExIiBmaWxsPSJ1cmwoI2cpIi8+CiAgPGcgZmlsbD0iI2ZmZmZmZiI+CiAgICA8cmVjdCB4PSIxMiIgeT0iMjciIHdpZHRoPSI1LjUiIGhlaWdodD0iOSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjE5LjI1IiB5PSIyMSIgd2lkdGg9IjUuNSIgaGVpZ2h0PSIxNSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjI2LjUiIHk9IjE1IiB3aWR0aD0iNS41IiBoZWlnaHQ9IjIxIiByeD0iMi43NSIvPgogIDwvZz4KICA8dGV4dCBpZD0id20iIHg9IjU0IiB5PSIzMSIgZm9udC1mYW1pbHk9IidTZWdvZSBVSScsICdIZWx2ZXRpY2EgTmV1ZScsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIxIiBsZXR0ZXItc3BhY2luZz0iMC4yIj48dHNwYW4gZmlsbD0iIzBFN0M2NiIgZm9udC13ZWlnaHQ9IjcwMCI+RGVtbzwvdHNwYW4+PHRzcGFuIGZpbGw9IiMxRjI5MzciIGZvbnQtd2VpZ2h0PSI2MDAiPiBPcmdhbmlzYXRpb248L3RzcGFuPjwvdGV4dD4KPC9zdmc+Cg=="
+    logo-data-dark: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTIgNDgiIHdpZHRoPSIyNTIiIGhlaWdodD0iNDgiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzJBRDRCRCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxMkE1OTQiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxyZWN0IHg9IjIiIHk9IjQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcng9IjExIiBmaWxsPSJ1cmwoI2cpIi8+CiAgPGcgZmlsbD0iIzBiMmIyNSI+CiAgICA8cmVjdCB4PSIxMiIgeT0iMjciIHdpZHRoPSI1LjUiIGhlaWdodD0iOSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjE5LjI1IiB5PSIyMSIgd2lkdGg9IjUuNSIgaGVpZ2h0PSIxNSIgcng9IjIuNzUiLz4KICAgIDxyZWN0IHg9IjI2LjUiIHk9IjE1IiB3aWR0aD0iNS41IiBoZWlnaHQ9IjIxIiByeD0iMi43NSIvPgogIDwvZz4KICA8dGV4dCBpZD0id20iIHg9IjU0IiB5PSIzMSIgZm9udC1mYW1pbHk9IidTZWdvZSBVSScsICdIZWx2ZXRpY2EgTmV1ZScsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjIxIiBsZXR0ZXItc3BhY2luZz0iMC4yIj48dHNwYW4gZmlsbD0iIzJERDRCRiIgZm9udC13ZWlnaHQ9IjcwMCI+RGVtbzwvdHNwYW4+PHRzcGFuIGZpbGw9IiNDN0NERDYiIGZvbnQtd2VpZ2h0PSI2MDAiPiBPcmdhbmlzYXRpb248L3RzcGFuPjwvdGV4dD4KPC9zdmc+Cg=="
+    # The subset of the governed vocabulary this demonstration organisation issues. The validator refuses
+    # an instance that attests to nothing.
+    relationship-types:
+      - employee
+      - client
+      - licensed_professional
+    enrollment-url: https://localhost:16443/
+    attestation-url: https://localhost:16443/api/v1/attest

@@ -1,0 +1,61 @@
+# Another identity provider for exercising the implementations against something other than Keycloak. Self-hosted, so
+# no paid tenant, and the conformance browser-login already handles Authentik's form. Server published on
+# 9002 to avoid WSO2 Identity Server's 9443.
+name: trusted-attestation-authentik
+
+services:
+  authentik-postgres:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: authentik
+      POSTGRES_DB: authentik
+    volumes: [authentik-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U authentik"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  authentik-redis:
+    image: docker.io/library/redis:alpine
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2024.10
+    command: server
+    # AUTHENTIK_SECRET_KEY, created on each machine by shared/test/generate-idp-material.sh and ignored by Git. Run it
+    # before starting this stack directly.
+    env_file: generated/secrets.env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_BOOTSTRAP_PASSWORD: authentik-admin-password
+      AUTHENTIK_BOOTSTRAP_TOKEN: authentik-bootstrap-token
+      AUTHENTIK_DISABLE_UPDATE_CHECK: "true"
+      AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+    ports: ["9002:9000"]
+    depends_on:
+      authentik-postgres: { condition: service_healthy }
+      authentik-redis: { condition: service_started }
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2024.10
+    command: worker
+    env_file: generated/secrets.env
+    environment:
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_BOOTSTRAP_PASSWORD: authentik-admin-password
+      AUTHENTIK_BOOTSTRAP_TOKEN: authentik-bootstrap-token
+    depends_on:
+      authentik-postgres: { condition: service_healthy }
+      authentik-redis: { condition: service_started }
+
+volumes:
+  authentik-db:

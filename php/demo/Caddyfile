@@ -1,0 +1,23 @@
+# Terminates TLS in front of the application. Caddy issues the certificate from its own local
+# certificate authority, so there is nothing to generate. The browser does not trust that authority and
+# warns once, which is correct behaviour for a demonstration.
+#
+# Caddy also sets X-Forwarded-Proto and X-Forwarded-Host itself, replacing anything the client sent. The
+# application needs X-Forwarded-Proto because, with TLS ending here, it cannot see the scheme itself, and
+# it refuses any request the proxy marks as plain HTTP. Laravel also reads X-Forwarded-Port and X-Forwarded-Prefix from a
+# trusted proxy, which Caddy passes through untouched, so two of the header_up lines remove them. The
+# application ignores Forwarded and X-Forwarded-Ssl. The other two lines remove them anyway, so no header
+# the client sent arrives under a forwarded name.
+{
+	auto_https disable_redirects
+}
+
+localhost:17443 {
+	tls internal
+	reverse_proxy app:8000 {
+		header_up -Forwarded
+		header_up -X-Forwarded-Port
+		header_up -X-Forwarded-Prefix
+		header_up -X-Forwarded-Ssl
+	}
+}

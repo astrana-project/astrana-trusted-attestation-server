@@ -1,0 +1,56 @@
+# Local development against the shared development environment in shared/test/docker-compose.yml, over
+# SAML 2.0 instead of OIDC. From the java folder:
+#
+#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,dev-saml
+#
+# Layered on top of the dev profile, which supplies the database, TLS and manifest settings. Only the
+# authentication protocol changes. Everything downstream reads claims by configured name and cannot tell
+# which protocol produced them.
+#
+# The signing keypair is a throwaway. Generate it with:
+#
+#   openssl req -x509 -newkey rsa:2048 -nodes -days 365 -subj "/CN=trusted-attestation-dev-sp" \
+#     -keyout saml/sp-private.key \
+#     -out saml/sp-certificate.crt
+#
+# It is git-ignored, because a private key, even a worthless one, does not belong in a repository.
+
+trusted-attestation:
+  iam:
+    protocol: SAML
+
+    # Under SAML these name SAML attributes rather than OIDC claims. The subject falls back to the
+    # assertion's NameID, which is where it normally lives (see MemberIdentityResolver).
+    subject-claim: sub
+    name-claim: name
+
+spring:
+  security:
+    saml2:
+      relyingparty:
+        registration:
+          keycloak:
+            # Defaults to {baseUrl}/saml2/service-provider-metadata/{registrationId}, which is the entity
+            # ID registered with the dev Keycloak. Stated explicitly because it is the identifier an
+            # identity provider administrator has to match exactly.
+            entity-id: https://localhost:16443/saml2/service-provider-metadata/keycloak
+
+            signing:
+              credentials:
+                - private-key-location: file:saml/sp-private.key
+                  certificate-location: file:saml/sp-certificate.crt
+
+            # This service provider's own single logout address, where the identity provider's
+            # LogoutResponse returns over the POST binding. Without it a sign-out stays local and never
+            # reaches the identity provider, so it is set here to exercise single logout in development
+            # and in the integration matrix. The dev Keycloak registers the same address.
+            singlelogout:
+              url: "{baseUrl}/logout/saml2/slo"
+              response-url: "{baseUrl}/logout/saml2/slo"
+              binding: POST
+
+            assertingparty:
+              # Everything about the identity provider comes from its own metadata, the endpoints, the
+              # bindings, and the certificate its assertions are verified against. Nothing is hardcoded
+              # here.
+              metadata-uri: http://localhost:8081/realms/trusted-attestation-dev/protocol/saml/descriptor

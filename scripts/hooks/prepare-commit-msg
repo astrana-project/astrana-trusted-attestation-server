@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+# astrana-trusted-attestation-server prepare-commit-msg hook, installed by scripts/setup.sh --hooks (scripts\setup.ps1 -Hooks).
+# Adds a Signed-off-by line for the committer when the message does not already have one.
+
+case "${2:-}" in merge|squash) exit 0 ;; esac
+name="$(git config user.name)"
+email="$(git config user.email)"
+[ -n "$name" ] && [ -n "$email" ] || exit 0
+git interpret-trailers --in-place --if-exists doNothing --trailer "Signed-off-by: $name <$email>" "$1"

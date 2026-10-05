@@ -1,0 +1,108 @@
+spring:
+  application:
+    name: trusted-attestation-server
+
+  jackson:
+    # The contract is snake_case throughout, so the DTOs stay idiomatic camelCase Java and the naming
+    # strategy does the translation. No @JsonProperty anywhere. A naming strategy applies to properties,
+    # not map keys, so the manifest's locale-keyed objects are untouched.
+    property-naming-strategy: SNAKE_CASE
+
+    # An invalid attestation response has to be exactly {"valid": false}, with no other fields, ever.
+    default-property-inclusion: non_null
+
+  mvc:
+    formcontent:
+      filter:
+        # The API reads its request body from the servlet input stream whatever Content-Type the caller
+        # sent, see ApiController. Boot's form content filter would otherwise consume the body of a PUT
+        # sent as application/x-www-form-urlencoded, leaving the controller an empty body where the other
+        # two implementations read the bytes as sent. Nothing here submits a form by PUT.
+        enabled: false
+
+  servlet:
+    multipart:
+      # The same reason: a multipart body is read as the bytes it is, not parsed. Nothing here uploads.
+      enabled: false
+
+  jpa:
+    # The application creates its own schema from the shared schema files (see SchemaInitializer).
+    # Hibernate must not also try, because a second definition of the schema is a second thing to drift.
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      # Read and write timestamps as UTC regardless of the JVM's default zone. The procedures store UTC
+      # wall-clock into timezone-naive columns (MySQL DATETIME, SQL Server DATETIME2). Without this,
+      # Hibernate converts Instant<->column through the JVM's zone, so on a non-UTC host expires_at and
+      # revoked_at come back shifted and a relationship's status (statusAt) is computed against the wrong
+      # instant. The .NET and PHP implementations read the naive value as UTC literally, and this pins
+      # Hibernate to match, so the same row means the same instant in every implementation and on every
+      # engine. PostgreSQL TIMESTAMPTZ is unaffected.
+      hibernate.jdbc.time_zone: UTC
+
+  datasource:
+    # Set per deployment, with a password too where the database needs one. The driver is inferred from the
+    # URL, and all three are on the classpath.
+    url: ""
+    username: ""
+
+server:
+  servlet:
+    session:
+      # Idle lifetime of the member's session. Set explicitly rather than left to Boot's 30-minute
+      # default so all three implementations expire an idle session at the same 8 hours. Otherwise a
+      # member idle for half an hour is signed out here but still signed in on the other two. Any request
+      # resets the clock.
+      timeout: 8h
+      cookie:
+        # Named to match the contract's securityScheme. The cookie represents "already signed in through
+        # the organisation's identity system", not a bearer token the server issued.
+        name: ata_session
+        http-only: true
+        secure: true
+        same-site: lax
+
+trusted-attestation:
+  database:
+    # SQL_SERVER, POSTGRESQL or MYSQL. Decides which shared/schema/*.sql the application applies on
+    # first run.
+    provider: POSTGRESQL
+    create-schema-on-startup: true
+
+  iam:
+    # The claim (or, under SAML, the attribute) that carries the member's subject identifier, and the one
+    # that carries the display name. Under SAML an absent subject attribute falls back to the NameID. A
+    # relationship is never read from a claim: it exists only once the organisation has granted it.
+    subject-claim: sub
+    name-claim: name
+
+  tls:
+    # Astrana Trusted Attestation refuses to start without TLS. Set this only when a reverse proxy
+    # terminates TLS in front of it.
+    terminated-by-proxy: false
+
+  audit:
+    # Retention is the host's decision, but pruning is on by default, because a decision that never gets
+    # made protects nobody. Turn it off only when your own job prunes the audit log.
+    prune-enabled: true
+    retention-days: 1825
+    cron: "0 0 2 * * *"
+
+  manifest:
+    # Served at /.well-known/ata-manifest.json. Validated at startup, so an invalid manifest stops the
+    # application rather than being found by a verifying Astrana instance whose lookup fails.
+    manifest-version: 1
+    default-locale: en
+    # The locales the pages offer, in order, as a language switcher. Empty means every locale the shared
+    # strings file ships, ordered by each language's own name with the default locale first. A listed
+    # locale with no shipped strings is ignored, and the switcher appears only when more than one remains.
+    supported-locales: []
+    name: {}
+    description: {}
+    website: {}
+    privacy-notice-url: {}
+    jurisdictions: []
+    relationship-types: []
+    enrollment-url: ""
+    attestation-url: ""

@@ -1,0 +1,51 @@
+# Configuration for the Java implementation in the CI stack, mounted at /app/config/application.yaml.
+# A file rather than environment variables, because Spring's relaxed binding of locale-keyed maps and
+# lists through the environment is fragile.
+
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/trusted_attestation_java
+    username: trusted_attestation
+    password: trusted-attestation-dev-password
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: http://keycloak:8081/realms/trusted-attestation-dev
+            user-name-attribute: preferred_username
+        registration:
+          keycloak:
+            client-id: trusted-attestation
+            client-secret: trusted-attestation-dev-secret
+            authorization-grant-type: authorization_code
+            scope: openid, profile, email
+
+trusted-attestation:
+  tls:
+    terminated-by-proxy: true
+
+  database:
+    provider: POSTGRESQL
+    create-schema-on-startup: true
+
+  manifest:
+    manifest-version: 1
+    default-locale: en
+    name:
+      en: CI Organisation
+    description:
+      en: The implementation under test
+    website:
+      en: https://localhost:16443/
+    privacy-notice-url:
+      en: https://localhost:16443/
+    relationship-types:
+      - employee
+      - client
+      - licensed_professional
+    enrollment-url: https://localhost:16443/
+    attestation-url: https://localhost:16443/api/v1/attest

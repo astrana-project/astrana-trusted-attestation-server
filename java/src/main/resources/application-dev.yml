@@ -1,0 +1,97 @@
+# Local development against the shared development environment in shared/test/docker-compose.yml, which
+# runs Keycloak on localhost:8081 and PostgreSQL on localhost:55432. From the repository root:
+#
+#   docker compose -f shared/test/docker-compose.yml --profile postgres up -d
+#
+# then, from the java folder:
+#
+#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+#
+# Members: alice, bob, carol and dave, password "password" for all four. A member holds nothing until a
+# relationship is granted with grant_member_relationship in the database.
+#
+# The keystore password, the database password and the client secret are not in this file. They come
+# from dev/secrets.yml, which Git ignores, and the README in the java folder shows how to make it.
+
+server:
+  port: 16443
+  ssl:
+    # Astrana Trusted Attestation refuses to start without TLS, in development too, because an
+    # application that only enforces its own security rule in production is one nobody has actually
+    # tested. The throwaway keystore is generated locally and ignored by Git, because a private key,
+    # even a worthless one, does not belong in a repository.
+    enabled: true
+    key-store: file:dev/dev-keystore.p12
+    key-store-type: PKCS12
+    key-alias: trusted-attestation-dev
+
+spring:
+  config:
+    import: optional:file:dev/secrets.yml
+
+  datasource:
+    url: jdbc:postgresql://localhost:55432/trusted_attestation
+    username: trusted_attestation
+
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8081/realms/trusted-attestation-dev
+
+            # A claim Spring's user service requires the provider to send. The session keeps only the
+            # subject, the name and the locale, the member is identified by the subject claim, and no
+            # relationship is read from any claim.
+            user-name-attribute: preferred_username
+        registration:
+          keycloak:
+            client-id: trusted-attestation
+            authorization-grant-type: authorization_code
+            scope:
+              - openid
+              - profile
+              - email
+
+trusted-attestation:
+  tls:
+    # Off in development only. A browser that accepts HSTS for localhost applies it to every port
+    # on localhost, which would force https on unrelated applications on this machine.
+    hsts-enabled: false
+
+  database:
+    provider: POSTGRESQL
+
+  manifest:
+    manifest-version: 1
+    default-locale: en
+    name:
+      en: Acme Bank
+      fr: Banque Acme
+    description:
+      en: Retail and commercial banking
+      fr: Banque de détail et commerciale
+    # Either an image file path or a data URI; the manifest always carries the encoded form. A path is
+    # resolved against the working directory, the java folder under spring-boot:run, so this is the
+    # shared development logo at shared/test/acme-logo.png.
+    logo-data: ../shared/test/acme-logo.png
+    website:
+      en: https://acmebank.example
+      fr: https://acmebank.example/fr
+    privacy-notice-url:
+      en: https://acmebank.example/privacy
+      fr: https://acmebank.example/fr/privacy
+    jurisdictions:
+      - US
+      - US-NY
+      - US-CA
+    relationship-types:
+      - employee
+      - client
+      - licensed_professional
+    enrollment-url: https://localhost:16443/
+    attestation-url: https://localhost:16443/api/v1/attest
+
+logging:
+  level:
+    org.astrana.trustedattestation: INFO

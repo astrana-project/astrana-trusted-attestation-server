@@ -1,0 +1,400 @@
+openapi: 3.0.3
+info:
+  title: Astrana Trusted Attestation Server API
+  version: "1.0"
+  description: >
+    The reasoning is in docs/adr. This contract is the source of truth for every request and response shape. Two kinds
+    of answer can come from any operation and are not listed under each one. One is HTTP 500 - Internal Server Error.
+    The other is the answer to a method the path does not take, which is whatever the framework gives by default, often
+    HTTP 405 - Method Not Allowed (see decision record 37). Each is a status code only, with no body and no Content-Type
+    (see decision record 26).
+servers:
+  - url: https://{ata-host}/api/v1
+    variables:
+      ata-host:
+        default: ata.example.organisation
+  - url: https://{ata-host}/api
+    description: The same routes with no version segment, always the latest version.
+    variables:
+      ata-host:
+        default: ata.example.organisation
+
+security:
+  - {}
+
+paths:
+  /me:
+    get:
+      operationId: getSelf
+      summary: Member's basic information and every relationship they hold, each with its own key status
+      security:
+        - iamSession: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+        "401":
+          description: >
+            Not authenticated. Status code only, with no body and no Content-Type (see decision record 26 in docs/adr).
+        "421":
+          $ref: "#/components/responses/MisdirectedRequest"
+
+  /me/relationships/{relationship_type}/key:
+    parameters:
+      - name: relationship_type
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/RelationshipType"
+        description: >
+          Picks WHICH of the caller's own relationships the operation acts on, never WHOSE record. The server always
+          takes the member from the session with the organisation's identity and access management system (see decision
+          record 2). It must be one of the relationships the signed-in caller already holds.
+    put:
+      operationId: setRelationshipKey
+      summary: Register, replace or clear the key for one relationship
+      description: >
+        Registers or replaces the key for this one relationship. Each save replaces the relationship's key rather than
+        adding another, so repeating the request leaves the same key on record. No other relationship the member holds
+        is affected, including others at the same organisation. The relationship must already exist, or this returns
+        404. Only the organisation creates relationships, with grant_member_relationship, which this API does not
+        expose. If PUT could create a relationship, a member could grant themselves any relationship_type with no
+        organisation involved, and the organisation would no longer be the one vouching for it (see decision record 16).
+        A public_key that is empty or contains only spaces, tabs, carriage returns and line feeds clears the key instead
+        of setting one. Clearing pauses attestation without giving up the grant. The relationship goes back to having no
+        key (status unkeyed), and saving a key again fully reverses the clearing (see decision record 20). Clearing,
+        like registering, never lifts revoked_at or expires_at. The key_cleared audit entry is written only when a key
+        was present, so saving an already-empty field again records nothing.
+      security:
+        - iamSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetKeyRequest"
+      responses:
+        "200":
+          description: >
+            Key registered or replaced for this relationship, or cleared when the request carried a blank public_key
+            (public_key is null in that case).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetKeyResponse"
+        "400":
+          description: >
+            Invalid key format or malformed body. Covers a public_key that is not blank and does not parse to a
+            canonical 32-byte key, the all-zero key, a public_key containing any whitespace character other than spaces,
+            tabs, carriage returns and line feeds, an absent, null or non-string public_key, and a body that is not
+            JSON. Status code only, with no body and no Content-Type. A public_key that is empty or contains only
+            spaces, tabs, carriage returns and line feeds is NOT a 400, because it clears the key.
+        "401":
+          description: Not authenticated. Status code only, with no body and no Content-Type.
+        "404":
+          description: >
+            relationship_type not held by this caller, including a value outside the vocabulary. Status code only, with
+            no body and no Content-Type.
+        "409":
+          description: >
+            This public key is already registered against a *different* relationship, the member's own other
+            relationship or anyone else's. Status code only, with no body and no Content-Type. Saving the key a
+            relationship already has is answered HTTP 200 like any registration, not a conflict. The uniqueness check
+            leaves out the row being updated, so repeating a request never gets a false 409. public_key carries a UNIQUE
+            constraint across the whole table, not scoped per member or per organisation (see decision record 3). This
+            also protects members. Keys are not secret (see the README, How it works), so without this constraint
+            someone who saw a key during a connection could register it against their own relationship.
+        "413":
+          description: >
+            Content Too Large. The request body is over 64 kilobytes (65,536 bytes), and is refused before it is read.
+            Status code only, with no body and no Content-Type. A request that is also not authenticated gets 401, not
+            413.
+        "421":
+          $ref: "#/components/responses/MisdirectedRequest"
+    delete:
+      operationId: removeRelationship
+      summary: Remove this one relationship
+      description: >
+        Deletes this one relationship's row entirely, which removes the relationship rather than revoking it (see the
+        README, How it works). Other relationships the member holds are unaffected. It works the same whether the
+        relationship has a key or has none yet (see decision record 1). The audit log records the removal as the event
+        key_removed.
+      security:
+        - iamSession: []
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Not authenticated. Status code only, with no body and no Content-Type.
+        "404":
+          description: >
+            relationship_type not held by this caller at all, including a value outside the vocabulary. Status code
+            only, with no body and no Content-Type.
+        "421":
+          $ref: "#/components/responses/MisdirectedRequest"
+
+  /me/relationships/{relationship_type}/revoke:
+    parameters:
+      - name: relationship_type
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/RelationshipType"
+    post:
+      operationId: selfRevokeRelationship
+      summary: The member's own revoke of this one relationship
+      description: >
+        The member revokes the relationship and cannot undo it. It moves the relationship to revoked unless it is
+        already revoked, never clears an existing revocation and never touches expires_at (see the README, How it
+        works). The organisation vouches for the relationship, so only the organisation can restore or extend it.
+        Registering a key does not lift a revocation either (see the status field of SetKeyResponse). A member can
+        always revoke without the organisation's permission. Unlike DELETE, the row survives, so the organisation can
+        restore it later with extend_member_relationship rather than a new grant. The call is idempotent. On a
+        relationship that is already revoked it succeeds, changes nothing and writes no second audit entry. The request
+        must carry the session's anti-forgery token in the X-CSRF-TOKEN header. The self-service page reads it from its
+        <meta name="csrf-token"> element. This stops a plain form on another site, including a sibling subdomain, from
+        revoking a member's relationship.
+      security:
+        - iamSession: []
+      parameters:
+        - name: X-CSRF-TOKEN
+          in: header
+          required: true
+          schema:
+            type: string
+          description: >
+            The framework's anti-forgery token for this session, as the self-service page carries it in <meta
+            name="csrf-token" content="...">.
+      responses:
+        "204":
+          description: >
+            Revoked, or already was. The response is the same either way, because the call is idempotent and the caller
+            cannot tell the two cases apart (see decision record 20).
+        "401":
+          description: Not authenticated. Status code only, with no body and no Content-Type.
+        "403":
+          description: >
+            Forbidden. The X-CSRF-TOKEN header is missing or does not match the session. Status code only, with no body
+            and no Content-Type.
+        "404":
+          description: >
+            relationship_type not held by this caller at all, including a value outside the vocabulary. Status code
+            only, with no body and no Content-Type.
+        "421":
+          $ref: "#/components/responses/MisdirectedRequest"
+
+  /attest:
+    post:
+      operationId: attest
+      summary: Look up one public key, anonymously
+      description: >
+        Checks one public key, which belongs to exactly one relationship (see decision record 3). There is no way to
+        list keys (see decision record 4).
+      security:
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttestRequest"
+      responses:
+        "200":
+          description: >
+            Always 200 for a request body within the 64 kilobyte limit and over TLS, whatever the key, including a
+            malformed one. valid means the key is on record at all. Keys never registered, and malformed keys, all get a
+            flat { "valid": false }, with no reason given, which protects against key guessing (see decision record 4).
+            But a key that IS on record returns its real relationship_type, relationship_subtype and status, including
+            "revoked" or "expired", because anyone holding a real key must have been given it by the member, so they are
+            not probing anonymously.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttestResponse"
+        "413":
+          description: >
+            Content Too Large. The request body is over 64 kilobytes (65,536 bytes), and is refused before it is read,
+            so no key is looked up. Status code only, with no body and no Content-Type.
+        "421":
+          $ref: "#/components/responses/MisdirectedRequest"
+
+components:
+  responses:
+    MisdirectedRequest:
+      description: >
+        Misdirected Request. The request arrived over plain HTTP with no TLS-terminating proxy declared, or its proxy's
+        X-Forwarded-Proto header holds anything other than the single value https. Status code only, with no body and no
+        Content-Type (see decision record 31).
+
+  securitySchemes:
+    iamSession:
+      type: apiKey
+      in: cookie
+      name: ata_session
+      description: >
+        Represents the authenticated browser session established through the organisation's own OpenID Connect or SAML
+        sign-in (see decision records 2 and 21). Astrana Trusted Attestation does not define its own credential type.
+        This models "already signed in through the organisation's identity and access management system", not a bearer
+        token issued by the server itself.
+
+  schemas:
+    RelationshipType:
+      type: string
+      description: >
+        A value from the fixed vocabulary, never free text. This list must match relationship-types.json, which is the
+        source of truth.
+      enum:
+        - advisor
+        - apprentice
+        - business_owner
+        - citizen
+        - client
+        - contractor
+        - director
+        - donor
+        - employee
+        - graduate
+        - intellectual_property_holder
+        - licensed_professional
+        - member
+        - official
+        - organiser
+        - partner
+        - property_owner
+        - religious_leader
+        - resident
+        - shareholder
+        - student
+        - tenant
+        - trustee
+        - veteran
+        - volunteer
+
+    RelationshipWithKey:
+      type: object
+      required: [relationship_type, relationship_subtype, status, public_key, expires_at]
+      properties:
+        relationship_type:
+          $ref: "#/components/schemas/RelationshipType"
+        relationship_subtype:
+          type: string
+          nullable: true
+          description: >
+            Optional free text the server does not govern (for example, "Fellow"). For information only. The server
+            never checks or structures it. See decision record 14.
+        status:
+          type: string
+          enum: [unkeyed, active, revoked, expired]
+          description: >
+            unkeyed means the organisation has granted this relationship but the member has not registered a key for it
+            (see the README, How it works). It is possible only here, never in AttestResponse, because a key must exist
+            for anyone to query it through /attest at all.
+        public_key:
+          type: string
+          format: byte
+          nullable: true
+          description: >
+            This relationship's own key, or null if none is registered yet. Never shared with any other relationship the
+            member holds (see decision record 3).
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$'
+          description: A UTC instant in ISO 8601 form with an explicit trailing Z, never a zone-less string.
+
+    MeResponse:
+      type: object
+      required: [name, relationships]
+      properties:
+        name:
+          type: string
+          description: >
+            From the session with the organisation's own identity and access management system. The server does not
+            store this. When the identity system sends no display name, the server uses the member's subject identifier
+            instead.
+        relationships:
+          type: array
+          items:
+            $ref: "#/components/schemas/RelationshipWithKey"
+          description: >
+            Every relationship the member holds at this organisation, each with its own key status (see decision record
+            3). A member can hold more than one at once, for example both "employee" and "client". Always an array, even
+            when it holds one entry.
+
+    SetKeyRequest:
+      type: object
+      required: [public_key]
+      properties:
+        public_key:
+          type: string
+          format: byte
+          description: >
+            Base64-encoded Ed25519 public key, 32 raw bytes. Must come from a keypair generated for this relationship
+            alone, never a key reused from another relationship or another organisation's registration (see decision
+            record 3). Applies only to the relationship named in the path, not to any other relationship the member
+            holds. A string that is empty or contains only spaces, tabs, carriage returns and line feeds CLEARS the key
+            instead of setting one. The relationship keeps its grant and goes back to having no key (status unkeyed, see
+            decision record 20). Any other whitespace character, such as a non-breaking space or a form feed, makes the
+            key malformed (400). The field must still be present and a string. An absent, null or non-string public_key
+            is a malformed request (400), not a clear.
+
+    SetKeyResponse:
+      type: object
+      required: [public_key, relationship_type, relationship_subtype, status]
+      properties:
+        public_key:
+          type: string
+          format: byte
+          nullable: true
+          description: >
+            The key now on record, base64-encoded, or null when the member cleared it (a blank public_key on the
+            request). Registering a key echoes it back, and clearing one returns null.
+        relationship_type:
+          $ref: "#/components/schemas/RelationshipType"
+        relationship_subtype:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [unkeyed, active, revoked, expired]
+          description: >
+            The relationship's status after this key was registered or cleared. It is included because neither
+            registering nor clearing a key lifts a revocation (see the README, How it works, and decision record 20). A
+            member registering or clearing a key on a revoked relationship gets a 200 here, but status revoked tells
+            them it was not restored. "unkeyed" appears when the member cleared the key and the relationship is neither
+            revoked nor expired.
+
+    AttestRequest:
+      type: object
+      required: [public_key]
+      properties:
+        public_key:
+          type: string
+          format: byte
+
+    AttestResponse:
+      type: object
+      required: [valid]
+      properties:
+        valid:
+          type: boolean
+        relationship_type:
+          $ref: "#/components/schemas/RelationshipType"
+        relationship_subtype:
+          type: string
+          description: Present only when the organisation set a subtype on the relationship, and left out otherwise.
+        status:
+          type: string
+          enum: [active, revoked, expired]
+      description: >
+        relationship_type, relationship_subtype and status are present only when valid is true. They describe exactly
+        one relationship, never an array, because each key belongs to exactly one relationship (see decision record 3).
+        This is safe to show even for a revoked or expired relationship, because the only way to hold the key is to have
+        received it from the member. Nobody can guess a key or list keys (see decision record 4). Exact revoked_at and
+        expires_at timestamps are never returned, only status. A verifying Astrana instance accepts the relationship
+        only when status is active. When valid is false, the response is exactly { "valid": false }, with no other
+        fields, ever.

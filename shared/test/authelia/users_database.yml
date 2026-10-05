@@ -1,0 +1,37 @@
+# The four conformance members. Password for all four is `password` (argon2id hash below), as against every
+# other dev IdP. The fixture UUID that shared/test/conformance/check.py grants relationships against is carried in
+# each user's `extra.ata_subject`, which the OIDC claims policy emits as the `ata_subject` claim; the apps
+# read that as the subject (Authelia's own `sub` is an opaque generated id that cannot be pinned).
+users:
+  alice:
+    disabled: false
+    displayname: "Alice"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$KHRQ6grpmUXSt1XOqVUClA$7Wi+yyFjrX1U3VzEV6FIzh5+CvTo1qq1MfTSxEOaUz0"
+    email: "alice@ata.example"
+    groups: []
+    extra:
+      ata_subject: "11111111-1111-4111-8111-111111111111"
+  bob:
+    disabled: false
+    displayname: "Bob"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$KHRQ6grpmUXSt1XOqVUClA$7Wi+yyFjrX1U3VzEV6FIzh5+CvTo1qq1MfTSxEOaUz0"
+    email: "bob@ata.example"
+    groups: []
+    extra:
+      ata_subject: "22222222-2222-4222-8222-222222222222"
+  carol:
+    disabled: false
+    displayname: "Carol"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$KHRQ6grpmUXSt1XOqVUClA$7Wi+yyFjrX1U3VzEV6FIzh5+CvTo1qq1MfTSxEOaUz0"
+    email: "carol@ata.example"
+    groups: []
+    extra:
+      ata_subject: "33333333-3333-4333-8333-333333333333"
+  dave:
+    disabled: false
+    displayname: "Dave"
+    password: "$argon2id$v=19$m=65536,t=3,p=4$KHRQ6grpmUXSt1XOqVUClA$7Wi+yyFjrX1U3VzEV6FIzh5+CvTo1qq1MfTSxEOaUz0"
+    email: "dave@ata.example"
+    groups: []
+    extra:
+      ata_subject: "44444444-4444-4444-8444-444444444444"

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!-- lang and dir come from the locale the page is actually rendered in (see UiStrings.resolve and
+     TextDirection), not the raw request locale: a request for an untranslated language is served in
+     English and must not advertise itself -- nor mirror the layout -- as that language. -->
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${htmlLang}" th:dir="${htmlDir}">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <!-- The landing page is deliberately indexable: it is what enrollment_url points at, and a
+         prospective member finding it through search is the point. Only /me carries noindex. -->
+    <title th:text="${orgName} + ' | ' + ${t['landing_title']}">Trusted attestation</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}"/>
+    <link rel="stylesheet" th:href="@{/trusted-attestation.css}"/>
+    <!-- The organisation's own colours and fonts. This implementation packages the file in the jar, so
+         changing it means a rebuild or a copy served by the proxy at the same address. Loaded after the
+         main stylesheet so its custom properties win. -->
+    <link rel="stylesheet" th:href="@{/theme-overrides.css}"/>
+</head>
+<body class="py-4 px-3">
+<!-- The language switcher, in the top bar above the card, as on the self-service page. See language-switcher.html. -->
+<div class="ata-topbar mb-3">
+    <th:block th:replace="~{language-switcher :: switcher}"/>
+</div>
+<main class="card ata-page mx-auto p-4">
+    <div class="d-flex align-items-center gap-3 mb-4 ata-brand">
+        <!-- Exactly one h1, always. With a logo the image carries the name and the heading is kept for
+             document structure and assistive technology; without one the shipped generic mark is
+             decorative and the name shows as the heading, so the page still looks finished. A dark-mode
+             logo, when the org supplies one, is offered through <picture>/prefers-color-scheme: no script,
+             and the light logo stays the <img> fallback for any browser that does not match the query. -->
+        <th:block th:if="${orgLogo}">
+            <picture>
+                <source th:if="${orgLogoDark}" th:srcset="${orgLogoDark}" media="(prefers-color-scheme: dark)"/>
+                <img class="ata-brand-logo" th:src="${orgLogo}" alt="" aria-hidden="true"/>
+            </picture>
+            <h1 class="fs-5 mb-0 visually-hidden" th:text="${orgName}">Acme Bank</h1>
+        </th:block>
+        <th:block th:unless="${orgLogo}">
+            <img class="ata-brand-logo" th:src="@{/favicon.svg}" alt="" aria-hidden="true"/>
+            <h1 class="fs-5 mb-0" th:text="${orgName}">Acme Bank</h1>
+        </th:block>
+    </div>
+
+    <p class="ata-field-label text-body-secondary mb-3" th:text="${t['landing_title']}">Trusted attestation</p>
+
+    <output class="ata-status d-block mb-3 text-success" th:if="${signedOut}"
+            th:text="${t['signed_out']}">You have been signed out.</output>
+
+    <p class="mb-4" th:text="${#strings.replace(t['landing_intro'], '{org}', orgName)}">What this is.</p>
+
+    <div class="d-flex flex-wrap gap-3">
+        <a class="btn btn-primary" th:href="@{/me}" th:text="${t['landing_sign_in']}">Sign in</a>
+        <a class="btn btn-sm btn-outline-secondary" th:href="${attribution.projectUrl}" rel="noopener"
+           target="_blank" th:text="${t['landing_learn_more']}">About Astrana attestation</a>
+    </div>
+</main>
+
+<!-- The software's own attribution, which the server has no setting to remove. The
+     licence link's label is a translated string, so the footer reads in the member's language like the rest
+     of the page. Only the licence page itself keeps the attribution's own English label. -->
+<footer class="ata-page ata-attribution mx-auto mt-4 text-body-secondary">
+    <a th:href="${attribution.projectUrl}" rel="noopener" target="_blank"
+       th:text="${attribution.projectName}">Astrana Trusted Attestation Server</a>
+    <span th:if="${!#strings.isEmpty(attribution.licenseNotice)}">
+        &middot;
+        <a th:if="${attribution.licenseUrl}" th:href="${attribution.licenseUrl}" rel="noopener"
+           target="_blank" th:text="${t['licence_link']}">Licence</a>
+        <span th:unless="${attribution.licenseUrl}" th:text="${t['licence_link']}">Licence</span>
+    </span>
+</footer>
+</body>
+</html>

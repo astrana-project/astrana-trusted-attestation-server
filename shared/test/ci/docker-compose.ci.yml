@@ -1,0 +1,175 @@
+# The three implementations, one identity provider, one database server and a proxy that terminates TLS,
+# on one Docker network. That is everything the conformance, differential and accessibility suites need.
+# The same file runs the suites on a developer machine and in continuous integration.
+#
+# Every container reaches Keycloak by the service name "keycloak", and Keycloak advertises exactly that
+# name (KC_HOSTNAME), so the issuer an application checks and the issuer written into a token are the same.
+# The suites run in the "suite" container, which shares the proxy's network. From there,
+# https://localhost:15443 is the .NET implementation, 16443 is Java and 17443 is PHP. These are the redirect
+# addresses the Keycloak realm allows. The name "keycloak" resolves there as it does for the applications.
+#
+#   docker compose -f shared/test/ci/docker-compose.ci.yml up -d --build
+#   docker compose -f shared/test/ci/docker-compose.ci.yml run --rm suite bash ci/run-suites.sh /reports
+#   docker compose -f shared/test/ci/docker-compose.ci.yml down -v
+#
+# Reports are written to shared/test/ci/reports, which Git ignores.
+
+name: trusted-attestation-ci
+
+x-keycloak-issuer: &issuer http://keycloak:8081/realms/trusted-attestation-dev
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm --http-port=8081
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: http://keycloak:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
+    volumes:
+      - ../keycloak/trusted-attestation-dev-realm.json:/opt/keycloak/data/import/realm.json:ro
+    healthcheck:
+      # Keycloak's own /health is on the management port. Test the realm endpoint on 8081 instead, which is
+      # what the applications need to reach. The image has no curl, so use bash's /dev/tcp.
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/localhost/8081 && printf 'GET /realms/trusted-attestation-dev HTTP/1.0\\r\\nHost:
+          localhost\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q 200",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: trusted_attestation
+      POSTGRES_PASSWORD: trusted-attestation-dev-password
+      POSTGRES_DB: trusted_attestation
+    volumes:
+      # One database per implementation, so three applications creating their schema at start-up never
+      # get in each other's way.
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trusted_attestation"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  dotnet-app:
+    image: ata-dotnet:ci
+    build:
+      context: ../../..
+      dockerfile: dotnet/Dockerfile
+    restart: on-failure
+    depends_on:
+      keycloak: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      TrustedAttestation__Tls__TerminatedByProxy: "true"
+      TrustedAttestation__Database__Provider: PostgreSql
+      TrustedAttestation__Database__ConnectionString: "Host=postgres;Database=trusted_attestation_dotnet;Username=trusted_attestation;Password=trusted-attestation-dev-password"
+      TrustedAttestation__Database__CreateSchemaOnStartup: "true"
+      TrustedAttestation__Iam__Protocol: Oidc
+      TrustedAttestation__Iam__Authority: *issuer
+      TrustedAttestation__Iam__ClientId: trusted-attestation
+      TrustedAttestation__Iam__ClientSecret: trusted-attestation-dev-secret
+      TrustedAttestation__Iam__RequireHttpsMetadata: "false"
+      TrustedAttestation__Manifest__ManifestVersion: "1"
+      TrustedAttestation__Manifest__DefaultLocale: en
+      TrustedAttestation__Manifest__Name__en: CI Organisation
+      TrustedAttestation__Manifest__Description__en: The implementation under test
+      TrustedAttestation__Manifest__Website__en: https://localhost:15443/
+      TrustedAttestation__Manifest__PrivacyNoticeUrl__en: https://localhost:15443/
+      TrustedAttestation__Manifest__RelationshipTypes__0: employee
+      TrustedAttestation__Manifest__RelationshipTypes__1: client
+      TrustedAttestation__Manifest__RelationshipTypes__2: licensed_professional
+      TrustedAttestation__Manifest__EnrollmentUrl: https://localhost:15443/
+      TrustedAttestation__Manifest__AttestationUrl: https://localhost:15443/api/v1/attest
+
+  java-app:
+    image: ata-java:ci
+    build:
+      context: ../../..
+      dockerfile: java/Dockerfile
+    restart: on-failure
+    depends_on:
+      keycloak: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    environment:
+      SPRING_CONFIG_ADDITIONAL_LOCATION: /app/config/
+    volumes:
+      - ./application-java.yaml:/app/config/application.yaml:ro
+
+  php-app:
+    image: ata-php:ci
+    build:
+      context: ../../..
+      dockerfile: php/Dockerfile
+    restart: on-failure
+    depends_on:
+      keycloak: { condition: service_healthy }
+      postgres: { condition: service_healthy }
+    environment:
+      APP_URL: https://localhost:17443
+      APP_KEY: base64:ZGVtby1rZXktMzItYnl0ZXMtYWFhYWFhYWFhYWFhYWE=
+      TRUSTED_ATTESTATION_TLS_TERMINATED_BY_PROXY: "true"
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      TRUSTED_ATTESTATION_IAM_ISSUER: *issuer
+      TRUSTED_ATTESTATION_IAM_DISCOVERY_URL: http://keycloak:8081/realms/trusted-attestation-dev/.well-known/openid-configuration
+      TRUSTED_ATTESTATION_IAM_CLIENT_ID: trusted-attestation
+      TRUSTED_ATTESTATION_IAM_CLIENT_SECRET: trusted-attestation-dev-secret
+      TRUSTED_ATTESTATION_IAM_REQUIRE_HTTPS_METADATA: "false"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: trusted_attestation_php
+      DB_USERNAME: trusted_attestation
+      DB_PASSWORD: trusted-attestation-dev-password
+      TRUSTED_ATTESTATION_CREATE_SCHEMA: "true"
+      TRUSTED_ATTESTATION_MANIFEST_DEFAULT_LOCALE: en
+      TRUSTED_ATTESTATION_MANIFEST_NAME: '{"en":"CI Organisation"}'
+      TRUSTED_ATTESTATION_MANIFEST_DESCRIPTION: '{"en":"The implementation under test"}'
+      TRUSTED_ATTESTATION_MANIFEST_WEBSITE: '{"en":"https://localhost:17443/"}'
+      TRUSTED_ATTESTATION_MANIFEST_PRIVACY_NOTICE_URL: '{"en":"https://localhost:17443/"}'
+      TRUSTED_ATTESTATION_MANIFEST_RELATIONSHIP_TYPES: employee,client,licensed_professional
+      TRUSTED_ATTESTATION_MANIFEST_ENROLLMENT_URL: https://localhost:17443/
+      TRUSTED_ATTESTATION_MANIFEST_ATTESTATION_URL: https://localhost:17443/api/v1/attest
+
+  # Caddy's internal certificate authority serves three virtual hosts. Each forwards to an application's
+  # plain HTTP port and sets X-Forwarded-Proto, which the applications trust in terminated-by-proxy mode.
+  proxy:
+    image: caddy:2
+    depends_on: [dotnet-app, java-app, php-app]
+    ports:
+      - "15443:15443"
+      - "16443:16443"
+      - "17443:17443"
+    volumes:
+      - ./Caddyfile.ci:/etc/caddy/Caddyfile:ro
+
+  # Where the suites run. Started only on request (`docker compose run --rm suite ...`), with the
+  # repository mounted read-only and a reports directory mounted for output.
+  suite:
+    image: ata-suite:ci
+    build:
+      context: .
+      dockerfile: Dockerfile.suite
+    profiles: ["suite"]
+    network_mode: "service:proxy"
+    depends_on: [proxy]
+    environment:
+      PGPASSWORD: trusted-attestation-dev-password
+      # Each application's own plain HTTP port, past the proxy, which the differential suite's
+      # forwarded-scheme cases need because the proxy overwrites the X-Forwarded-Proto header they test.
+      DIFFERENTIAL_DIRECT_URLS: http://dotnet-app:8080 http://java-app:8080 http://php-app:8000
+    volumes:
+      - ../../..:/repo:ro
+      - ./reports:/reports
+    working_dir: /repo/shared/test

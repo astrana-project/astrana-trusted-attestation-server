@@ -1,0 +1,14 @@
+{
+  "name": "trusted-attestation-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The one stylesheet all three implementations serve, built from a tree-shaken Bootstrap.",
+  "scripts": {
+    "build": "sass --no-source-map --style=compressed --load-path=node_modules src/trusted-attestation.scss dist/trusted-attestation.css",
+    "build:expanded": "sass --no-source-map --style=expanded --load-path=node_modules src/trusted-attestation.scss dist/trusted-attestation.expanded.css"
+  },
+  "devDependencies": {
+    "bootstrap": "5.3.8",
+    "sass": "^1.80.0"
+  }
+}

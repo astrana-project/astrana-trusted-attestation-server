@@ -1,0 +1,574 @@
+/*! Bootstrap v5.3.8 | MIT License | Copyright 2011-2025 The Bootstrap Authors | https://getbootstrap.com */
+
+// The one stylesheet all three implementations serve.
+//
+// It lives here for the same reason schema/*.sql and contract/*.json do: a member looking at an Astrana
+// Trusted Attestation page should not be able to tell which of the three stacks rendered it, and the only way to guarantee
+// that is for there to be one copy of the answer.
+//
+// Built from Bootstrap, importing only the parts this page uses rather than the whole framework. The
+// page is one card: a heading, a definition list, one text field, two buttons, a status line and a
+// footer. Pulling in the carousel, modals, offcanvas, accordions and the rest to style that would be
+// paying for a wardrobe to wear one coat.
+//
+//   npm install && npm run build    ->  dist/trusted-attestation.css
+//
+// Note on @import: Bootstrap 5.3 is still written against Sass's old module system and documents this
+// form, so Dart Sass emits deprecation warnings when building it. They come from Bootstrap's own
+// sources, not from this file, and switching to @use is a Bootstrap 6 matter.
+
+// ---------------------------------------------------------------------------------------------------
+// Configuration, which has to come before the variables it overrides.
+// ---------------------------------------------------------------------------------------------------
+
+@import "bootstrap/scss/functions";
+
+// Dark mode follows the operating system rather than an attribute on <html>.
+//
+// Bootstrap 5.3 defaults to data-bs-theme, which needs script to set it and leaves the page light until
+// that script runs. This page has no state to remember and no theme switcher, so the browser's own
+// preference is the whole answer, and a media query applies it before the first paint.
+$color-mode-type: media-query;
+
+// Bootstrap's own hue family, using the darker (hover/active) shades it already ships rather than its
+// vivid defaults. This keeps the recognisable Bootstrap look while clearing WCAG 2.1 AA with margin:
+// Bootstrap's defaults (#0d6efd/#dc3545/#198754) land right at 4.50-4.53:1 for white button text, a
+// bare pass with no headroom, whereas these sit near 5.8:1, so anti-aliasing, a hover shade or a
+// slightly different contrast calculation cannot tip a button under the line. AA is both a
+// requirement (decision record 33 in docs/adr) and an enforced gate (shared/test/accessibility.py, axe-core).
+$primary: #0b5ed7; // Bootstrap primary hover blue  (white text: 5.84:1)
+$danger: #bb2d3b; // Bootstrap danger hover red     (white text: 5.91:1)
+$success: #157347; // Bootstrap success hover green  (white text: 5.87:1)
+
+$body-bg: #f6f7f9;
+$body-color: #16181d;
+$border-color: #d9dde3;
+
+$font-family-sans-serif:
+  system-ui,
+  -apple-system,
+  "Segoe UI",
+  Roboto,
+  sans-serif;
+$border-radius: 0.375rem;
+$border-radius-lg: 0.625rem;
+
+// Bootstrap ships a full type scale; this page has one heading.
+$enable-shadows: false;
+$enable-gradients: false;
+
+@import "bootstrap/scss/variables";
+
+// Three colours, because the page makes three statements: this is the action, this one is destructive,
+// and that worked. Bootstrap generates a button variant, a set of text and background utilities and a
+// row of CSS custom properties for every entry here, so the ones nothing references are pure weight.
+$theme-colors: (
+  "primary": $primary,
+  "danger": $danger,
+  "success": $success,
+);
+
+@import "bootstrap/scss/variables-dark";
+
+// The dark palette, matched to what the page used before.
+$body-bg-dark: #14161a;
+$body-color-dark: #e7e9ee;
+$border-color-dark: #2e333c;
+
+@import "bootstrap/scss/maps";
+@import "bootstrap/scss/mixins";
+@import "bootstrap/scss/root";
+
+// ---------------------------------------------------------------------------------------------------
+// The parts of Bootstrap this page actually uses.
+// ---------------------------------------------------------------------------------------------------
+
+@import "bootstrap/scss/reboot"; // sensible defaults for body, dl, code, and the rest
+@import "bootstrap/scss/type"; // headings and .small
+// Not containers: this page is one centred card, which .ata-page and a margin utility do
+// without Bootstrap's responsive gutter scale.
+
+// Forms, one partial at a time. The umbrella import also brings selects, checkboxes, radios, range
+// sliders, input groups, floating labels and the validation states; this page has a single text field.
+@import "bootstrap/scss/forms/labels";
+@import "bootstrap/scss/forms/form-text";
+@import "bootstrap/scss/forms/form-control";
+// The key field pairs with an in-field "paste" icon button (see .ata-key below), which needs the
+// input-group component to sit flush at the end of the input.
+@import "bootstrap/scss/forms/input-group";
+
+@import "bootstrap/scss/buttons";
+@import "bootstrap/scss/card";
+@import "bootstrap/scss/helpers/visually-hidden";
+
+// Utilities are generated from a map, so trimming the map is what keeps the output small: the full set
+// is thousands of classes covering every property at every breakpoint, and this page uses a handful.
+// The map has to be defined before it can be narrowed, which is what this import is for; the generator
+// that turns it into CSS is the separate utilities/api below.
+@import "bootstrap/scss/utilities";
+
+// Each of these is here because the page uses it. margin-x in particular is not decoration: mx-auto is
+// what centres the card, and dropping it would silently left-align the whole page.
+$utilities: map-get-multiple(
+  $utilities,
+  (
+    "display",
+    "flex-wrap",
+    "gap",
+    "align-items",
+    "justify-content",
+    "margin",
+    "margin-x",
+    "margin-top",
+    "margin-bottom",
+    "padding",
+    "padding-x",
+    "padding-y",
+    "font-size",
+    "font-weight",
+    "text-align",
+    "color"
+  )
+);
+
+@import "bootstrap/scss/utilities/api";
+
+// ---------------------------------------------------------------------------------------------------
+// What Bootstrap does not have an opinion about.
+// ---------------------------------------------------------------------------------------------------
+
+// The card is lifted off the page rather than sharing its background.
+//
+// Bootstrap 5.3 defaults --bs-card-bg to --bs-body-bg, which makes a card invisible except for its
+// border. The design this replaces put a white card on a grey page, and that separation is doing work:
+// it marks where the org's statement about a member ends and the software's own furniture begins.
+.card {
+  --#{$prefix}card-bg: #{$white};
+}
+
+@include color-mode(dark) {
+  .card {
+    --#{$prefix}card-bg: #1c1f25;
+  }
+}
+
+// WCAG 2.4.7 (focus visible): Bootstrap builds each button's keyboard-focus ring from $theme-colors,
+// which this theme reduces to primary/danger/success -- leaving the secondary variant, used by the
+// revoke action, with no ring at all under keyboard focus while primary (save) and danger (remove) both
+// show one. Restore it in a neutral grey, the same shape as the others, touching only the focus ring.
+.btn-secondary,
+.btn-outline-secondary {
+  --#{$prefix}btn-focus-box-shadow: 0 0 0 0.25rem #{rgba(#6c757d, 0.5)};
+}
+
+// Revoke and Remove share the solid button style because both live inside the "more actions" panel, a
+// deliberate step away from Save. Remove stays the harsher action (solid danger red); Revoke is neutral
+// (solid grey), because a member's revoke is reversible by the organisation. Bootstrap never generated a
+// real .btn-secondary here (secondary is not in this build's reduced $theme-colors), so the solid grey --
+// and its keyboard-focus ring (WCAG 2.4.7), which a real variant would supply -- are defined explicitly
+// through the button's own custom properties. White on #6c757d clears AA (about 4.7:1) in both modes,
+// since a solid button carries its own background rather than relying on the card behind it.
+.ata-btn-revoke {
+  --#{$prefix}btn-color: #fff;
+  --#{$prefix}btn-bg: #6c757d;
+  --#{$prefix}btn-border-color: #6c757d;
+  --#{$prefix}btn-hover-color: #fff;
+  --#{$prefix}btn-hover-bg: #5c636a;
+  --#{$prefix}btn-hover-border-color: #565e64;
+  --#{$prefix}btn-active-color: #fff;
+  --#{$prefix}btn-active-bg: #565e64;
+  --#{$prefix}btn-active-border-color: #51585e;
+  --#{$prefix}btn-disabled-color: #fff;
+  --#{$prefix}btn-disabled-bg: #6c757d;
+  --#{$prefix}btn-disabled-border-color: #6c757d;
+  --#{$prefix}btn-focus-box-shadow: 0 0 0 0.25rem #{rgba(#6c757d, 0.5)};
+}
+
+// One column, centred, at a width that keeps a public key readable without becoming a wall of text.
+.ata-page {
+  max-width: 34rem;
+}
+
+// The org's identity, ruled off from the page's own content so the two are not read as one claim. The
+// padding is the gap between the name and that rule: it lives here, not on a utility in the template, both
+// so all three stacks share one value and because the tree-shaken utility set ships no padding-top/bottom.
+.ata-brand {
+  border-bottom: var(--#{$prefix}border-width) solid var(--#{$prefix}border-color);
+  padding-bottom: 1.25rem;
+}
+
+// The org's own logo, bounded so an org that ships a wide banner rather than a square icon cannot push
+// the heading off the card. Height is definite, not a max: an SVG with only a viewBox carries no intrinsic
+// size, so under `width: auto` with only a max-height it collapses to 0x0 and the mark disappears -- which
+// is exactly the shape of the shipped generic mark and of many org-supplied SVGs. `object-fit: contain`
+// keeps the aspect ratio when a wide logo is clamped by max-width, so it letterboxes rather than distorts.
+.ata-brand-logo {
+  height: 3rem;
+  max-width: 90%;
+  width: auto;
+  object-fit: contain;
+}
+
+// The software's own attribution, outside the card and ruled off from it: it is a statement about the
+// software, not about the org, and the separation is the point. Set small and in the secondary colour: it
+// is the quietest thing on the page, below the org's content in the reading order and in emphasis.
+.ata-attribution {
+  border-top: var(--#{$prefix}border-width) solid var(--#{$prefix}border-color);
+  padding-top: 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--#{$prefix}secondary-color);
+  text-align: center;
+
+  a {
+    color: inherit;
+  }
+}
+
+// Field labels in the member's details, distinguished from the values by weight and size rather than
+// by colour alone.
+.ata-field-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+// A public key is 44 characters of base64 with no spaces, so it has to be allowed to break anywhere or
+// it overflows the card on a narrow screen.
+.ata-key {
+  font-family: $font-family-monospace;
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+// The paste button is the input group's last child but starts hidden, and is only revealed by script where
+// the browser can read the clipboard. While it is hidden the field is visually the only member of the group,
+// so restore its right-hand corners that the input-group otherwise squares off for a trailing button. Keyed
+// on :has so it needs no extra class toggling; where :has is unsupported the only effect is a squared corner.
+.input-group:has(> [data-action="paste"][hidden]) > .ata-key {
+  border-top-right-radius: var(--#{$prefix}border-radius);
+  border-bottom-right-radius: var(--#{$prefix}border-radius);
+}
+
+// Right-to-left pages flip the group's visual order, but Bootstrap's left-to-right build joins and rounds the
+// corners by physical side, so the field and the paste button met with the wrong corners squared and the
+// field's outer corners cut off. Mirror the group's four side-specific rules for dir="rtl". The !important
+// is needed because Bootstrap's own selectors carry several :not() clauses and would otherwise win.
+[dir="rtl"] .input-group {
+  > :not(:first-child) {
+    margin-left: 0;
+    margin-right: calc(-1 * var(--#{$prefix}border-width));
+  }
+
+  > :first-child {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-top-right-radius: var(--#{$prefix}border-radius) !important;
+    border-bottom-right-radius: var(--#{$prefix}border-radius) !important;
+  }
+
+  > :last-child {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-top-left-radius: var(--#{$prefix}border-radius) !important;
+    border-bottom-left-radius: var(--#{$prefix}border-radius) !important;
+  }
+
+  // The field alone, while the paste button is hidden: all four corners rounded, as in left-to-right.
+  &:has(> [data-action="paste"][hidden]) > .ata-key {
+    border-top-left-radius: var(--#{$prefix}border-radius) !important;
+    border-bottom-left-radius: var(--#{$prefix}border-radius) !important;
+  }
+}
+
+// The in-field paste button. A plain outline button is transparent and disappears into the tinted
+// relationship panel, so give it a light-grey fill (the theme's secondary surface) that reads as a distinct
+// control against the white field beside it, and flips with the theme. Set through the button's own custom
+// properties so hover/active follow the same Bootstrap machinery as every other button.
+.ata-paste {
+  --#{$prefix}btn-bg: var(--#{$prefix}secondary-bg);
+  --#{$prefix}btn-border-color: var(--#{$prefix}border-color);
+  --#{$prefix}btn-color: var(--#{$prefix}body-color);
+  // A keyboard focus ring (WCAG 2.4.7): this is not a theme-colour button variant, so Bootstrap leaves its
+  // focus-shadow variable unset -- give it the same neutral grey ring the other custom controls use.
+  --#{$prefix}btn-focus-box-shadow: 0 0 0 0.25rem #{rgba(#6c757d, 0.5)};
+  --#{$prefix}btn-hover-bg: var(--#{$prefix}border-color);
+  --#{$prefix}btn-hover-border-color: var(--#{$prefix}border-color);
+  --#{$prefix}btn-hover-color: var(--#{$prefix}body-color);
+  --#{$prefix}btn-active-bg: var(--#{$prefix}border-color);
+  --#{$prefix}btn-active-border-color: var(--#{$prefix}border-color);
+  --#{$prefix}btn-active-color: var(--#{$prefix}body-color);
+}
+
+// In dark mode the theme's secondary surface sits very close to the dark field beside it, so the button
+// barely reads as separate. Lift it to a distinctly lighter grey (and a lighter hover) so the control stands
+// out against both the field and the panel. Hardcoded like the other dark surfaces in this file.
+@include color-mode(dark) {
+  .ata-paste {
+    --#{$prefix}btn-bg: #3f4753;
+    --#{$prefix}btn-hover-bg: #4b5563;
+    --#{$prefix}btn-active-bg: #4b5563;
+    --#{$prefix}btn-border-color: #4b5563;
+    --#{$prefix}btn-hover-border-color: #4b5563;
+    --#{$prefix}btn-active-border-color: #4b5563;
+  }
+}
+
+// Reserved height, so the layout does not jump when a status message appears after a save.
+.ata-status {
+  min-height: 1.4rem;
+}
+
+// Each relationship is its own card inside the page's card. Nested cards are usually a smell, but here
+// the nesting is the point: these are separate records with separate keys, and running them together as
+// one list would suggest a shared state they do not have.
+.ata-relationship {
+  background-color: var(--#{$prefix}tertiary-bg);
+}
+
+// The key field sits inside that tinted panel, and Bootstrap gives a form-control the body background --
+// which here is almost the panel's own shade, so the field blends in and stops reading as an input. Give
+// it the card's background instead (white in light, the dark card colour in dark), so it stands out as a
+// field against the panel in both modes.
+.ata-relationship .form-control {
+  background-color: var(--#{$prefix}card-bg);
+}
+
+// The relationship's standing, sitting opposite its name. Colour is not carrying the meaning on its own
+// -- the word itself is the label, so this reads the same to someone who cannot distinguish the shades
+// and the same again in a screen reader.
+// A tinted chip, not plain coloured text. Coloured text alone had to be dark to clear AA on the white card,
+// which read as near-black and looked uncoloured; giving the chip a tinted background lets the hue carry at
+// a glance while the text stays readable. The base (no status) is a neutral chip; each status overrides it
+// below.
+.ata-status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--#{$prefix}border-radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--#{$prefix}secondary-text-emphasis);
+  background-color: var(--#{$prefix}secondary-bg-subtle);
+}
+
+// Status colour reinforces the word rather than replacing it: the label is always present, so this stays
+// within WCAG 1.4.1 (colour is not the sole carrier of meaning -- unlike a colour-only dot would be), and
+// it is keyed on the section's data-status, which the script keeps current -- so the colour follows a live
+// status change (for example a save that turns unkeyed into active) without extra scripting. Each chip
+// takes its background and text from Bootstrap's subtle/emphasis pair for that status, which is designed to
+// clear WCAG AA together and flips for dark mode on its own -- so the hue is unmistakable in both themes
+// without hand-picked values.
+.ata-relationship[data-status="active"] .ata-status-badge {
+  color: var(--#{$prefix}success-text-emphasis);
+  background-color: var(--#{$prefix}success-bg-subtle);
+}
+
+.ata-relationship[data-status="unkeyed"] .ata-status-badge {
+  color: var(--#{$prefix}info-text-emphasis);
+  background-color: var(--#{$prefix}info-bg-subtle);
+}
+
+.ata-relationship[data-status="revoked"] .ata-status-badge {
+  color: var(--#{$prefix}danger-text-emphasis);
+  background-color: var(--#{$prefix}danger-bg-subtle);
+}
+
+.ata-relationship[data-status="expired"] .ata-status-badge {
+  color: var(--#{$prefix}warning-text-emphasis);
+  background-color: var(--#{$prefix}warning-bg-subtle);
+}
+
+// The relationship type, given a pill so it reads as the card's identifier at a glance rather than as one
+// more line of bold text. One tint for every type on purpose: colour here is prominence, not meaning -- the
+// word is still the label (decision record 33, and the same reasoning as the status badge above) -- so it stays a single
+// accessible background/text pair that flips with the theme, not a per-type palette that would be arbitrary
+// and hard to keep above the WCAG contrast line across twenty-five values. Bootstrap's subtle/emphasis pair
+// is designed to clear AA in both modes.
+.ata-rel-type {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  // The app's own corner radius rather than a full pill, so the tag matches the buttons and the card.
+  border-radius: var(--#{$prefix}border-radius);
+  background-color: var(--#{$prefix}primary-bg-subtle);
+  color: var(--#{$prefix}primary-text-emphasis);
+  font-weight: 600;
+}
+
+// "More actions": a quiet toggle that keeps the destructive controls (revoke, remove) out of the way until
+// deliberately opened. Keeping them a step removed -- not hidden, but not one careless click away -- is the
+// point: a prominent Remove next to Save invites accidental use and the support load that follows. The toggle
+// sits at the far end of the Save row (justify-content-between in the template) so it is nowhere near Save on
+// a phone. Progressive enhancement: the toggle is hidden until the script reveals it and collapses the panel,
+// so without JavaScript the panel simply shows and every action stays reachable.
+.ata-more-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0.25rem 0;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--#{$prefix}secondary-color);
+}
+
+// A visible keyboard-focus ring (WCAG 2.4.7), the same neutral grey the other custom controls use.
+.ata-more-toggle:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem #{rgba(#6c757d, 0.5)};
+  border-radius: var(--#{$prefix}border-radius);
+}
+
+.ata-more-caret {
+  transition: transform 0.15s ease;
+}
+
+.ata-more-toggle[aria-expanded="true"] .ata-more-caret {
+  transform: rotate(180deg);
+}
+
+// A caution shown above the destructive actions, so it is read before either is clicked rather than after.
+// Amber, not red: it warns "think first", it is not an error (red stays reserved for the destructive control
+// itself). Uses Bootstrap's warning subtle/emphasis pair, which is theme-aware and clears AA in both modes.
+.ata-warning {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.5rem 0.75rem;
+  border: var(--#{$prefix}border-width) solid var(--#{$prefix}warning-border-subtle);
+  border-radius: var(--#{$prefix}border-radius);
+  background-color: var(--#{$prefix}warning-bg-subtle);
+  color: var(--#{$prefix}warning-text-emphasis);
+  font-size: 0.875rem;
+}
+
+.ata-warning > svg {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+// The sign-out control is a button because it performs an action, but it belongs in the page's
+// furniture rather than competing with the two buttons that do the real work.
+.ata-link-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  // Rendered in the link colour rather than muted body text, so it reads as the interactive control it is.
+  // The Bootstrap link-colour custom properties are theme-aware -- lightened for dark mode -- so it stays
+  // above the WCAG AA contrast line in both.
+  color: var(--#{$prefix}link-color);
+}
+
+.ata-link-button:hover,
+.ata-link-button:focus-visible {
+  color: var(--#{$prefix}link-hover-color);
+}
+
+// The top bar that holds the language switcher, pinned to the right.
+.ata-topbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+// The language switcher: a native <details> disclosure. Closed, the summary shows a translate icon and the
+// current language; open, the offered languages drop below it, right-aligned and over the page rather than
+// pushing it down. No JavaScript.
+.ata-language {
+  position: relative;
+}
+
+.ata-language > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  padding: 0.25rem 0.6rem;
+  border: var(--#{$prefix}border-width) solid var(--#{$prefix}border-color);
+  border-radius: var(--#{$prefix}border-radius);
+  color: var(--#{$prefix}body-color);
+  list-style: none; // Firefox: remove the default disclosure triangle
+  user-select: none;
+}
+
+.ata-language > summary::-webkit-details-marker {
+  display: none; // WebKit/Blink: remove the default disclosure triangle
+}
+
+// A visible keyboard-focus ring (WCAG 2.4.7), the same neutral grey the secondary controls use.
+.ata-language > summary:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 0.25rem #{rgba(#6c757d, 0.5)};
+}
+
+.ata-language-menu {
+  position: absolute;
+  inset-inline-end: 0; // aligns under the summary in both LTR (right) and RTL (left)
+  z-index: 5;
+  margin-top: 0.25rem;
+  // Wide enough for three columns of language names; narrows to fit a small screen.
+  width: min(28rem, calc(100vw - 1.5rem));
+  // Laid out in columns so a long list stays short: 20 languages become ~7 rows, not a 20-deep list.
+  // Row-major order, so tab order follows the visible reading order. The height cap + scroll below is a
+  // backstop for a very large set; three columns keep the usual case from ever needing it.
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.125rem 0.25rem;
+  max-height: min(70vh, 24rem);
+  overflow-y: auto;
+  scrollbar-width: thin; // Firefox: a slim scrollbar rather than none
+  scrollbar-gutter: stable; // reserve the gutter so the columns do not shift if it appears
+  padding: 0.375rem;
+  // An explicit surface, not var(--bs-card-bg): that override lives only on .card elements, and this menu
+  // sits outside the card, so it would otherwise fall back to the page background and not stand out.
+  background-color: #{$white};
+  border: var(--#{$prefix}border-width) solid var(--#{$prefix}border-color);
+  border-radius: var(--#{$prefix}border-radius);
+  // A soft drop shadow lifts the menu off the page. Set directly rather than via Bootstrap's shadow
+  // utilities, which this build disables ($enable-shadows: false) as unnecessary everywhere else.
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+// In dark mode the surface has to flip with the page, exactly as .card does above: the menu items draw
+// their text in --bs-body-color, which lightens for dark, so a fixed white background would leave light
+// text on white -- an unreadable menu. Match the dark card colour, and deepen the shadow, which barely
+// registers against a dark page, into a ring that still separates the menu from what is behind it.
+@include color-mode(dark) {
+  .ata-language-menu {
+    background-color: #1c1f25;
+    box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.6);
+  }
+}
+
+// Menu items read as rows, not underlined links: full-width, no underline, with a hover/focus highlight.
+.ata-language-menu .btn {
+  text-decoration: none;
+  color: var(--#{$prefix}body-color);
+  border-radius: var(--#{$prefix}border-radius);
+  padding: 0.35rem 0.6rem;
+}
+
+.ata-language-menu .btn:hover,
+.ata-language-menu .btn:focus-visible {
+  background-color: var(--#{$prefix}tertiary-bg);
+}
+
+// Chromium/WebKit default to an auto-hiding overlay scrollbar, which leaves no sign the list scrolls.
+// Styling the scrollbar forces a classic, always-visible one while it overflows.
+.ata-language-menu::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+.ata-language-menu::-webkit-scrollbar-thumb {
+  background-color: var(--#{$prefix}secondary-color);
+  border-radius: 0.5rem;
+}
+
+.ata-language-menu::-webkit-scrollbar-track {
+  background-color: transparent;
+}

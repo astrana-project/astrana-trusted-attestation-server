@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "me",
+      "//": "HTTPS only. There is no http profile, because Astrana Trusted Attestation refuses to start without TLS, so an http profile would only ever fail at start-up. Run 'dotnet dev-certs https --trust' once before first use. The demonstration and the integration stack also use port 15443, so stop them first.",
+      "applicationUrl": "https://localhost:15443",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

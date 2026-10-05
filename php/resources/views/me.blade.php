@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="{{ $htmlLang }}" dir="{{ $htmlDir }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- The authenticated page must never appear in a search index: its URL existing in results would
+         say this person has a relationship here, which is exactly what /attest is designed not to leak. --}}
+    <meta name="robots" content="noindex, nofollow">
+    {{-- The session's anti-forgery token, which the script below sends on revoke. --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ $orgName }} | {{ $t['page_title'] }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url('/favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url('/trusted-attestation.css') }}"/>
+    <link rel="stylesheet" href="{{ url('/theme-overrides.css') }}"/>
+</head>
+<body class="py-4 px-3">
+<div class="ata-topbar mb-3">
+    @include('shared.language-switcher')
+</div>
+<main class="card ata-page mx-auto p-4">
+    {{-- The organisation's own name and logo, so the member can see whose page this is. Both come from
+         the manifest -- the same content the organisation already maintains for discovery -- rather than
+         from a separate branding setting. --}}
+    <div class="d-flex align-items-center gap-3 mb-4 ata-brand">
+        {{-- Exactly one h1, always. With a logo the image carries the name and the heading is kept for
+             document structure and assistive technology; without one the shipped generic mark is
+             decorative and the name shows as the heading, so the page still looks finished. A dark-mode
+             logo, when the org supplies one, is offered through <picture>/prefers-color-scheme: no script,
+             and the light logo stays the <img> fallback for any browser that does not match the query. --}}
+        @if ($orgLogo)
+            <picture>
+                @if ($orgLogoDark)
+                    <source srcset="{{ $orgLogoDark }}" media="(prefers-color-scheme: dark)">
+                @endif
+                <img class="ata-brand-logo" src="{{ $orgLogo }}" alt="" aria-hidden="true">
+            </picture>
+            <h1 class="fs-5 mb-0 visually-hidden">{{ $orgName }}</h1>
+        @else
+            <img class="ata-brand-logo" src="{{ url('/favicon.svg') }}" alt="" aria-hidden="true">
+            <h1 class="fs-5 mb-0">{{ $orgName }}</h1>
+        @endif
+    </div>
+
+    <p class="ata-field-label text-body-secondary mb-4">{{ $t['page_title'] }}</p>
+
+    {{-- Identity and the control that ends it, grouped: sign-out sits with "signed in as" rather than
+         stranded at the foot of the page. It stays a quiet link, not a button, so it does not compete with
+         the per-relationship actions. Sign-out is a POST (with a CSRF token) so it cannot be triggered by a
+         link someone else planted. --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
+        <dl class="mb-0">
+            <dt class="ata-field-label text-body-secondary">{{ $t['signed_in_as'] }}</dt>
+            <dd class="mb-0">{{ $memberName }}</dd>
+        </dl>
+        <form action="/signout" method="post" class="mb-0">
+            @csrf
+            <button type="submit" class="ata-link-button">{{ $t['sign_out'] }}</button>
+        </form>
+    </div>
+
+    @if (count($relationships) === 0)
+        {{-- Not an error. This is what every member looks like before their first grant, and the page has
+             to say so rather than offering a key field that could not succeed. The follow-up points them at
+             the organisation for help: the org name links to the support URL (or the website), and is plain
+             text when the manifest carries neither. The name is spliced into the localized string at its
+             {org} marker so word order stays correct in every language. --}}
+        <p class="mb-2">{{ str_replace('{org}', $orgName, $t['no_relationships']) }}</p>
+        @php [$before, $after] = array_pad(explode('{org}', $t['no_relationships_help'], 2), 2, ''); @endphp
+        <p class="mb-0">{{ $before }}@if ($contactUrl)<a href="{{ $contactUrl }}" rel="noopener" target="_blank">{{ $orgName }}</a>@else{{ $orgName }}@endif{{ $after }}</p>
+    @else
+        <h2 class="fs-6 ata-field-label text-body-secondary">{{ $t['relationships'] }}</h2>
+
+        {{-- One section per relationship, each with its own key and its own controls. They are genuinely
+             independent -- separate keys, separate standing, separately removable -- so a single combined
+             control would be describing something the data model does not have. --}}
+        @foreach ($relationships as $r)
+            <section class="card p-3 mb-3 ata-relationship"
+                     data-relationship-type="{{ $r['relationshipType'] }}"
+                     data-status="{{ $r['status'] }}">
+                <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2">
+                    {{-- The subtype is shown whenever it is set and not empty, whatever its text: a subtype of
+                         "0" is a subtype, and the other two implementations show it. --}}
+                    <h3 class="fs-6 mb-0">
+                        <span class="ata-rel-type">{{ $r['label'] }}</span>@if ($r['subtype'] !== null && $r['subtype'] !== '') &middot; <span class="fw-normal text-body-secondary">{{ $r['subtype'] }}</span>@endif
+                    </h3>
+                    <span class="ata-status-badge" data-status>{{ $t['status_'.$r['status']] }}</span>
+                </div>
+
+                @if ($r['status'] === 'revoked')
+                    <p class="form-text mt-2 mb-0">{{ str_replace('{org}', $orgName, $t['revoked_help']) }}</p>
+                @elseif ($r['status'] === 'expired')
+                    <p class="form-text mt-2 mb-0">{{ $t['expired_help'] }}</p>
+                @endif
+
+                @if ($r['expiresAt'])
+                    <p class="form-text mt-1 mb-0">{{ $t['key_expires'] }}: {{ $r['expiresAt'] }}</p>
+                @endif
+
+                <label class="form-label fw-semibold mt-3 mb-2" for="key-{{ $r['relationshipType'] }}">
+                    {{ $t['set_key_label'] }}
+                </label>
+                {{-- The key field with an in-field paste icon button at its end. The button is hidden by
+                     default and only revealed by the script when the browser can read the clipboard
+                     (navigator.clipboard.readText), so it never appears as a dead control where it cannot
+                     work; native paste always works regardless. Icon-only, so it carries an accessible name.
+                     The field itself is always left to right, also on a right-to-left page, because a key is
+                     base64 text. --}}
+                <div class="input-group">
+                    <input class="form-control ata-key" type="text" autocomplete="off" spellcheck="false" dir="ltr"
+                           id="key-{{ $r['relationshipType'] }}" data-key-input value="{{ $r['publicKey'] }}">
+                    <button class="btn ata-paste" type="button" data-action="paste" hidden
+                            aria-label="{{ $t['paste_key'] }}" title="{{ $t['paste_key'] }}">
+                        {{-- Paste glyph (clipboard behind a document). --}}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 640 640" aria-hidden="true">
+                            <path d="M128 64C92.7 64 64 92.7 64 128L64 448C64 483.3 92.7 512 128 512L240 512L240 288C240 226.1 290.1 176 352 176L416 176L416 128C416 92.7 387.3 64 352 64L128 64zM312 176L168 176C154.7 176 144 165.3 144 152C144 138.7 154.7 128 168 128L312 128C325.3 128 336 138.7 336 152C336 165.3 325.3 176 312 176zM352 224C316.7 224 288 252.7 288 288L288 512C288 547.3 316.7 576 352 576L512 576C547.3 576 576 547.3 576 512L576 346.5C576 329.5 569.3 313.2 557.3 301.2L498.8 242.7C486.8 230.7 470.5 224 453.5 224L352 224z" />
+                        </svg>
+                    </button>
+                </div>
+
+                {{-- Save is the only prominent action. Revoke and remove are real and reachable, but behind
+                     a quiet "more actions" toggle at the far end of the Save row -- a deliberate step away
+                     and nowhere near Save on a phone, since an adjacent Remove invites accidental taps and
+                     the support requests that follow. Progressive enhancement: the toggle is hidden and the
+                     panel shown until the script reveals the toggle and collapses the panel, so without
+                     JavaScript every action stays reachable. --}}
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <button class="btn btn-primary" type="button" data-action="save">{{ $t['set_key_button'] }}</button>
+                    <button class="ata-more-toggle" type="button" data-more-toggle aria-expanded="true"
+                            aria-controls="more-{{ $r['relationshipType'] }}" hidden>
+                        {{ $t['more_actions'] }}
+                        <svg class="ata-more-caret" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="ata-more-panel mt-4" id="more-{{ $r['relationshipType'] }}" data-more-panel>
+                    {{-- The caution is above the actions, so it is read before either is clicked. --}}
+                    <div class="ata-warning mb-3" role="note">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2" />
+                        </svg>
+                        <span>{{ str_replace('{org}', $orgName, $t['revoke_help']) }}</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-3">
+                        <button class="btn ata-btn-revoke" type="button" data-action="revoke"
+                                @if ($r['status'] === 'revoked') hidden @endif>{{ $t['revoke_button'] }}</button>
+                        <button class="btn btn-danger" type="button" data-action="remove">{{ $t['remove_key_button'] }}</button>
+                    </div>
+                </div>
+
+                <output class="ata-status d-block mt-3" data-message aria-live="polite"></output>
+            </section>
+        @endforeach
+    @endif
+</main>
+
+<script>
+    // Talks to the same API operations any other caller would use, and the page has no privileged back
+    // door of its own. Saving and removing a key are JSON requests a browser preflights across origins. The
+    // revoke is a plain POST, so it carries the session's anti-forgery token in the X-CSRF-TOKEN header,
+    // read from the meta tag in the head.
+    //
+    // One delegated listener rather than three per relationship: the number of relationships is whatever
+    // the organisation granted, and wiring handlers per card would mean the page's behaviour depended on
+    // how many there happened to be.
+    (function () {
+        const T = @json($t);
+        const csrfToken = document.querySelector("meta[name=csrf-token]").content;
+
+        function show(section, message, kind) {
+            const output = section.querySelector("[data-message]");
+            output.textContent = message;
+            output.className = "ata-status d-block mt-3 " + kind;
+        }
+
+        // The card carries its own status, so re-enabling the buttons afterwards does not have to guess
+        // at it. Revoke is hidden once revoked rather than shown disabled: revoking again is a no-op, and
+        // a permanently disabled action is clutter. It stays in the DOM so this toggle can bring it back
+        // if a status ever moves the other way.
+        function setStatus(section, status) {
+            section.dataset.status = status;
+            section.querySelector("[data-status]").textContent = T["status_" + status] || status;
+            section.querySelector("[data-action='revoke']").hidden = status === "revoked";
+        }
+
+        // Each relationship has its own URL, built from the type on its own card. Encoded because it goes
+        // into a path segment, even though every governed value is already URL-safe -- relying on that
+        // would be relying on the vocabulary never gaining a value that is not.
+        function url(section, suffix) {
+            const type = encodeURIComponent(section.dataset.relationshipType);
+            return "/api/v1/me/relationships/" + type + "/" + suffix;
+        }
+
+        async function save(section) {
+            const input = section.querySelector("[data-key-input]");
+
+            // Saving an empty field is the member clearing their key -- pausing the relationship without
+            // giving up the grant. The same request either way; the server reads a blank public_key as
+            // "clear it", so there is no separate control to reach for.
+            const value = input.value.trim();
+            const response = await fetch(url(section, "key"), {
+                method: "PUT",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ public_key: value })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                input.value = result.public_key || "";
+
+                // From the response rather than assumed to be "active": setting a key on a revoked
+                // relationship succeeds without restoring it, and the member needs to see that.
+                setStatus(section, result.status);
+                show(section, value ? T["saved"] : T["cleared"], "text-success");
+                return;
+            }
+
+            if (response.status === 400) return show(section, T["error_invalid_key"], "text-danger");
+            if (response.status === 409) return show(section, T["error_conflict"], "text-danger");
+            if (response.status === 404) return show(section, T["error_not_granted"], "text-danger");
+            if (response.status === 401) return window.location.reload();
+
+            show(section, T["error_generic"], "text-danger");
+        }
+
+        async function revoke(section) {
+            if (!window.confirm(T["revoke_confirm"])) return;
+
+            const response = await fetch(url(section, "revoke"), {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "X-CSRF-TOKEN": csrfToken }
+            });
+
+            if (response.status === 204) {
+                setStatus(section, "revoked");
+                return show(section, T["revoked_message"], "text-success");
+            }
+
+            if (response.status === 401) return window.location.reload();
+
+            show(section, T["error_generic"], "text-danger");
+        }
+
+        async function remove(section) {
+            if (!window.confirm(T["remove_confirm"])) return;
+
+            const response = await fetch(url(section, "key"), {
+                method: "DELETE",
+                credentials: "same-origin"
+            });
+
+            // 404 counts as done: the relationship is gone either way, and telling the member their
+            // removal failed because it had already happened would be a worse answer than the truth.
+            if (response.status === 204 || response.status === 404) {
+                section.remove();
+                return;
+            }
+
+            if (response.status === 401) return window.location.reload();
+
+            show(section, T["error_generic"], "text-danger");
+        }
+
+        // Fill the key field from the clipboard. Reading the clipboard is gated by the browser: it needs
+        // a user gesture (this click), a secure context, and permission, and some browsers do not expose
+        // it at all -- so this is a progressive enhancement, revealed below only where it works. A denied
+        // or empty read leaves the field untouched for a manual paste rather than raising an error.
+        async function paste(section) {
+            const input = section.querySelector("[data-key-input]");
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) input.value = text.trim();
+            } catch {
+                // permission denied or unavailable at click time: fall back to manual paste
+            }
+            input.focus();
+        }
+
+        const actions = { save: save, revoke: revoke, remove: remove, paste: paste };
+
+        // Reveal the paste buttons only when the browser can actually read the clipboard, so the control
+        // is absent -- not merely inert -- everywhere it would not work (for example Firefox, which does
+        // not expose readText to pages).
+        if (navigator.clipboard && typeof navigator.clipboard.readText === "function") {
+            document.querySelectorAll("[data-action='paste']").forEach(b => { b.hidden = false; });
+        }
+
+        // "More actions" disclosure. The toggle ships hidden and the panel visible, so without script
+        // every action is reachable; here the script reveals the toggle, collapses the panel, and wires
+        // the two together. Not part of the delegated [data-action] listener because it changes page
+        // state, not relationship state, and has no server call.
+        document.querySelectorAll("[data-more-toggle]").forEach(function (toggle) {
+            const panel = document.getElementById(toggle.getAttribute("aria-controls"));
+            if (!panel) return;
+
+            toggle.hidden = false;
+            panel.hidden = true;
+            toggle.setAttribute("aria-expanded", "false");
+
+            toggle.addEventListener("click", function () {
+                const willOpen = panel.hidden;
+                panel.hidden = !willOpen;
+                toggle.setAttribute("aria-expanded", String(willOpen));
+            });
+        });
+
+        document.addEventListener("click", async function (event) {
+            const button = event.target.closest("[data-action]");
+            if (!button) return;
+
+            const section = button.closest(".ata-relationship");
+            const handler = actions[button.dataset.action];
+            if (!section || !handler) return;
+
+            const buttons = section.querySelectorAll("[data-action]");
+            buttons.forEach(b => b.disabled = true);
+
+            try {
+                await handler(section);
+            } catch {
+                show(section, T["error_generic"], "text-danger");
+            } finally {
+                // The card is gone after a successful remove, so there is nothing to re-enable. Otherwise
+                // the buttons come back in whatever state the current status calls for.
+                if (section.isConnected) {
+                    buttons.forEach(b => b.disabled = false);
+                    setStatus(section, section.dataset.status);
+                }
+            }
+        });
+    })();
+</script>
+{{-- The server has no setting to remove this, because it is the software's own
+     attribution, distinct from the organisation branding above. Its content comes from the contract, so it
+     reads identically on every Astrana Trusted Attestation instance whichever implementation is serving
+     it. The licence link's label is the one string here that is translated, from the shared strings file. --}}
+<footer class="ata-page ata-attribution mx-auto mt-4 text-body-secondary">
+    <a href="{{ $attribution->projectUrl }}" rel="noopener" target="_blank">{{ $attribution->projectName }}</a>
+    @if ($attribution->licenseNotice)
+        &middot;
+        @if ($attribution->licenseUrl)
+            <a href="{{ $attribution->licenseUrl }}" rel="noopener" target="_blank">{{ $t['licence_link'] }}</a>
+        @else
+            <span>{{ $t['licence_link'] }}</span>
+        @endif
+    @endif
+</footer>
+</body>
+</html>

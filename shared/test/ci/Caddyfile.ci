@@ -1,0 +1,21 @@
+# Caddy's internal certificate authority ("tls internal") serves three virtual hosts. Each forwards to an
+# application's plain HTTP port and sets X-Forwarded-Proto to https, which the applications trust in
+# terminated-by-proxy mode. The ports are the ones the Keycloak realm allows as redirect targets.
+{
+	auto_https disable_redirects
+}
+
+localhost:15443 {
+	tls internal
+	reverse_proxy dotnet-app:8080
+}
+
+localhost:16443 {
+	tls internal
+	reverse_proxy java-app:8080
+}
+
+localhost:17443 {
+	tls internal
+	reverse_proxy php-app:8000
+}

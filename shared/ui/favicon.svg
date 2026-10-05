@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- The generic ATA mark: a seal shape holding a check, for organisations that have not set their own
+       logo, and the favicon for every deployment. Deliberately plain: it identifies the software, and
+       must not compete with the organisation's own branding when that is present. -->
+  <path fill="#0d6efd" d="M16 1 28 6v9c0 7.4-5 13.4-12 16C9 28.4 4 22.4 4 15V6z"/>
+  <path fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+        d="M10 16.5l4 4 8-9"/>
+</svg>

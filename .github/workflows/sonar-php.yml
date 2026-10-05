@@ -1,0 +1,68 @@
+# SonarQube Cloud analysis for the PHP implementation. Each implementation has its own SonarQube Cloud project.
+#
+# The workflow runs on every pull request so that it always reports a result and can be a required check. The
+# install, test and analysis steps run only when the change touches php/ or shared/. Every push to master is
+# analysed in full.
+name: Sonar (PHP)
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze PHP
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Check whether this change touches the PHP implementation
+        id: scope
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^(php/|shared/|\.github/workflows/sonar-php\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No PHP or shared files changed. Nothing to analyse."
+          fi
+
+      - name: Set up PHP
+        if: steps.scope.outputs.run == 'true'
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: "8.4"
+          coverage: xdebug
+
+      - name: Install dependencies
+        if: steps.scope.outputs.run == 'true'
+        working-directory: php
+        # post-autoload-dump runs scripts/sync-shared-assets.php, which copies the contract, schema and interface
+        # files from ../shared
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Tests with coverage
+        if: steps.scope.outputs.run == 'true'
+        working-directory: php
+        run: vendor/bin/phpunit --coverage-clover coverage.xml
+
+      - name: SonarQube Cloud scan
+        if: steps.scope.outputs.run == 'true'
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: php
+          # The project key, organisation, host and coverage path come from php/sonar-project.properties
+
+# Notes:
+# - php/sonar-project.properties carries the project key, organisation, SonarQube Cloud host, sources and the
+#   coverage report path (php/coverage.xml).
