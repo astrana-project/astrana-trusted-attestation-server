@@ -18,8 +18,7 @@ COPY dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Ser
 # linux-x64. Docker sets TARGETARCH, and a build for 64-bit ARM processors gets linux-arm64.
 ARG TARGETARCH
 RUN echo "linux-$([ "$TARGETARCH" = arm64 ] && echo arm64 || echo x64)" > /src/runtime-identifier \
-    && dotnet restore dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Server.csproj \
-        -r "$(cat /src/runtime-identifier)"
+    && dotnet restore dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Server.csproj --locked-mode
 
 COPY dotnet/src/ dotnet/src/
 RUN dotnet publish dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Server.csproj \

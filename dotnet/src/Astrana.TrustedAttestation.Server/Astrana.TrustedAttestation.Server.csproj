@@ -12,6 +12,12 @@
     <!-- Local development reads its credentials from user secrets, which live outside the repository
          and are read only when the environment is Development. -->
     <UserSecretsId>astrana-trusted-attestation-server</UserSecretsId>
+    <!-- packages.lock.json records the exact version and content hash of every package, and the image and continuous
+         integration restore in locked mode, so a build never takes a package the lock file does not name. It covers
+         both runtime identifiers the image is built for, so restore runs without one, because a restore for a single
+         runtime identifier does not match the lock file. Publish then picks the one the image is for. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
