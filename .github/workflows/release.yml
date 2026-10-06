@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release
@@ -29,6 +29,9 @@ jobs:
     # changelog can never publish an image or create a tag.
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    # Write access only here, because this job creates the tag and the GitHub release.
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
