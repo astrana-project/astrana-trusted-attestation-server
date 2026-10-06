@@ -1,0 +1,47 @@
+# OpenSSF (Open Source Security Foundation) Scorecard, which rates the repository's supply-chain security practices.
+# It runs on every push to master, weekly, and whenever a branch protection rule changes. The results go to code
+# scanning and are published to the public Scorecard service, which serves the badge in the README.
+#
+# Publishing the results restricts this workflow. It may have no workflow-level environment variables, defaults or
+# write permissions, and the job may use only the checkout, upload-artifact, upload-sarif, scorecard and
+# harden-runner actions. Keep any other step out of this file.
+#
+# The repository secret SCORECARD_TOKEN is a fine-grained token with read access to the repository's administration
+# settings, so the branch protection check can read the rules. The built-in token cannot.
+name: Scorecard
+
+on:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "41 2 * * 1"
+  branch_protection_rule:
+
+permissions:
+  contents: read
+
+jobs:
+  analyse:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Uploads the results to code scanning.
+      security-events: write
+      # Proves to the Scorecard service that this workflow produced the results it publishes.
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          repo_token: ${{ secrets.SCORECARD_TOKEN }}
+          publish_results: true
+
+      - uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: results.sarif
