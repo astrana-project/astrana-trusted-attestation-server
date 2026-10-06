@@ -1,7 +1,8 @@
 # The container the suites run in. Playwright's Python image brings Python, Playwright and a Chromium the
 # accessibility suite drives. The PostgreSQL client is what the conformance suite uses to grant its
 # fixtures, since relationships come into existence only through the organisation-only stored procedure.
-FROM mcr.microsoft.com/playwright/python:v1.49.1-noble
+# The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
+FROM mcr.microsoft.com/playwright/python:v1.49.1-noble@sha256:42e251ec3238672c931be6c3565ff279690ae072c3e22058128d0412494f6866
 
 # The image ships the browsers but not the Python package for the system interpreter. Pin the package to
 # the image's Playwright version so the bundled browsers match it.

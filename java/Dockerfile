@@ -2,7 +2,8 @@
 #   docker build -f java/Dockerfile -t astrana/ata-java .
 #
 # Build
-FROM maven:3.9-eclipse-temurin-25 AS build
+# The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
+FROM maven:3.9-eclipse-temurin-25@sha256:93b8a14ea2f412782e4e842651273b4d903e35cc496284f178fbbe2d67d00976 AS build
 WORKDIR /src
 
 COPY java/pom.xml java/
@@ -16,7 +17,7 @@ COPY java/src/ java/src/
 RUN mvn -B -q -f java/pom.xml -DskipTests package
 
 # Run
-FROM eclipse-temurin:25-jre
+FROM eclipse-temurin:25-jre@sha256:fcd7fd7b387f94bb2ac461478a7436ad8e349924c374ea8313919624dceae636
 WORKDIR /app
 COPY --from=build /src/java/target/trusted-attestation-server-*.jar app.jar
 # The third-party notices, served from the jar, also at a fixed path beside it.
