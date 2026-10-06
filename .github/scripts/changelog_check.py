@@ -13,10 +13,13 @@ Rules:
 - A change to all three implementations' code may instead step all three changelogs to the same new MINOR or
   MAJOR, which is how an observable change that touches no shared file is released.
 - A change to nothing released (documentation, demo stacks, an implementation's tests, the test harness,
-  repository tooling) needs no changelog change, and a version bump without a corresponding change is an error.
+  repository tooling, build files that never ship) needs no changelog change, and a version bump without a
+  corresponding change is an error. Build files that never ship are the Dockerfiles, the stylesheet's npm files and
+  Sass source, the PHP build scripts, and .NET restore settings and lock files that change no package version.
 """
 
 import datetime
+import json
 import re
 import subprocess
 import sys
@@ -32,11 +35,13 @@ UNRELEASED = re.compile(r"^## \[?unreleased\]?", re.M | re.I)
 
 
 def git(*args: str) -> str:
-    return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
+    return subprocess.run(["git", *args], capture_output=True, text=True, encoding="utf-8", check=True).stdout
 
 
 def file_at(ref: str, path: str) -> str:
-    result = subprocess.run(["git", "show", f"{ref}:{path}"], capture_output=True, text=True)
+    result = subprocess.run(
+        ["git", "show", f"{ref}:{path}"], capture_output=True, text=True, encoding="utf-8", errors="replace"
+    )
     return result.stdout if result.returncode == 0 else ""
 
 
@@ -49,17 +54,85 @@ TEST_DIRS = ("/tests/", "/src/test/")
 TEST_FILES = ("phpunit.xml", "coverage.runsettings", "sonar-project.properties")
 # Development configuration, which .dockerignore keeps out of every image and the Java build keeps out of the jar.
 DEV_FILES = ("appsettings.Development.json", "launchSettings.json", "application-dev.yml", "application-dev-saml.yml")
+# Build files that never ship themselves. The images are infrastructure, so a Dockerfile change rides along with the
+# next release. The stylesheet's npm files and Sass source only build shared/ui/dist, which is released. The PHP
+# scripts run during the install or the image build, never in the running server, and a script not named here counts
+# as released until someone checks what runs it.
+BUILD_FILES = tuple(f"{impl}/Dockerfile" for impl in IMPLS) + (
+    "shared/ui/package.json",
+    "shared/ui/package-lock.json",
+    "php/scripts/add-native-sbom-components.php",
+    "php/scripts/generate-third-party-notices.php",
+    "php/scripts/sync-shared-assets.php",
+)
+BUILD_DIRS = ("shared/ui/src/",)
+# Project file settings that only steer the NuGet restore, which the lock file then records.
+RESTORE_SETTINGS = re.compile(
+    r"<(RestorePackagesWithLockFile|RestoreLockedMode|RuntimeIdentifiers)\b[^>]*>[^<]*</\1>"
+)
+XML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+EMPTY_PROPERTY_GROUP = re.compile(r"<PropertyGroup\b[^>]*>\s*</PropertyGroup>")
+CONTENT_CHECKED = ("/packages.lock.json", ".csproj")
 
 
 def released_code(path: str) -> bool:
-    """True for files that end up in a released artefact. Tests, test and development configuration are not."""
+    """True for files that end up in a released artefact. Tests, test and development configuration and the build
+    files that never ship are not."""
     unreleased = TEST_FILES + DEV_FILES
     if path.endswith(".md") or path.endswith(unreleased) or any(d in path for d in TEST_DIRS):
+        return False
+    if path in BUILD_FILES or path.startswith(BUILD_DIRS):
         return False
     for impl in IMPLS:
         if path.startswith(f"{impl}/"):
             return not path.startswith(f"{impl}/demo/")
     return path.startswith(SHARED)
+
+
+def resolved_versions(lock_text: str) -> dict:
+    """Every package a NuGet lock file resolves, by target, with its version."""
+    targets = json.loads(lock_text)["dependencies"]
+    return {
+        (target, name): entry.get("resolved") for target, entries in targets.items() for name, entry in entries.items()
+    }
+
+
+def project_without_restore_settings(text: str) -> list[str]:
+    """A project file's lines with comments, restore-only settings, blank lines and line endings left out."""
+    text = EMPTY_PROPERTY_GROUP.sub("", RESTORE_SETTINGS.sub("", XML_COMMENT.sub("", text.lstrip("\ufeff"))))
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def released_content(path: str, base_text: str, head_text: str) -> bool:
+    """Whether a released file's change from base_text to head_text changes the software. A new NuGet lock file, or
+    one that resolves the same versions, does not, and nor does a project file change made only of restore settings
+    and comments. Anything else does, a dependency version change included."""
+    if path.endswith("/packages.lock.json"):
+        if not base_text.strip():
+            return False
+        try:
+            return resolved_versions(base_text) != resolved_versions(head_text)
+        except (ValueError, KeyError, AttributeError, TypeError):
+            return True
+    if path.endswith(".csproj") and base_text.strip() and head_text.strip():
+        return project_without_restore_settings(base_text) != project_without_restore_settings(head_text)
+    return True
+
+
+def released_changes(files, at_base, at_head):
+    """Whether the change touches a released shared file, and which implementations' released code it changes.
+    at_base and at_head return a file's text before and after the change, an empty string where it does not exist."""
+
+    def released(path: str) -> bool:
+        if not released_code(path):
+            return False
+        # Only these files are read, as the content of every other released file does not change the answer.
+        return not path.endswith(CONTENT_CHECKED) or released_content(path, at_base(path), at_head(path))
+
+    released_files = [f for f in files if released(f)]
+    shared_change = any(f.startswith(SHARED) for f in released_files)
+    impl_changes = {impl for impl in IMPLS for f in released_files if f.startswith(f"{impl}/")}
+    return shared_change, impl_changes
 
 
 def step(old, new) -> str | None:
@@ -93,9 +166,9 @@ def next_version(old, part: str):
 def main() -> int:
     base = sys.argv[1] if len(sys.argv) > 1 else "origin/master"
     files = [f for f in git("diff", "--name-only", f"{base}...HEAD").splitlines() if f]
-
-    shared_change = any(f.startswith(SHARED) and released_code(f) for f in files)
-    impl_changes = {impl for impl in IMPLS for f in files if f.startswith(f"{impl}/") and released_code(f)}
+    # The file list compares with the point the branch left the base, so file contents do too.
+    fork = git("merge-base", base, "HEAD").strip()
+    shared_change, impl_changes = released_changes(files, lambda p: file_at(fork, p), lambda p: file_at("HEAD", p))
 
     errors = []
     head, before = {}, {}
