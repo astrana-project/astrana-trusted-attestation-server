@@ -7,7 +7,8 @@
 # Stage 1: resolve Composer dependencies. Kept separate so Composer never reaches the final image.
 # Only the resolved vendor/ tree is copied forward. Scripts are skipped here (the shared-asset sync has
 # its own stage below, and package discovery runs in the runtime stage).
-FROM composer:2 AS vendor
+# The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
+FROM composer:2@sha256:af98f42dfff7c68ba8d53c2164fd9fde1087b7d449514baa38c418b1f6bc4bac AS vendor
 WORKDIR /app
 COPY php/composer.json php/composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs
@@ -15,7 +16,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-script
 # Stage 2: the shared single source (contract, schema, strings, stylesheet), synced into the paths the
 # application reads. Its own stage so that shared/ itself is in no layer of the final image: a COPY
 # followed by a later rm still leaves the copied tree in the COPY layer. Only the synced copies move on.
-FROM php:8.4-cli AS shared-assets
+FROM php:8.4-cli@sha256:0177c7589c0715b63e5343342a7c1f1887db759ad0b0d6ad3bb949938bba6b47 AS shared-assets
 WORKDIR /app
 COPY php/scripts/sync-shared-assets.php scripts/
 COPY shared/ /shared
@@ -23,7 +24,7 @@ RUN php scripts/sync-shared-assets.php
 
 # Stage 3: the runtime image, PHP with the database drivers the server needs. The tag names the Debian
 # release, which scripts/add-native-sbom-components.php reads for the bill of materials.
-FROM php:8.4-cli-trixie
+FROM php:8.4-cli-trixie@sha256:0177c7589c0715b63e5343342a7c1f1887db759ad0b0d6ad3bb949938bba6b47
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # The published image supports MySQL and PostgreSQL only. Microsoft's ODBC driver for SQL Server may be

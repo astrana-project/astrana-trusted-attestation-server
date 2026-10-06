@@ -66,6 +66,10 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: dotnet tool install --global dotnet-sonarscanner
 
+      - name: Restore the packages the lock files name
+        if: steps.scope.outputs.run == 'true'
+        run: dotnet restore Astrana.TrustedAttestation.slnx --locked-mode
+
       - name: Build, test and analyse
         if: steps.scope.outputs.run == 'true'
         shell: bash
@@ -82,8 +86,8 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
             /d:sonar.coverage.exclusions="**/src/Astrana.TrustedAttestation.Server/Program.cs" \
             /d:sonar.exclusions="demo/**"
-          dotnet build --no-incremental
-          dotnet test --settings coverage.runsettings --collect:"XPlat Code Coverage"
+          dotnet build --no-incremental --no-restore
+          dotnet test --no-restore --settings coverage.runsettings --collect:"XPlat Code Coverage"
           dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
 
 # Notes:

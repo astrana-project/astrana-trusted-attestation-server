@@ -2,7 +2,8 @@
 #   docker build -f dotnet/Dockerfile -t astrana/ata-dotnet .
 #
 # Build
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+# The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS build
 WORKDIR /src
 
 # The contract, schema and interface inputs are embedded or copied from ../../../shared at build time,
@@ -17,15 +18,14 @@ COPY dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Ser
 # linux-x64. Docker sets TARGETARCH, and a build for 64-bit ARM processors gets linux-arm64.
 ARG TARGETARCH
 RUN echo "linux-$([ "$TARGETARCH" = arm64 ] && echo arm64 || echo x64)" > /src/runtime-identifier \
-    && dotnet restore dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Server.csproj \
-        -r "$(cat /src/runtime-identifier)"
+    && dotnet restore dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Server.csproj --locked-mode
 
 COPY dotnet/src/ dotnet/src/
 RUN dotnet publish dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Server.csproj \
         -c Release -r "$(cat /src/runtime-identifier)" --self-contained false -o /app --no-restore
 
 # Run
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4
 WORKDIR /app
 COPY --from=build /app .
 # The third-party notices, served from the web root, also at a fixed path beside the application.

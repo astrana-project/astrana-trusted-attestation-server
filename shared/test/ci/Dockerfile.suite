@@ -1,13 +1,16 @@
 # The container the suites run in. Playwright's Python image brings Python, Playwright and a Chromium the
 # accessibility suite drives. The PostgreSQL client is what the conformance suite uses to grant its
 # fixtures, since relationships come into existence only through the organisation-only stored procedure.
-FROM mcr.microsoft.com/playwright/python:v1.49.1-noble
+# The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
+FROM mcr.microsoft.com/playwright/python:v1.49.1-noble@sha256:42e251ec3238672c931be6c3565ff279690ae072c3e22058128d0412494f6866
 
-# The image ships the browsers but not the Python package for the system interpreter. Pin the package to
-# the image's Playwright version so the bundled browsers match it.
+# The image ships the browsers but not the Python package for the system interpreter. suite-requirements.txt pins
+# the package to the image's Playwright version, so the bundled browsers match it, and pins every package by hash.
+COPY suite-requirements.txt /tmp/suite-requirements.txt
 RUN apt-get update \
  && apt-get install -y --no-install-recommends postgresql-client \
  && rm -rf /var/lib/apt/lists/* \
- && pip install --no-cache-dir --break-system-packages playwright==1.49.1
+ && pip install --no-cache-dir --break-system-packages --require-hashes -r /tmp/suite-requirements.txt \
+ && rm /tmp/suite-requirements.txt
 
 WORKDIR /repo/shared/test

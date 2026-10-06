@@ -170,6 +170,9 @@ secrets. A release that fails, for example because those secrets are not set, is
   leave the changelogs alone. Development configuration means `appsettings.Development.json`, `launchSettings.json`,
   `application-dev.yml` and `application-dev-saml.yml`. The version tracks the software, and none of these are part of
   it.
+- Build files that never ship need no changelog entry either. These are the Dockerfiles, the stylesheet's npm files and
+  Sass source, the PHP build scripts, and the .NET restore settings and lock files, but a change to a dependency's
+  version still needs one.
 
 The changelog check fails the pull request if the heading is missing, the bump does not match the files you changed, or
 the three `MAJOR.MINOR` versions differ. The
@@ -208,7 +211,7 @@ changelog checks, with `--tests` (`-Tests` on Windows) for the unit tests as wel
 Markdown, YAML, JSON, SCSS and CSS in the repository. To run it by hand:
 
 ```
-npm install
+npm ci
 npm run format
 ```
 

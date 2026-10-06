@@ -43,8 +43,8 @@ Write-Host "  a missing toolchain only matters for what it builds, continuous in
 
 if (Get-Command npm -ErrorAction SilentlyContinue) {
     Write-Host "== formatter"
-    npm install --no-audit --no-fund --silent
-    if ($LASTEXITCODE -eq 0) { Write-Host "prettier installed" } else { Write-Host "npm install failed, run it by hand" }
+    npm ci --no-audit --no-fund --silent
+    if ($LASTEXITCODE -eq 0) { Write-Host "prettier installed" } else { Write-Host "npm ci failed, run it by hand" }
 }
 
 $hookDir = git rev-parse --git-path hooks

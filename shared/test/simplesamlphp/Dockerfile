@@ -1,7 +1,8 @@
 # A minimal SimpleSAMLphp 2.x IdP that serves cleanly over plain HTTP at the site root, with the router
 # fallback SSP 2.x needs (every path goes through public/index.php). The pre-built images that exist serve
 # HTTPS-only behind an alias with no fallback, which 403s every router path -- so this builds its own.
-FROM php:8.3-apache
+# The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
+FROM php:8.3-apache@sha256:c2c73159da2f7a19167a2849bd9785ca9ad4f5eeff01f85295ef861a5e9bcf4d
 
 # mbstring is the one required extension not already in the base image; the rest SSP needs (dom, openssl,
 # json, libxml, ...) are compiled in. unzip is for composer's package extraction.

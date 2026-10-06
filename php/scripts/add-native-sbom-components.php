@@ -46,7 +46,8 @@ $refuse = static function (string $message) use ($dockerfilePath): never {
 
 $dockerfile = (string) file_get_contents($dockerfilePath);
 
-preg_match_all('/^FROM (\S+)/m', $dockerfile, $images);
+// The image name and tag, without the digest that pins the exact image.
+preg_match_all('/^FROM ([^\s@]+)/m', $dockerfile, $images);
 $runtimeImage = end($images[1]) ?: '';
 if (! str_ends_with($runtimeImage, '-'.$debian['codename'])) {
     $refuse("builds on $runtimeImage, not on Debian {$debian['codename']}, the release the package versions here were recorded from");

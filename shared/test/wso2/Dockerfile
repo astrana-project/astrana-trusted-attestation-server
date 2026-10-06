@@ -10,7 +10,8 @@
 # change. The image points the TLS listener at it via [keystore.tls], and trusts that certificate in WSO2's own
 # client truststore so the server accepts it on its internal HTTPS calls. The matrix mounts the matching public
 # certificate, generated/wso2-tls.crt, into the three implementations so they trust it on the backchannel.
-FROM wso2/wso2is:7.1.0
+# The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
+FROM wso2/wso2is:7.1.0@sha256:b874455a8add57a0377d3963427a694c700649933b9169a00fb6eb308a502947
 
 USER root
 
