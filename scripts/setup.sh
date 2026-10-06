@@ -47,7 +47,7 @@ echo "  a missing toolchain only matters for what it builds, continuous integrat
 
 if npm --version >/dev/null 2>&1; then
   echo "== formatter"
-  if npm install --no-audit --no-fund --silent; then echo "prettier installed"; else echo "npm install failed, run it by hand"; fi
+  if npm ci --no-audit --no-fund --silent; then echo "prettier installed"; else echo "npm ci failed, run it by hand"; fi
 fi
 
 hook_dir="$(git rev-parse --git-path hooks)"

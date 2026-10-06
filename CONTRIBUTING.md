@@ -208,7 +208,7 @@ changelog checks, with `--tests` (`-Tests` on Windows) for the unit tests as wel
 Markdown, YAML, JSON, SCSS and CSS in the repository. To run it by hand:
 
 ```
-npm install
+npm ci
 npm run format
 ```
 
