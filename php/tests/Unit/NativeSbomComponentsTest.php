@@ -175,6 +175,23 @@ final class NativeSbomComponentsTest extends TestCase
     }
 
     #[Test]
+    public function a_runtime_image_pinned_by_digest_is_read_by_its_tag(): void
+    {
+        // The Dockerfile pins each base image by digest and keeps the tag, which still names the Debian release.
+        $digest = '@sha256:'.str_repeat('0', 64);
+        $pinned = str_replace("FROM php:8.4-cli-trixie\n", "FROM php:8.4-cli-trixie$digest\n", self::DOCKERFILE);
+
+        [$exitCode, $sbom] = $this->merge($pinned, self::generated());
+        self::assertSame(0, $exitCode);
+        self::assertSame($this->merge(self::DOCKERFILE, self::generated())[1], $sbom);
+
+        $otherRelease = str_replace("FROM php:8.4-cli-trixie\n", "FROM php:8.4-cli-bookworm$digest\n", self::DOCKERFILE);
+        [$exitCode, $sbom] = $this->merge($otherRelease, self::generated());
+        self::assertNotSame(0, $exitCode);
+        self::assertSame(self::generated(), $sbom);
+    }
+
+    #[Test]
     public function a_dockerfile_without_one_of_the_pins_is_refused_and_the_file_left_alone(): void
     {
         [$exitCode, $sbom] = $this->merge(str_replace("ARG PDO_SQLSRV_VERSION=5.13.2\n", '', self::DOCKERFILE), self::generated());
