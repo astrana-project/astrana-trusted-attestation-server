@@ -43,7 +43,8 @@ image supports MySQL and PostgreSQL only. For SQL Server, build the PHP image yo
 
 - An identity and access management system that supports OpenID Connect or SAML 2.0. Keycloak, Microsoft Entra ID, Okta,
   Active Directory Federation Services, Authentik, Zitadel and others all qualify. Members sign in through it, so it
-  must already know every person you intend to grant a relationship to.
+  must already know every person you intend to grant a relationship to. The [identity systems page](identity-systems.md)
+  lists the systems tested with the server, and what to check in any other.
 
 - A database server of one of three kinds, PostgreSQL, MySQL or Microsoft SQL Server, with an empty database on it.
 
