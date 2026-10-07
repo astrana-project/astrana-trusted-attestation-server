@@ -198,7 +198,7 @@ are published at
 │   └── screenshots/          the images the documentation shows
 ├── scripts/                   setup, format, check and integration helpers, and the git hooks
 └── .github/                  workflows, the changelog and sign-off checks, issue and pull request templates,
-                              copilot-instructions.md
+                              and the pointer GitHub Copilot follows to AGENTS.md
 ```
 
 Everything under `shared/contract`, `shared/schema` and `shared/ui` is the single source of the contract, the schemas,
