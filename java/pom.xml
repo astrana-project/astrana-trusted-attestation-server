@@ -318,6 +318,13 @@
         paths they touched, so any analysis reading this project saw zero, and a test count on its own
         says nothing about what is covered. The report is written on every `./mvnw test`, so it exists
         whether or not anybody remembers to ask for it.
+
+        The agent records only this project's classes. The report reads nothing else, and recording every
+        library class the tests load makes the agent write a large file one byte at a time as the test JVM
+        exits. On a slow file system, such as a folder mounted into a container, that write outlasts the
+        30 seconds Surefire allows after the tests finish, so Surefire kills the JVM and leaves a truncated
+        `jacoco.exec` behind. Each run also starts a fresh file rather than appending, so a file left over
+        from an earlier run can never be carried into the next.
       -->
       <plugin>
         <groupId>org.jacoco</groupId>
@@ -329,6 +336,12 @@
             <goals>
               <goal>prepare-agent</goal>
             </goals>
+            <configuration>
+              <append>false</append>
+              <includes>
+                <include>org/astrana/**</include>
+              </includes>
+            </configuration>
           </execution>
           <execution>
             <id>report</id>
