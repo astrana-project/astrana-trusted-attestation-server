@@ -1,10 +1,12 @@
 # Scans the container images, their build files and the Git history on each pull request and each push to master, so
 # that a problem is found before it is released, because every merge to master publishes a release.
 #
-# Hadolint checks the three Dockerfiles. Each image is built and Trivy scans it for HIGH and CRITICAL vulnerabilities
-# that have a fix, and scans the repository's Dockerfiles for HIGH and CRITICAL misconfigurations. Both Trivy scans
-# upload their findings to code scanning and then fail the run if there are any. A vulnerability with no fix yet is left
-# out, because nothing the project changes can remove it. Gitleaks scans the whole Git history for secrets.
+# Hadolint checks the Dockerfiles of the three published images. The test images are never published, so Hadolint
+# leaves their Dockerfiles out. Each published image is built and Trivy scans it for HIGH and CRITICAL vulnerabilities
+# that have a fix, and scans all the repository's Dockerfiles for HIGH and CRITICAL misconfigurations. Both Trivy scans
+# fail the run if they find anything, and upload their findings to code scanning either way. A vulnerability with no
+# fix yet is left out, because nothing the project changes can remove it. Gitleaks scans the whole Git history for
+# secrets.
 #
 # The weekly run repeats the Trivy scans, so that a vulnerability published after the last change is found.
 name: Scan
@@ -19,8 +21,10 @@ on:
 permissions:
   contents: read
 
+# The event is part of the group, so that the weekly run can't cancel a push run, which also runs Hadolint and
+# Gitleaks.
 concurrency:
-  group: scan-${{ github.ref }}
+  group: scan-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -69,7 +73,7 @@ jobs:
           pull: true
           no-cache: true
 
-      - name: Scan the image for code scanning
+      - name: Scan the image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: ${{ env.TRIVY_VERSION }}
@@ -81,25 +85,14 @@ jobs:
           format: sarif
           limit-severities-for-sarif: true
           output: trivy-image.sarif
+          exit-code: 1
 
+      # Uploaded when the scan fails too, so that its findings show in code scanning.
       - uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        if: ${{ !cancelled() && hashFiles('trivy-image.sarif') != '' }}
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image-${{ matrix.implementation }}
-
-      - name: Fail on a HIGH or CRITICAL vulnerability that has a fix
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        env:
-          TRIVY_SKIP_DB_UPDATE: true
-        with:
-          version: ${{ env.TRIVY_VERSION }}
-          skip-setup-trivy: true
-          scan-type: image
-          image-ref: ata-${{ matrix.implementation }}:scan
-          scanners: vuln
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: 1
 
   trivy-config:
     name: Trivy configuration
@@ -110,7 +103,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Scan the configuration for code scanning
+      - name: Scan the configuration
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           version: ${{ env.TRIVY_VERSION }}
@@ -122,23 +115,14 @@ jobs:
           format: sarif
           limit-severities-for-sarif: true
           output: trivy-config.sarif
+          exit-code: 1
 
+      # Uploaded when the scan fails too, so that its findings show in code scanning.
       - uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        if: ${{ !cancelled() && hashFiles('trivy-config.sarif') != '' }}
         with:
           sarif_file: trivy-config.sarif
           category: trivy-config
-
-      - name: Fail on a HIGH or CRITICAL misconfiguration
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          version: ${{ env.TRIVY_VERSION }}
-          skip-setup-trivy: true
-          scan-type: config
-          scan-ref: .
-          severity: HIGH,CRITICAL
-          skip-dirs: .cache
-          trivyignores: .trivyignore.yaml
-          exit-code: 1
 
   gitleaks:
     name: Gitleaks
