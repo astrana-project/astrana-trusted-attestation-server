@@ -508,6 +508,40 @@ by the addresses in its configuration. The identity system must be able to redir
 proxy serves. The demonstration in `java/demo` is a complete working example of a container behind a proxy, with a
 database and an identity system you would replace with your own.
 
+#### Verify the image
+
+Each published image is signed through Sigstore by the release workflow of the Astrana Trusted Attestation Server
+repository, with a short-lived certificate rather than a long-lived key. To check that the image you pulled is the one
+that workflow built, install [cosign](https://docs.sigstore.dev/cosign/system_config/installation/), version 3 or later,
+and run this command. It prints the signature's details when the image is genuine and fails when it is not. In this
+command and the ones below, put the release's full version, such as `1.0.0`, in place of `<version>`.
+
+```bash
+cosign verify astrana/ata-java:<version> \
+  --certificate-identity-regexp '^https://github\.com/astrana-project/astrana-trusted-attestation-server/\.github/workflows/release\.yml@refs/heads/master$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+The image also comes with a record of how it was built and, in every release after 1.0.0, a list of the software it
+contains. The signature covers both, and Docker shows them. A 1.0.0 image is signed but comes with no list of software,
+so for it the second command prints `{}`.
+
+```bash
+docker buildx imagetools inspect astrana/ata-java:<version> --format '{{ json .Provenance }}'
+docker buildx imagetools inspect astrana/ata-java:<version> --format '{{ json .SBOM }}'
+```
+
+Each GitHub release includes the software bill of materials, `sbom.json`, with its signature, `sbom.json.sigstore.json`.
+Download both from the release and check them the same way.
+
+```bash
+curl -LO https://github.com/astrana-project/astrana-trusted-attestation-server/releases/download/java-v<version>/sbom.json
+curl -LO https://github.com/astrana-project/astrana-trusted-attestation-server/releases/download/java-v<version>/sbom.json.sigstore.json
+cosign verify-blob sbom.json --bundle sbom.json.sigstore.json \
+  --certificate-identity-regexp '^https://github\.com/astrana-project/astrana-trusted-attestation-server/\.github/workflows/release\.yml@refs/heads/master$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
 ### Installed on a server
 
 Building needs a Java 25 development kit, and the Maven wrapper in `java/` supplies Maven. Running needs a Java 25

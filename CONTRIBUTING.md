@@ -191,10 +191,6 @@ merges, and the tag and the Docker image take their version from it. Java's jar 
 When you bump a version, set it in `java/pom.xml` for Java. Regenerate the implementation's `sbom.json` as its README
 describes whenever a dependency or the version changes. The changelog check compares both versions with the changelog.
 
-The Release workflow publishes on each push to `master`, using the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository
-secrets. A release that fails, for example because those secrets are not set, is tried again on the next push to
-`master`, or when the maintainer runs the Release workflow by hand.
-
 [Versions and releases](docs/versions.md#what-each-number-means) says what each number means. Choose the version as
 follows.
 
@@ -240,6 +236,22 @@ To propose corrections, open a pull request that changes only that language's en
 its labels in `shared/contract/relationship-types.json`, and links to its issue. Keep every key as it is, and keep every
 placeholder in curly brackets, such as `{org}`, exactly as written. A correction is a defect fix, so version it as
 [Changelog and version](#changelog-and-version) describes, with an entry such as "Corrected the French interface text."
+
+## Releasing
+
+Releases are published only by the Release workflow, which runs on each push to `master`, so each time a pull request
+merges. Never publish an image, a tag or a GitHub release from your own computer. The workflow publishes with the
+`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets, and those credentials exist only in the repository's
+continuous integration secrets. A release that fails, for example because those secrets are not set, is tried again on
+the next push to `master`, or when the maintainer runs the Release workflow by hand.
+
+The workflow signs each image and each release's software bill of materials, and the installation guides show users how
+to check those signatures. The signing identity is made from the repository's name, the workflow file's path and the
+branch, so renaming any of them changes it. The verify commands in the installation guides, and the identity the
+workflow checks its own signatures against, must then be updated in the same pull request. The workflow's
+`id-token: write` permission must stay, because signing depends on it.
+[Decision record 45](docs/adr/0045-anyone-can-check-where-a-published-image-came-from.md) explains why releases are
+signed this way.
 
 ## Developer Certificate of Origin
 
