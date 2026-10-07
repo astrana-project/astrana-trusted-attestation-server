@@ -38,7 +38,8 @@ You need four things:
 
 - An identity and access management system that supports OpenID Connect or SAML 2.0 and already knows every person you
   intend to grant a relationship to. Microsoft Entra ID, Active Directory Federation Services, Keycloak, Okta,
-  PingFederate and the other enterprise systems all qualify. This page calls it the identity system.
+  PingFederate and the other enterprise systems all qualify. This page calls it the identity system. The
+  [identity systems](../identity-systems.md) page lists the ones tested with the server and what to check in yours.
 - A database server, Microsoft SQL Server, PostgreSQL, or MySQL, with an empty database on it.
 - Somewhere to run the server, with a TLS certificate for the address that members and verifying Astrana instances will
   use, or a reverse proxy that terminates TLS in front of it.

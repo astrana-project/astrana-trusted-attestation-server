@@ -41,7 +41,8 @@ You need four things:
 
 - A sign-in service that supports OpenID Connect or SAML 2.0 and already has an account for every person you intend to
   grant a relationship to. Google Workspace and Microsoft 365 both do, and so do Keycloak, Authentik and the other
-  identity and access management systems. This page calls it the sign-in service.
+  identity and access management systems. This page calls it the sign-in service. The
+  [identity systems](../identity-systems.md) page lists the ones tested with the server and what to check in yours.
 - A hosting account, or a server, with PHP 8.4.1 or later and a MySQL, Microsoft SQL Server or PostgreSQL database. PHP
   needs these extensions, which hosting accounts normally provide: `mbstring`, `openssl`, `dom`, `fileinfo`,
   `tokenizer`, `curl` and `intl`. Composer stops the installation if one is missing. PHP also needs the PHP Data Objects

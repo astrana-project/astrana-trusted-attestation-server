@@ -55,9 +55,10 @@ Astrana Trusted Attestation is designed to fit into the existing infrastructure,
 organisations that run it. It runs on the organisation's own stack, with implementations available for .NET, Java and
 PHP. Members sign in through the identity and access management system the organisation already uses, over the open
 standards OpenID Connect or SAML. Any provider that supports either works without special integration, as long as it
-presents an identifier the organisation already holds for each member. The server keeps a small record, in a database of
-a kind the organisation already runs (PostgreSQL, MySQL or SQL Server), on an existing database server or a dedicated
-one. Granting, revoking and extending relationships stay with the organisation's own systems and processes.
+presents an identifier the organisation already holds for each member. The [identity systems](docs/identity-systems.md)
+page lists the ones tested with it and what to check in others. The server keeps a small record, in a database of a kind
+the organisation already runs (PostgreSQL, MySQL or SQL Server), on an existing database server or a dedicated one.
+Granting, revoking and extending relationships stay with the organisation's own systems and processes.
 
 ## How it works
 
@@ -190,6 +191,7 @@ are published at
 │   ├── installation.md       installing and configuring the server
 │   ├── installation/         one installation page per implementation
 │   ├── glossary.md           the terms the documentation uses
+│   ├── identity-systems.md   the identity systems tested with the server, and what to check in others
 │   ├── relationship-types.md what each relationship type means
 │   ├── adr/                  architecture decision records
 │   └── screenshots/          the images the documentation shows
