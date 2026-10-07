@@ -45,8 +45,11 @@ ARG MSODBCSQL18_VERSION=18.7.1.1-1
 # its licence file, and the sqlsrv and pdo_sqlsrv extensions, from Microsoft's repository for the image's
 # own Debian release, which Microsoft signs with its 2025 key. No coverage or other test tooling is
 # installed. The extensions are compiled in this one layer and the compilers, headers and download tools
-# are removed again at the end of it, so that the image carries the runtime libraries only. The Debian
-# packages this layer adds are recorded, for the third-party notices.
+# are removed again at the end of it, so that the image carries the runtime libraries only. The C library
+# headers are purged by their package name, libc6-dev, because libc-dev in PHPIZE_DEPS is only a name
+# other packages provide, and purging it removes nothing. Then the packages left that have a Debian
+# security update waiting are upgraded, and only those. The Debian packages this layer adds are recorded,
+# for the third-party notices.
 # hadolint ignore=DL3008
 RUN dpkg-query -W -f '${Package}\n' | sort > /tmp/packages-before \
  && apt-get update \
@@ -68,7 +71,10 @@ RUN dpkg-query -W -f '${Package}\n' | sort > /tmp/packages-before \
       && apt-mark manual unixodbc libodbc2 msodbcsql18 \
       && apt-get purge -y --auto-remove unixodbc-dev gnupg; \
     fi \
- && apt-get purge -y --auto-remove libpq-dev libicu-dev curl $PHPIZE_DEPS \
+ && apt-get purge -y --auto-remove libpq-dev libicu-dev curl $PHPIZE_DEPS libc6-dev \
+ && apt-get --just-print upgrade | awk '/^Inst .*-security/ {print $2}' > /tmp/security-updates \
+ && xargs --no-run-if-empty apt-get install -y --no-install-recommends --only-upgrade < /tmp/security-updates \
+ && rm /tmp/security-updates \
  && rm -rf /var/lib/apt/lists/* /tmp/pear \
  && install -d /usr/local/share/astrana-trusted-attestation \
  && comm -13 /tmp/packages-before <(dpkg-query -W -f '${Package}\n' | sort) \
