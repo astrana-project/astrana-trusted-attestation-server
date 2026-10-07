@@ -196,7 +196,8 @@ are published at
 │   ├── versions.md           what the version numbers mean and how to update
 │   ├── adr/                  architecture decision records
 │   └── screenshots/          the images the documentation shows
-├── scripts/                   setup, format, check and integration helpers, and the git hooks
+├── scripts/                  setup, format, check and integration helpers, the translation review script and the
+│                             git hooks
 └── .github/                  workflows, the changelog and sign-off checks, issue and pull request templates,
                               and the pointer GitHub Copilot follows to AGENTS.md
 ```
