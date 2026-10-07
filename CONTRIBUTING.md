@@ -64,12 +64,14 @@ software, and a vulnerability in one means a release. Use what the language and 
 dependency only when it does something they do not, and say in the pull request why it is needed. The
 [decision record on dependencies](docs/adr/0006-keep-third-party-dependencies-to-a-minimum.md) gives the reasoning.
 
+The pages must stay accessible to the Web Content Accessibility Guidelines (WCAG) 2.1 at level AA, as
+[decision record 33](docs/adr/0033-one-accessible-interface-shared-by-all-three-implementations.md) requires, with the
+[markup the shared interface describes](shared/ui/README.md#the-markup-the-landing-page-and-the-self-service-page-carry).
+
 `shared/` holds the single source of the API contract, the database schemas, the stylesheet and interface strings, and
 the relationship-type vocabulary. Each implementation copies them in at build time. Never edit an implementation's copy.
 Change the source in `shared/`. Import `relationship-types.json`, never retype its values. Keep request and response
 shapes exactly as `openapi.yaml` defines them.
-
-Give every unit test its own dependencies, so that no test can affect another.
 
 These rules keep the design secure, so do not weaken them.
 
@@ -83,6 +85,19 @@ These rules keep the design secure, so do not weaken them.
 - No route carries a member identifier. The session supplies it.
 - `PUT` on a relationship's attestation key never creates a relationship, and a member can never grant, extend or
   restore their own.
+
+## Tests
+
+Work test first, always. Before you write or change any code, write the test that describes the behaviour you want, run
+it and see it fail for the reason you expect. Then write the smallest code that makes it pass, and tidy the code only
+while the tests pass.
+
+- A bug fix starts with a test that reproduces the bug.
+- A change to observable behaviour starts with the conformance or differential case in `shared/test`, as well as the
+  unit tests in each implementation.
+- Do not write code that no failing test asked for.
+- Do not change a test to make it pass, unless a decision has changed the behaviour it describes.
+- Give every unit test its own dependencies, so that no test can affect another.
 
 ## Secrets
 
@@ -100,6 +115,23 @@ anywhere else, and never swap in a real password.
 If you commit a secret by mistake, treat it as exposed, even after you remove it, because it stays in the history.
 Revoke or replace it first. Then tell the maintainer. If the secret gives access to anything real, tell them privately,
 as [SECURITY.md](SECURITY.md) describes.
+
+## Documentation
+
+Write for human readers, in plain British English. Expand an acronym the first time it appears in a document.
+
+- Do not use em-dashes or semicolons, and do not write "e.g.", "i.e." or "etc.".
+- Do not front a sentence with a label and a colon, such as "Note:". A line ending in a colon that introduces a list or
+  a code block is fine.
+- Do not write sentences about the document itself, or point to something described elsewhere without adding anything.
+- Do not add status or history notes, such as "currently", "no longer" or "was changed".
+- Do not put planning notes, task lists or commentary about the work into repository documents.
+
+Write "Astrana Trusted Attestation" or "the Astrana Trusted Attestation Server" in full, never the acronym. Identifiers
+such as `ata_session` and `astrana/ata-*` stay as they are.
+
+Leave out filler words such as "deliberately", "simply", "by design" and "for now". Every sentence should give the
+reader something they can use.
 
 ## Architecture decision records
 
@@ -130,8 +162,8 @@ consequences.
 To change a decision, write a new record and change the old one's status line to `Superseded by record N on YYYY-MM-DD.`
 Never edit a record into a different decision. The old record is the history of why things were as they were.
 
-Write records in plain language, with British spelling, words in full, acronyms expanded on first use in each record, no
-bold for emphasis, and no labels fronting a sentence.
+Write records as [Documentation](#documentation) describes, treating each record as its own document for acronyms, and
+use no bold for emphasis.
 
 ## Review and merging
 
