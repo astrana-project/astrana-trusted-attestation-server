@@ -11,7 +11,7 @@ jobs:
     name: Sign-off
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - run: python3 .github/scripts/dco_check.py "origin/${{ github.base_ref }}"
@@ -20,7 +20,7 @@ jobs:
     name: Changelog accuracy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       # The check's own tests run first, so a change to the check cannot quietly change what it enforces.
@@ -31,6 +31,6 @@ jobs:
     name: Script tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The tests of the contributor scripts in scripts/, such as the translation review sheet.
       - run: python3 -m unittest discover -s scripts
