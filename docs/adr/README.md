@@ -88,18 +88,20 @@ Never edit a record into a different decision. The old record is the history of 
 
 ## Delivery
 
-|     | Record                                                                                                                                                   | Derives from  |
-| --: | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-|  36 | [Parity is defined by one implementation-blind suite](0036-parity-is-defined-by-one-implementation-blind-suite.md)                                       | 2, 5          |
-|  37 | [Only behaviour the contract and the shared interface define must match](0037-only-behaviour-the-contract-and-the-shared-interface-define-must-match.md) | 5, 26, 31, 36 |
-|  38 | [Shared feature versions, independent patches, release on merge](0038-shared-feature-versions-independent-patches-release-on-merge.md)                   | 5, 7, 36      |
-|  39 | [Security fixes ship in the latest release only](0039-security-fixes-ship-in-the-latest-release-only.md)                                                 | 12, 38        |
-|  40 | [Published images are application-only, demonstrations are bundled](0040-published-images-are-application-only-demonstrations-are-bundled.md)            | 2, 5, 9       |
+|     | Record                                                                                                                                                   | Derives from     |
+| --: | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+|  36 | [Parity is defined by one implementation-blind suite](0036-parity-is-defined-by-one-implementation-blind-suite.md)                                       | 2, 5             |
+|  37 | [Only behaviour the contract and the shared interface define must match](0037-only-behaviour-the-contract-and-the-shared-interface-define-must-match.md) | 5, 26, 31, 36    |
+|  38 | [Shared feature versions, independent patches, release on merge](0038-shared-feature-versions-independent-patches-release-on-merge.md)                   | 5, 7, 36         |
+|  39 | [Security fixes ship in the latest release only](0039-security-fixes-ship-in-the-latest-release-only.md)                                                 | 12, 38           |
+|  40 | [Published images are application-only, demonstrations are bundled](0040-published-images-are-application-only-demonstrations-are-bundled.md)            | 2, 5, 9          |
+|  44 | [Version numbers say what an update means](0044-version-numbers-say-what-an-update-means.md)                                                             | 5, 7, 12, 36, 38 |
 
 ## Dates and names
 
-The records were written down when the project moved into this repository, from its earlier design documents and its
-history, and each is dated 2026-10-05, the day the set was completed. Paths and names are as they are now.
+The first 40 records were written down when the project moved into this repository, from its earlier design documents
+and its history, and are dated 2026-10-05, the day that set was completed. Later records carry the date they were
+accepted. Paths and names are as they are now.
 
 From the first public release on, numbers are fixed. A new record takes the next number and is added to the group it
 belongs to in this list, and this list, not the numbering, is the reading order. The "derives from" column names the

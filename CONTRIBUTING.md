@@ -154,30 +154,39 @@ Each implementation has its own `CHANGELOG.md` (`dotnet/`, `java/`, `php/`), in
 Add a heading for the new version, `## [X.Y.Z] - YYYY-MM-DD`, and list your changes under it. Do not add an `Unreleased`
 section. Date the heading the day you finalise the entry. If the pull request merges on a later day, update the date
 before it merges, or the maintainer will when merging. The version you write is the one released when the pull request
-merges, and the tag and the Docker image take their version from it. Java's jar takes its version from `java/pom.xml`
-instead, so set the same version there when you bump Java's changelog.
+merges, and the tag and the Docker image take their version from it. Java's jar takes its version from `java/pom.xml`.
+When you bump a version, set it in `java/pom.xml` for Java. Regenerate the implementation's `sbom.json` as its README
+describes whenever a dependency or the version changes. The changelog check compares both versions with the changelog.
 
 The Release workflow publishes on each push to `master`, using the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository
 secrets. A release that fails, for example because those secrets are not set, is tried again on the next push to
 `master`, or when the maintainer runs the Release workflow by hand.
 
-- If you change `shared/contract`, `shared/schema` or `shared/ui`, or anything observable from outside the application,
-  bump `MINOR` (compatible) or `MAJOR` (breaking) in all three changelogs, with the same version and the same entry in
-  each.
-- If you change one implementation and nothing observable, such as a dependency update or an internal fix, bump that
-  implementation's `PATCH`, in its changelog only.
+[Versions and releases](docs/versions.md#what-each-number-means) says what each number means. Choose the version as
+follows.
+
+- If you make a functional change, in `shared/contract`, `shared/schema` or `shared/ui` or anywhere observable from
+  outside the application, bump the same new `MINOR` or `MAJOR` in all three changelogs, with the same entry in each.
+- If you fix a defect in `shared/contract`, `shared/schema` or `shared/ui`, or make any other change there that is not
+  functional, bump `PATCH` in all three changelogs, each one step above that implementation's current version, with the
+  same entry in each. The three patch numbers can differ.
+- If you fix a defect in one implementation, update its dependencies, or refactor or restructure its shipped code
+  without a functional change, bump that implementation's `PATCH`, in its changelog only.
 - If you change only documentation, the demonstration stacks, tests, the test harness or development configuration,
   leave the changelogs alone. Development configuration means `appsettings.Development.json`, `launchSettings.json`,
   `application-dev.yml` and `application-dev-saml.yml`. The version tracks the software, and none of these are part of
   it.
 - Build files that never ship need no changelog entry either. These are the Dockerfiles, the stylesheet's npm files and
-  Sass source, the PHP build scripts, and the .NET restore settings and lock files, but a change to a dependency's
-  version still needs one.
+  Sass source, the PHP build scripts, the `sbom.json` bills of materials, the .NET restore settings and lock files, and
+  the configuration of the JaCoCo and Spotless plugins in `java/pom.xml`.
+- Development-only dependencies need no changelog entry either. These are `require-dev` in `php/composer.json`,
+  `packages-dev` in `php/composer.lock` and the dependencies with the `test` scope in `java/pom.xml`. A change to any
+  other dependency's version still needs one, and so does any other change to `java/pom.xml`.
 
-The changelog check fails the pull request if the heading is missing, the bump does not match the files you changed, or
-the three `MAJOR.MINOR` versions differ. The
-[decision record on versioning](docs/adr/0038-shared-feature-versions-independent-patches-release-on-merge.md) explains
-why versions work this way.
+The changelog check fails the pull request if the heading is missing, the bump does not match the files you changed, the
+three `MAJOR.MINOR` versions differ, or `java/pom.xml` or an `sbom.json` states a different version from its changelog.
+The [decision record on versioning](docs/adr/0044-version-numbers-say-what-an-update-means.md) explains why versions
+work this way.
 
 ## Developer Certificate of Origin
 

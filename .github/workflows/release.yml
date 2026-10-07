@@ -1,5 +1,5 @@
 # Releases every implementation whose changelog carries a version that is not released yet, on each push to master
-# (decision record 38). For each one it pushes the image astrana/ata-<implementation> with three tags (the full
+# (decision record 44). For each one it pushes the image astrana/ata-<implementation> with three tags (the full
 # version, MAJOR.MINOR and latest). It then tags the commit <implementation>-v<version> and creates a GitHub release
 # with that version's changelog section and the software bill of materials.
 #

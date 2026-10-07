@@ -22,9 +22,10 @@
 - [ ] If this changes the contract or a shared input (`shared/`), **all three implementations** (.NET, Java, PHP) are
       updated together and still behave identically
 - [ ] If the change is released, each affected implementation's `CHANGELOG.md` has a **dated version heading** for it,
-      with no `Unreleased` section. A shared or observable change bumps `MINOR` or `MAJOR` to the same version in all
-      three. A fix to one implementation only bumps that implementation's `PATCH`. A change to documentation, tests or
-      tooling only leaves the changelogs alone
+      with no `Unreleased` section, and the version follows
+      [Changelog and version](https://github.com/astrana-project/astrana-trusted-attestation-server/blob/master/CONTRIBUTING.md#changelog-and-version)
+      in CONTRIBUTING.md, with the version set in `java/pom.xml` for Java and the implementation's `sbom.json`
+      regenerated as its README describes
 - [ ] Documentation and decision records updated if the contract or behaviour changed
 - [ ] All commits are signed off under the
       [Developer Certificate of Origin](https://github.com/astrana-project/astrana-trusted-attestation-server/blob/master/DCO)

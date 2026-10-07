@@ -1,6 +1,6 @@
 # 38. Shared feature versions, independent patches, release on merge
 
-Accepted on 2026-10-05.
+Superseded by record 44 on 2026-10-07.
 
 ## Context
 

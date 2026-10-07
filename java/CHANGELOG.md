@@ -3,8 +3,8 @@
 All notable changes to the Java implementation of the Astrana Trusted Attestation Server are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
-[Semantic Versioning](https://semver.org/spec/v2.0.0.html). The first two numbers of a version are shared by the .NET,
-Java and PHP implementations, and the last number moves on its own for a fix to one implementation.
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
+number means and how the versions of the three implementations relate.
 
 ## [1.0.0] - 2026-10-05
 

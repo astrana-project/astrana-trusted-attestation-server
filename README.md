@@ -193,6 +193,7 @@ are published at
 │   ├── glossary.md           the terms the documentation uses
 │   ├── identity-systems.md   the identity systems tested with the server, and what to check in others
 │   ├── relationship-types.md what each relationship type means
+│   ├── versions.md           what the version numbers mean and how to update
 │   ├── adr/                  architecture decision records
 │   └── screenshots/          the images the documentation shows
 ├── scripts/                   setup, format, check and integration helpers, and the git hooks
@@ -208,8 +209,8 @@ of maintaining a copy of its own, so the three cannot drift apart.
 
 The [quick start](docs/quickstart.md) runs a demonstration on your own machine. The
 [installation guide](docs/installation.md) covers registering the server with your identity system, the database, the
-configuration, and granting, revoking and extending relationships. The [glossary](docs/glossary.md) defines the terms
-the documentation uses.
+configuration, and granting, revoking and extending relationships. [Versions and releases](docs/versions.md) says what
+the version numbers mean and how to update. The [glossary](docs/glossary.md) defines the terms the documentation uses.
 
 These files define what every implementation must do:
 

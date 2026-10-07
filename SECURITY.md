@@ -75,16 +75,16 @@ test another organisation's Astrana Trusted Attestation Server without that orga
 ## Security releases
 
 A fix ships as a new release of the affected implementation, with an entry in its `CHANGELOG.md`. A fix in one
-implementation alone is a patch release of that implementation, and a fix in a shared input is a feature release of all
-three. The maintainer publishes a GitHub security advisory for the repository, requests a Common Vulnerabilities and
-Exposures (CVE) identifier when the issue needs one, and publishes a new image of each affected implementation. To hear
-about fixes, watch the repository's releases and security advisories on GitHub.
+implementation alone is a patch release of that implementation, and a fix in a shared input is a patch release of each
+of the three. The maintainer publishes a GitHub security advisory for the repository, requests a Common Vulnerabilities
+and Exposures (CVE) identifier when the issue needs one, and publishes a new image of each affected implementation. To
+hear about fixes, watch the repository's releases and security advisories on GitHub.
 
 ## Supported versions
 
 Security issues are fixed in the latest release of each implementation, so to get a fix, update to the latest release.
-Within a major version every release is backwards compatible, so updating does not bring a breaking change. Older
-releases do not get fixes.
+Within a major version every release is backwards compatible, as [Versions and releases](docs/versions.md) describes, so
+updating does not bring a breaking change. Older releases do not get fixes.
 
 When a new major version is released, its release notes will say whether, and for how long, the previous major version
 continues to receive security fixes.

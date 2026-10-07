@@ -120,13 +120,13 @@ without its notice. The file is generated, so it is not kept in Git.
 ## Changelog and bill of materials
 
 `CHANGELOG.md` follows Keep a Changelog, with no Unreleased section, as
-[decision record 38](../docs/adr/0038-shared-feature-versions-independent-patches-release-on-merge.md) describes.
-`sbom.json` is a CycloneDX software bill of materials for the published image, generated from the Composer lock file
-without the development dependencies. It also lists what the image installs outside Composer. These are the Debian
-packages the `Dockerfile` adds, at the versions the image was last built with, and the `sqlsrv` and `pdo_sqlsrv`
-extensions and Microsoft's ODBC driver, at the versions the `Dockerfile` pins. The published image does not hold the SQL
-Server parts, so the bill of materials marks them as optional. When a dependency or one of those versions changes,
-regenerate it from this folder, with the version from the changelog:
+[decision record 44](../docs/adr/0044-version-numbers-say-what-an-update-means.md) describes. `sbom.json` is a CycloneDX
+software bill of materials for the published image, generated from the Composer lock file without the development
+dependencies. It also lists what the image installs outside Composer. These are the Debian packages the `Dockerfile`
+adds, at the versions the image was last built with, and the `sqlsrv` and `pdo_sqlsrv` extensions and Microsoft's ODBC
+driver, at the versions the `Dockerfile` pins. The published image does not hold the SQL Server parts, so the bill of
+materials marks them as optional. Regenerate it from this folder whenever a dependency or the version changes, counting
+those components as dependencies. Use the version from the changelog:
 
 ```bash
 docker run --rm -v "$(pwd)":/app -w /app --entrypoint sh composer:2 -c \

@@ -152,9 +152,9 @@ alone. A jar with no licence text fails the build. To fix it, add a line naming 
 ## Changelog and bill of materials
 
 `CHANGELOG.md` follows Keep a Changelog, with no Unreleased section, as
-[decision record 38](../docs/adr/0038-shared-feature-versions-independent-patches-release-on-merge.md) describes.
-`sbom.json` is a CycloneDX software bill of materials generated from the Maven dependency tree. When a dependency
-changes, regenerate it from this folder, copy the result over the committed file, then complete it:
+[decision record 44](../docs/adr/0044-version-numbers-say-what-an-update-means.md) describes. `sbom.json` is a CycloneDX
+software bill of materials generated from the Maven dependency tree. Regenerate it from this folder whenever a
+dependency or the version changes. Copy the result over the committed file, then complete it:
 
 ```bash
 ./mvnw org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeBom -DoutputName=sbom -DoutputFormat=json

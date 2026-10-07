@@ -590,7 +590,6 @@ relationship entirely, after which only a new grant brings it back.
   removal and member's own revoke is in the log, with the member's subject identifier. For the organisation's own
   changes, the log also holds the actor your tooling passed. Keys and attestation lookups are never written to it, so
   your auditors can read it without seeing anything a member or a verifying Astrana instance has not already seen.
-- New versions come as new releases of this implementation. A release that changes the schema says so in its notes, and
-  you apply the change by hand. Equal major and minor versions mean the three implementations answer the same on
-  everything the contract and the shared interface define.
+- New versions come as new releases of this implementation. [Versions and releases](../versions.md) says what each
+  number means and what to read before you update, including any schema change you apply by hand.
 - Report a security problem privately, as [SECURITY.md](../../SECURITY.md) describes.
