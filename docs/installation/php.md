@@ -698,7 +698,6 @@ for you to do.
 - Every grant, revoke, extension, key registration, key clearing, removal and member's own revoke is in the audit log,
   with the member's subject identifier. For the organisation's own changes, the log also holds the name you gave as the
   actor. Keys and attestation lookups are never written to it.
-- New versions come as new releases of this implementation. A release that changes the schema says so in its notes, and
-  you apply the change by hand. Equal major and minor versions mean the three implementations answer the same on
-  everything the contract and the shared interface define.
+- New versions come as new releases of this implementation. [Versions and releases](../versions.md) says what each
+  number means and what to read before you update, including any schema change you apply by hand.
 - Report a security problem privately, as [SECURITY.md](../../SECURITY.md) describes.

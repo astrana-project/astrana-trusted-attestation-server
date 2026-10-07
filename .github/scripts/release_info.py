@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Reads what an implementation releases from its changelog, for the release workflow.
 
-The top dated version heading in <implementation>/CHANGELOG.md is the release (decision record 38). This prints the version, its
-MAJOR.MINOR, the tag it is released under and the title of its GitHub release, and writes that version's section of the
-changelog, without the heading, to a file for the release notes. Under GitHub Actions the values go to $GITHUB_OUTPUT.
+The top dated version heading in <implementation>/CHANGELOG.md is the release (decision record 44). This prints the
+version, its MAJOR.MINOR, the tag it is released under and the title of its GitHub release, and writes that version's
+section of the changelog, without the heading, to a file for the release notes. Under GitHub Actions the values go to
+$GITHUB_OUTPUT.
 
     python .github/scripts/release_info.py <dotnet|java|php> [notes-file]
 """
