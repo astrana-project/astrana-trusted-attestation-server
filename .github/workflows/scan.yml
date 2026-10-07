@@ -1,0 +1,142 @@
+# Scans the container images, their build files and the Git history on each pull request and each push to master, so
+# that a problem is found before it is released, because every merge to master publishes a release.
+#
+# Hadolint checks the Dockerfiles of the three published images. The test images are never published, so Hadolint
+# leaves their Dockerfiles out. Each published image is built and Trivy scans it for HIGH and CRITICAL vulnerabilities
+# that have a fix, and scans all the repository's Dockerfiles for HIGH and CRITICAL misconfigurations. Both Trivy scans
+# fail the run if they find anything, and upload their findings to code scanning either way. A vulnerability with no
+# fix yet is left out, because nothing the project changes can remove it. Gitleaks scans the whole Git history for
+# secrets.
+#
+# The weekly run repeats the Trivy scans, so that a vulnerability published after the last change is found.
+name: Scan
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "41 3 * * 1"
+
+permissions:
+  contents: read
+
+# The event is part of the group, so that the weekly run can't cancel a push run, which also runs Hadolint and
+# Gitleaks.
+concurrency:
+  group: scan-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TRIVY_VERSION: v0.75.0
+
+jobs:
+  hadolint:
+    name: Hadolint (${{ matrix.implementation }})
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        implementation: [dotnet, java, php]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: ${{ matrix.implementation }}/Dockerfile
+
+  trivy-image:
+    name: Trivy image (${{ matrix.implementation }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        implementation: [dotnet, java, php]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Built fresh, with the base image pulled again and no layer cache, so the scan sees the packages a release built
+      # today would carry.
+      - name: Build the image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ${{ matrix.implementation }}/Dockerfile
+          tags: ata-${{ matrix.implementation }}:scan
+          load: true
+          pull: true
+          no-cache: true
+
+      - name: Scan the image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          scan-type: image
+          image-ref: ata-${{ matrix.implementation }}:scan
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          limit-severities-for-sarif: true
+          output: trivy-image.sarif
+          exit-code: 1
+
+      # Uploaded when the scan fails too, so that its findings show in code scanning.
+      - uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        if: ${{ !cancelled() && hashFiles('trivy-image.sarif') != '' }}
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image-${{ matrix.implementation }}
+
+  trivy-config:
+    name: Trivy configuration
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Scan the configuration
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          scan-type: config
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          skip-dirs: .cache
+          trivyignores: .trivyignore.yaml
+          format: sarif
+          limit-severities-for-sarif: true
+          output: trivy-config.sarif
+          exit-code: 1
+
+      # Uploaded when the scan fails too, so that its findings show in code scanning.
+      - uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        if: ${{ !cancelled() && hashFiles('trivy-config.sarif') != '' }}
+        with:
+          sarif_file: trivy-config.sarif
+          category: trivy-config
+
+  gitleaks:
+    name: Gitleaks
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # The open source command-line tool, in its own image. The Gitleaks action is under a commercial licence and needs
+      # a licence key for a repository an organisation owns. Gitleaks exits with 1 when it finds a secret, which fails
+      # the run.
+      - name: Scan the Git history for secrets
+        env:
+          GITLEAKS_IMAGE: ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+        run: docker run --rm -v "$GITHUB_WORKSPACE":/repo "$GITLEAKS_IMAGE" git /repo --redact --verbose

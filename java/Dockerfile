@@ -28,6 +28,9 @@ COPY --from=build /src/java/target/classes/static/THIRD-PARTY-NOTICES.txt THIRD-
 # TRUSTED_ATTESTATION_TLS_TERMINATED_BY_PROXY=true and put a TLS-terminating proxy in front.
 #
 # The daily audit prune runs inside this same process. There is no second service to deploy.
+#
+# The user is named by its number, so that a platform that refuses to run containers as root, such
+# as Kubernetes with runAsNonRoot, can check it.
 RUN useradd --system --uid 10001 ata
-USER ata
+USER 10001
 ENTRYPOINT ["java", "-jar", "app.jar"]

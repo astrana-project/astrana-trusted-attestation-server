@@ -42,7 +42,8 @@ heading first, or use `git push --no-verify` for that one push.
 - Keep your branch up to date with `master`.
 
 - All the checks must pass: the unit tests of each implementation, the conformance, differential and accessibility
-  suites, the SonarQube Cloud quality gate, CodeQL, formatting, script tests, changelog and sign-off.
+  suites, the SonarQube Cloud quality gate, CodeQL, the Hadolint, Trivy and Gitleaks scans, formatting, script tests,
+  changelog and sign-off.
 
 ## Code
 

@@ -50,7 +50,10 @@ ARG MSODBCSQL18_VERSION=18.7.1.1-1
 # other packages provide, and purging it removes nothing. Then the packages left that have a Debian
 # security update waiting are upgraded, and only those. The Debian packages this layer adds are recorded,
 # for the third-party notices.
-# hadolint ignore=DL3008
+#
+# Debian does not keep old package versions, so the packages are not pinned (DL3008). The SHELL
+# above is bash, which has the process substitution that Hadolint warns plain sh lacks (SC3001).
+# hadolint ignore=DL3008,SC3001
 RUN dpkg-query -W -f '${Package}\n' | sort > /tmp/packages-before \
  && apt-get update \
  && apt-get install -y --no-install-recommends libpq5 libpq-dev libicu-dev \
@@ -113,7 +116,8 @@ RUN rm -f bootstrap/cache/packages.php bootstrap/cache/services.php \
 
 # The server refuses to serve without TLS, so a TLS-terminating proxy sits in front and
 # TRUSTED_ATTESTATION_TLS_TERMINATED_BY_PROXY is set to true. PHP's built-in server serves public/ through
-# the router in server.php on port 8000.
-USER www-data
+# the router in server.php on port 8000. It runs as www-data, named by its number 33, so that a
+# platform that refuses to run containers as root, such as Kubernetes with runAsNonRoot, can check it.
+USER 33
 EXPOSE 8000
 CMD ["php", "-S", "0.0.0.0:8000", "-t", "public", "server.php"]
