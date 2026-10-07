@@ -65,5 +65,8 @@ Thumbs.db
 # and Authelia's database, which is encrypted with one of those secrets
 /shared/test/*/generated/
 
+# --- Translation review sheets written by scripts/translation-review.py ---
+/translation-review/
+
 # --- Working-state documents kept out of the repository ---
 /.working-state/

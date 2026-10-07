@@ -377,7 +377,8 @@ The server validates the whole manifest when it starts. It refuses to run in any
 
 The pages ship in 58 locales, from `shared/ui/ui-strings.json`. Where a locale has no translation for a string, the page
 shows the English one. The translations were drafted by machine, so have a native speaker read the ones your members
-will see before you go live. Arabic, Hebrew, Persian, Urdu and Pashto are laid out right to left.
+will see before you go live. [Reviewing a translation](../../CONTRIBUTING.md#reviewing-a-translation) explains how to
+make a review sheet and send corrections. Arabic, Hebrew, Persian, Urdu and Pashto are laid out right to left.
 
 The server picks a request's locale from these sources, in this order:
 

@@ -42,7 +42,7 @@ heading first, or use `git push --no-verify` for that one push.
 - Keep your branch up to date with `master`.
 
 - All the checks must pass: the unit tests of each implementation, the conformance, differential and accessibility
-  suites, the SonarQube Cloud quality gate, CodeQL, formatting, changelog and sign-off.
+  suites, the SonarQube Cloud quality gate, CodeQL, formatting, script tests, changelog and sign-off.
 
 ## Code
 
@@ -219,6 +219,26 @@ The changelog check fails the pull request if the heading is missing, the bump d
 three `MAJOR.MINOR` versions differ, or `java/pom.xml` or an `sbom.json` states a different version from its changelog.
 The [decision record on versioning](docs/adr/0044-version-numbers-say-what-an-update-means.md) explains why versions
 work this way.
+
+## Reviewing a translation
+
+A machine drafted every language other than English in `shared/ui/ui-strings.json`, so each one needs a native speaker
+to review it. To review a language, write its review sheet from the repository root, using the language's tag from the
+strings file, such as `fr` for French or `zh-Hans` for Simplified Chinese:
+
+```
+python3 scripts/translation-review.py --locale fr
+```
+
+On Windows, use `py` in place of `python3`. The script writes the sheet to `translation-review/fr.md`, and Git ignores
+that folder. `--out` writes it to another folder, and without `--locale` the script writes a sheet for every language.
+The sheet lists each string with where it appears on the page, the English and the translation, then the name of each
+relationship type, and the things to check.
+
+To propose corrections, open a pull request that changes only that language's entries in `shared/ui/ui-strings.json`, or
+its labels in `shared/contract/relationship-types.json`, and links to its issue. Keep every key as it is, and keep every
+placeholder in curly brackets, such as `{org}`, exactly as written. A correction is a defect fix, so version it as
+[Changelog and version](#changelog-and-version) describes, with an entry such as "Corrected the French interface text."
 
 ## Developer Certificate of Origin
 
