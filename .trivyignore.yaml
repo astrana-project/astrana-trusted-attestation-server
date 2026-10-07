@@ -1,0 +1,9 @@
+# Findings the Trivy configuration scan in .github/workflows/scan.yml leaves out, each limited to the files it is about.
+misconfigurations:
+  - id: DS-0002
+    paths:
+      - shared/test/ci/Dockerfile.suite
+      - shared/test/simplesamlphp/Dockerfile
+    statement:
+      These test images are never published. They run only in the test stacks on a developer's computer or in continuous
+      integration, and are thrown away afterwards. The SimpleSAMLphp image's Apache serves as www-data.

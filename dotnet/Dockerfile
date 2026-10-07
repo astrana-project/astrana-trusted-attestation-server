@@ -34,5 +34,10 @@ COPY --from=build /app/wwwroot/THIRD-PARTY-NOTICES.txt THIRD-PARTY-NOTICES.txt
 # No port is exposed by default. Astrana Trusted Attestation refuses to start without TLS, so the
 # operator has to choose to bind an https endpoint here, or to set
 # TrustedAttestation__Tls__TerminatedByProxy=true and put a TLS-terminating proxy in front.
+#
+# APP_UID is the number of the user that is not root, which the runtime image defines, so a
+# platform that refuses to run containers as root can check it. Hadolint cannot see the number
+# behind the variable.
+# hadolint ignore=DL3066
 USER $APP_UID
 ENTRYPOINT ["dotnet", "Astrana.TrustedAttestation.Server.dll"]
