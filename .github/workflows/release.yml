@@ -1,10 +1,12 @@
 # Releases every implementation whose changelog carries a version that is not released yet, on each push to master
-# (decision record 44). For each one it pushes the image astrana/ata-<implementation> with three tags (the full
-# version, MAJOR.MINOR and latest). It then tags the commit <implementation>-v<version> and creates a GitHub release
-# with that version's changelog section and the software bill of materials.
+# (decision record 44). For each one it pushes the image astrana/ata-<implementation> by its digest alone, signs and
+# verifies it, and only then gives it three tags (the full version, MAJOR.MINOR and latest). It then tags the commit
+# <implementation>-v<version> and creates a GitHub release with that version's changelog section and the software bill
+# of materials.
 #
 # The workflow skips any version that already has a tag, so a merge releases only the implementations whose version
-# changed. The image is pushed before the tag is created, so a failed push leaves no tag and the next run tries again.
+# changed. Nothing is tagged until both signatures verify, so a failed run never leaves a tag on an unsigned image, and
+# the next run tries again.
 #
 # Each image carries a provenance attestation and a software bill of materials, which BuildKit attaches to the image
 # index, and cosign signs the index by its digest with a keyless Sigstore certificate issued to this workflow. That one
@@ -15,8 +17,9 @@
 # A release published before signing began can be signed once, from this same workflow, so that its signatures carry
 # the same identity. In GitHub, open Actions, then Release, then Run workflow. Leave the branch as master, enter the
 # version, such as 1.0.0, under "Sign an existing release", and run it. For each implementation the sign-existing job
-# checks that the image published under that version was built from the release's own commit, signs it by digest,
-# signs the release's sbom.json, verifies both and uploads only the new sbom.json.sigstore.json to the release. It
+# checks that the image published under that version was built from the release's own commit, and that the release's
+# sbom.json is the one committed there. It then signs the image by digest, signs the release's sbom.json, verifies both
+# and uploads only the new sbom.json.sigstore.json to the release. It
 # rebuilds, retags and republishes nothing. An image's attestations cannot change without republishing it, so such a
 # release keeps the attestations it was built with and gains signatures only. The 1.0.0 images carry BuildKit's
 # provenance attestation, which the new signature covers, but no software bill of materials attestation.
@@ -125,6 +128,7 @@ jobs:
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.description=The project's own code is licensed under the MIT License. The image also contains third-party components under their own licences. Their notices are in THIRD-PARTY-NOTICES.txt, which the server serves at /THIRD-PARTY-NOTICES.txt, and in the image's own notice files, and they are listed in the image's software bill of materials attestation and in the one attached to the GitHub release.
 
+      # Pushed by digest alone, with no tag, so nobody can pull it by tag until it is signed and verified.
       - name: Build and publish the image
         id: build
         if: steps.tag.outputs.released == 'false'
@@ -132,8 +136,8 @@ jobs:
         with:
           context: .
           file: ${{ matrix.implementation }}/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          outputs:
+            type=image,name=astrana/ata-${{ matrix.implementation }},push-by-digest=true,name-canonical=true,push=true
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=release-${{ matrix.implementation }}
           cache-to: type=gha,scope=release-${{ matrix.implementation }},mode=max
@@ -166,6 +170,19 @@ jobs:
             --certificate-oidc-issuer "$SIGNER_ISSUER" "$IMAGE"
           cosign verify-blob --bundle sbom.json.sigstore.json --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" \
             --certificate-oidc-issuer "$SIGNER_ISSUER" "$SBOM"
+
+      # Tagging points each tag at the same digest, so the signature covers the tagged image.
+      - name: Tag the image
+        if: steps.tag.outputs.released == 'false'
+        env:
+          IMAGE: astrana/ata-${{ matrix.implementation }}@${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          args=()
+          while IFS= read -r tag; do
+            if [ -n "$tag" ]; then args+=(--tag "$tag"); fi
+          done <<< "$TAGS"
+          docker buildx imagetools create "${args[@]}" "$IMAGE"
 
       - name: Tag the commit and create the GitHub release
         if: steps.tag.outputs.released == 'false'
@@ -238,15 +255,28 @@ jobs:
           fi
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
+      # The signature goes on the file users download from the release, so that file must be the one committed at the
+      # release's commit. A file replaced since is refused rather than signed.
+      - name: Check the release's software bill of materials is the one committed
+        env:
+          COMMIT: ${{ steps.release.outputs.commit }}
+          SBOM_PATH: ${{ matrix.implementation }}/sbom.json
+        run: |
+          gh release download "$TAG" --pattern sbom.json
+          gh api -H "Accept: application/vnd.github.raw+json" "repos/$GH_REPO/contents/$SBOM_PATH?ref=$COMMIT" \
+            > committed-sbom.json
+          if ! cmp -s sbom.json committed-sbom.json; then
+            echo "::error::The sbom.json attached to $TAG differs from $SBOM_PATH at $COMMIT. Nothing was signed."
+            exit 1
+          fi
+
       - name: Sign the image
         env:
           IMAGE: ${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
         run: cosign sign --yes "$IMAGE"
 
       - name: Sign the software bill of materials
-        run: |
-          gh release download "$TAG" --pattern sbom.json
-          cosign sign-blob --yes --bundle sbom.json.sigstore.json sbom.json
+        run: cosign sign-blob --yes --bundle sbom.json.sigstore.json sbom.json
 
       - name: Verify the signatures
         env:

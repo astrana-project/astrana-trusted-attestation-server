@@ -22,8 +22,8 @@ public log. There is no signing key that a person keeps.
 
 Each image also comes with a provenance attestation, a statement of where and how the image was built, naming the
 repository, the commit and the build steps. It also comes with a bill of materials attestation. The image's signature
-covers both. Before it creates the release, the workflow checks both signatures against the workflow's identity, and a
-missing or wrong one stops the release.
+covers both. The workflow publishes the image without a tag, and checks both signatures against the workflow's identity
+before it tags the image or creates the release. A missing or wrong signature stops the release.
 
 ## Consequences
 
@@ -33,12 +33,15 @@ missing or wrong one stops the release.
 - There is no signing key to store, rotate, leak or lose.
 - The signing identity is the repository, the workflow file's path and the branch. Renaming any of them changes it, and
   anyone who checks against the old identity sees new releases fail until they check against the new one.
-- Releases depend on the Sigstore service. When it cannot sign or verify, the run fails before the commit is tagged or
-  the GitHub release is created, and the next run tries again. No Git tag or GitHub release exists without both
-  signatures, but when the run fails after pushing the image, the image's tags point at an unsigned image until the next
-  run publishes and signs it again. The rebuilt image has a new digest, and the first one is never signed.
+- Releases depend on the Sigstore service. When it cannot sign or verify, the run fails before the image or the commit
+  is tagged or the GitHub release is created, and the next run tries again. No image tag, Git tag or GitHub release
+  exists without both signatures. The failed run leaves an untagged image behind, and the next run publishes and signs a
+  new one.
 - A release published before signing began can be signed later by the same workflow, so its signatures carry the same
   identity. Its image keeps the attestations it was built with, because they cannot change without republishing it.
+  Before signing, the workflow checks that the image's revision label names the release's commit, and that the bill of
+  materials attached to the release is the one committed there. The label check catches a mistake, not an attack,
+  because whoever can publish the image can also set its label.
 - A long-lived signing key was rejected because anyone who obtained it could sign anything, so a signature would not
   show that the release workflow published the release. GNU Privacy Guard (GPG) signatures were rejected for the same
   reason, and because container tooling does not check them, so few of the people pulling an image would check one.
