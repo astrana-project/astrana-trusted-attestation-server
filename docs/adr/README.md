@@ -96,6 +96,7 @@ Never edit a record into a different decision. The old record is the history of 
 |  39 | [Security fixes ship in the latest release only](0039-security-fixes-ship-in-the-latest-release-only.md)                                                 | 12, 38           |
 |  40 | [Published images are application-only, demonstrations are bundled](0040-published-images-are-application-only-demonstrations-are-bundled.md)            | 2, 5, 9          |
 |  44 | [Version numbers say what an update means](0044-version-numbers-say-what-an-update-means.md)                                                             | 5, 7, 12, 36, 38 |
+|  45 | [Anyone can check where a published image came from](0045-anyone-can-check-where-a-published-image-came-from.md)                                         | 44               |
 
 ## Dates and names
 
