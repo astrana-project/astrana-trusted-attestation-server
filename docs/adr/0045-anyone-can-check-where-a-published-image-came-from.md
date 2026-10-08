@@ -37,11 +37,13 @@ before it tags the image or creates the release. A missing or wrong signature st
   is tagged or the GitHub release is created, and the next run tries again. No image tag, Git tag or GitHub release
   exists without both signatures. The failed run leaves an untagged image behind, and the next run publishes and signs a
   new one.
-- A release published before signing began can be signed later by the same workflow, so its signatures carry the same
-  identity. Its image keeps the attestations it was built with, because they cannot change without republishing it.
-  Before signing, the workflow checks that the image's revision label names the release's commit, and that the bill of
-  materials attached to the release is the one committed there. The label check catches a mistake, not an attack,
-  because whoever can publish the image can also set its label.
+- The image of a release published before signing began can be signed later by the same workflow, so its signature
+  carries the same identity. Its image keeps the attestations it was built with, because they cannot change without
+  republishing it. Before signing, the workflow checks that the image's revision label names the release's commit. The
+  check catches a mistake, not an attack, because whoever can publish the image can also set its label.
+- Such a release's bill of materials stays unsigned, because the repository's GitHub releases are immutable and accept
+  no new file once published. GitHub's own signed attestation of each immutable release covers its files, so the bill of
+  materials can still be checked against it.
 - A long-lived signing key was rejected because anyone who obtained it could sign anything, so a signature would not
   show that the release workflow published the release. GNU Privacy Guard (GPG) signatures were rejected for the same
   reason, and because container tooling does not check them, so few of the people pulling an image would check one.

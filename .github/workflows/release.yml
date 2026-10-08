@@ -14,15 +14,18 @@
 # release is signed the same way, into sbom.json.sigstore.json beside it. The job then verifies both signatures against
 # the identity the installation guides tell users to check, so a missing or wrong signature fails the release.
 #
-# A release published before signing began can be signed once, from this same workflow, so that its signatures carry
-# the same identity. In GitHub, open Actions, then Release, then Run workflow. Leave the branch as master, enter the
-# version, such as 1.0.0, under "Sign an existing release", and run it. For each implementation the sign-existing job
-# checks that the image published under that version was built from the release's own commit, and that the release's
-# sbom.json is the one committed there. It then signs the image by digest, signs the release's sbom.json, verifies both
-# and uploads only the new sbom.json.sigstore.json to the release. It
-# rebuilds, retags and republishes nothing. An image's attestations cannot change without republishing it, so such a
-# release keeps the attestations it was built with and gains signatures only. The 1.0.0 images carry BuildKit's
-# provenance attestation, which the new signature covers, but no software bill of materials attestation.
+# The image of a release published before signing began can be signed once, from this same workflow, so that its
+# signature carries the same identity. In GitHub, open Actions, then Release, then Run workflow. Leave the branch as
+# master, enter the version, such as 1.0.0, under "Sign an existing release", and run it. For each implementation the
+# sign-existing job checks that the image published under that version was built from the release's own commit, then
+# signs the image by digest and verifies the signature. It rebuilds, retags and republishes nothing. An image's
+# attestations cannot change without republishing it, so such a release keeps the attestations it was built with and
+# gains a signature only. The 1.0.0 images carry BuildKit's provenance attestation, which the new signature covers, but
+# no software bill of materials attestation.
+#
+# Such a release's sbom.json is left unsigned, because the repository's releases are immutable and GitHub accepts no new
+# file once a release is published. GitHub's own attestation of each immutable release covers its files instead, and
+# `gh release verify-asset` checks it.
 #
 # Set two repository secrets. DOCKERHUB_USERNAME is the Docker Hub user. DOCKERHUB_TOKEN is a Docker Hub access token
 # that can push to the astrana namespace.
@@ -197,13 +200,13 @@ jobs:
 
   sign-existing:
     name: Sign an existing release (${{ matrix.implementation }})
-    # Only on a manual run from master with a version entered, so the signatures carry the same identity as those made
+    # Only on a manual run from master with a version entered, so the signature carries the same identity as those made
     # at release.
     if: github.ref == 'refs/heads/master' && inputs.sign-existing
     runs-on: ubuntu-latest
-    # Write access to upload the signature to the existing GitHub release, and the identity token for Sigstore.
+    # Read access to find the release, and the identity token for Sigstore.
     permissions:
-      contents: write
+      contents: read
       id-token: write
     strategy:
       fail-fast: false
@@ -255,39 +258,14 @@ jobs:
           fi
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
-      # The signature goes on the file users download from the release, so that file must be the one committed at the
-      # release's commit. A file replaced since is refused rather than signed.
-      - name: Check the release's software bill of materials is the one committed
-        env:
-          COMMIT: ${{ steps.release.outputs.commit }}
-          SBOM_PATH: ${{ matrix.implementation }}/sbom.json
-        run: |
-          gh release download "$TAG" --pattern sbom.json
-          gh api -H "Accept: application/vnd.github.raw+json" "repos/$GH_REPO/contents/$SBOM_PATH?ref=$COMMIT" \
-            > committed-sbom.json
-          if ! cmp -s sbom.json committed-sbom.json; then
-            echo "::error::The sbom.json attached to $TAG differs from $SBOM_PATH at $COMMIT. Nothing was signed."
-            exit 1
-          fi
-
       - name: Sign the image
         env:
           IMAGE: ${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
         run: cosign sign --yes "$IMAGE"
 
-      - name: Sign the software bill of materials
-        run: cosign sign-blob --yes --bundle sbom.json.sigstore.json sbom.json
-
-      - name: Verify the signatures
+      - name: Verify the signature
         env:
           IMAGE: ${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
         run: |
           cosign verify --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" \
             --certificate-oidc-issuer "$SIGNER_ISSUER" "$IMAGE"
-          cosign verify-blob --bundle sbom.json.sigstore.json --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" \
-            --certificate-oidc-issuer "$SIGNER_ISSUER" sbom.json
-
-      - name: Attach the signature to the release
-        run: >-
-          gh release upload "$TAG" --clobber "sbom.json.sigstore.json#Signature of the software bill of materials
-          (Sigstore bundle)"
