@@ -8,6 +8,11 @@
 # changed. Nothing is tagged until both signatures verify, so a failed run never leaves a tag on an unsigned image, and
 # the next run tries again.
 #
+# Docker Hub keeps each full-version tag immutable, so once a run has given an image that tag, no later run can move it.
+# A run that failed after that point would otherwise fail again on every retry. So when the full-version tag already
+# exists, the job uses the image it names instead of building a new one, once it has checked that the image was built
+# from this commit and is signed. It then adds the other tags and creates the GitHub release as usual.
+#
 # Each image carries a provenance attestation and a software bill of materials, which BuildKit attaches to the image
 # index, and cosign signs the index by its digest with a keyless Sigstore certificate issued to this workflow. That one
 # signature covers the image for every platform and both attestations. The software bill of materials attached to the
@@ -133,10 +138,31 @@ jobs:
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.description=The project's own code is licensed under the MIT License. The image also contains third-party components under their own licences. Their notices are in THIRD-PARTY-NOTICES.txt, which the server serves at /THIRD-PARTY-NOTICES.txt, and in the image's own notice files, and they are listed in the image's software bill of materials attestation and in the one attached to the GitHub release.
 
+      # An image already under the full-version tag was published by an earlier run of this release that failed later.
+      # It must have been built from this commit, or the release stops here.
+      - name: Look for an image an earlier run already published
+        id: existing
+        if: steps.tag.outputs.released == 'false'
+        env:
+          IMAGE_NAME: astrana/ata-${{ matrix.implementation }}
+          VERSION: ${{ steps.info.outputs.version }}
+        run: |
+          if ! digest=$(docker buildx imagetools inspect "$IMAGE_NAME:$VERSION" --format '{{ .Manifest.Digest }}' 2> /dev/null); then
+            echo "Nothing is published as $IMAGE_NAME:$VERSION yet, so the image is built."
+            exit 0
+          fi
+          revisions=$(bash .github/scripts/image-revisions.sh "$IMAGE_NAME@$digest")
+          if [ "$revisions" != "$GITHUB_SHA" ]; then
+            echo "::error::$IMAGE_NAME:$VERSION was built from $revisions, not $GITHUB_SHA, and that tag cannot move."
+            exit 1
+          fi
+          echo "$IMAGE_NAME:$VERSION was published by an earlier run from this commit, so that image is used."
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
       # Pushed by digest alone, with no tag, so nobody can pull it by tag until it is signed and verified.
       - name: Build and publish the image
         id: build
-        if: steps.tag.outputs.released == 'false'
+        if: steps.tag.outputs.released == 'false' && !steps.existing.outputs.digest
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -149,14 +175,23 @@ jobs:
           provenance: mode=max
           sbom: true
 
+      - name: Choose the image to sign and tag
+        id: image
+        if: steps.tag.outputs.released == 'false'
+        env:
+          EXISTING: ${{ steps.existing.outputs.digest }}
+          BUILT: ${{ steps.build.outputs.digest }}
+        run: echo "digest=${EXISTING:-$BUILT}" >> "$GITHUB_OUTPUT"
+
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         if: steps.tag.outputs.released == 'false'
 
-      # Signs by digest, never by tag, so the signature names exactly the image just pushed.
+      # Signs by digest, never by tag, so the signature names exactly the image just pushed. An image an earlier run
+      # published was signed before it was tagged, so it is only verified below.
       - name: Sign the image
-        if: steps.tag.outputs.released == 'false'
+        if: steps.tag.outputs.released == 'false' && !steps.existing.outputs.digest
         env:
-          IMAGE: astrana/ata-${{ matrix.implementation }}@${{ steps.build.outputs.digest }}
+          IMAGE: astrana/ata-${{ matrix.implementation }}@${{ steps.image.outputs.digest }}
         run: cosign sign --yes "$IMAGE"
 
       - name: Sign the software bill of materials
@@ -168,7 +203,7 @@ jobs:
       - name: Verify the signatures
         if: steps.tag.outputs.released == 'false'
         env:
-          IMAGE: astrana/ata-${{ matrix.implementation }}@${{ steps.build.outputs.digest }}
+          IMAGE: astrana/ata-${{ matrix.implementation }}@${{ steps.image.outputs.digest }}
           SBOM: ${{ matrix.implementation }}/sbom.json
         run: |
           cosign verify --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" \
@@ -176,16 +211,20 @@ jobs:
           cosign verify-blob --bundle sbom.json.sigstore.json --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" \
             --certificate-oidc-issuer "$SIGNER_ISSUER" "$SBOM"
 
-      # Tagging points each tag at the same digest, so the signature covers the tagged image.
+      # Tagging points each tag at the same digest, so the signature covers the tagged image. An image an earlier run
+      # published already has its full-version tag, which cannot be pushed again, so only the other tags are added.
       - name: Tag the image
         if: steps.tag.outputs.released == 'false'
         env:
-          IMAGE: astrana/ata-${{ matrix.implementation }}@${{ steps.build.outputs.digest }}
+          IMAGE: astrana/ata-${{ matrix.implementation }}@${{ steps.image.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
+          EXISTING_TAG:
+            ${{ steps.existing.outputs.digest && format('astrana/ata-{0}:{1}', matrix.implementation,
+            steps.info.outputs.version) || '' }}
         run: |
           args=()
           while IFS= read -r tag; do
-            if [ -n "$tag" ]; then args+=(--tag "$tag"); fi
+            if [ -n "$tag" ] && [ "$tag" != "$EXISTING_TAG" ]; then args+=(--tag "$tag"); fi
           done <<< "$TAGS"
           docker buildx imagetools create "${args[@]}" "$IMAGE"
 
@@ -240,6 +279,9 @@ jobs:
 
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
+      # The image-revisions script needs the repository.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       # The full-version tag is resolved to a digest once, and only that digest is signed. The image for every platform
       # must carry the release's commit as its revision label. That catches a tag moved to a different image by
       # mistake, but anyone with the Docker Hub token could set the label.
@@ -249,11 +291,7 @@ jobs:
           COMMIT: ${{ steps.release.outputs.commit }}
         run: |
           digest=$(docker buildx imagetools inspect "$IMAGE_NAME:$VERSION" --format '{{ .Manifest.Digest }}')
-          # A single-platform image gives one configuration and a multi-platform index gives one per platform. The
-          # distinct revisions are listed, so the check passes only when there is one and it is the release's commit.
-          revisions=$(docker buildx imagetools inspect "$IMAGE_NAME@$digest" --format '{{ json .Image }}' \
-            | jq -r 'if has("config") then [.] else [.[]] end
-              | map(.config.Labels["org.opencontainers.image.revision"] // "no revision label") | unique | join(", ")')
+          revisions=$(bash .github/scripts/image-revisions.sh "$IMAGE_NAME@$digest")
           if [ "$revisions" != "$COMMIT" ]; then
             echo "::error::$IMAGE_NAME:$VERSION was built from $revisions, not $TAG at $COMMIT. Nothing was signed."
             exit 1
