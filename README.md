@@ -4,9 +4,10 @@
 </picture>
 
 [![MIT licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE.md)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/astrana-project/astrana-trusted-attestation-server/badge)](https://scorecard.dev/viewer/?uri=github.com/astrana-project/astrana-trusted-attestation-server)
 [![Integration tests on master](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/integration.yml/badge.svg?branch=master)](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/integration.yml)
 [![CodeQL code scanning on master](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/codeql.yml/badge.svg?branch=master)](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/astrana-project/astrana-trusted-attestation-server/badge)](https://scorecard.dev/viewer/?uri=github.com/astrana-project/astrana-trusted-attestation-server)
+[![Security scans on master](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/scan.yml/badge.svg?branch=master)](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/scan.yml)
 [![Formatting checks on master](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/format.yml/badge.svg?branch=master)](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/format.yml)
 [![SonarQube Cloud quality gate for the .NET implementation](https://sonarcloud.io/api/project_badges/measure?project=astrana-trusted-attestation-server-dotnet&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=astrana-trusted-attestation-server-dotnet)
 [![SonarQube Cloud quality gate for the Java implementation](https://sonarcloud.io/api/project_badges/measure?project=astrana-trusted-attestation-server-java&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=astrana-trusted-attestation-server-java)

@@ -508,8 +508,8 @@ docker buildx imagetools inspect astrana/ata-dotnet:<version> --format '{{ json 
 docker buildx imagetools inspect astrana/ata-dotnet:<version> --format '{{ json .SBOM }}'
 ```
 
-Each GitHub release includes the software bill of materials, `sbom.json`, with its signature, `sbom.json.sigstore.json`.
-Download both from the release and check them the same way.
+Each GitHub release includes the software bill of materials, `sbom.json`. Every release after 1.0.0 also includes its
+signature, `sbom.json.sigstore.json`. Download both from the release and check them the same way.
 
 ```bash
 curl -LO https://github.com/astrana-project/astrana-trusted-attestation-server/releases/download/dotnet-v<version>/sbom.json
@@ -517,6 +517,15 @@ curl -LO https://github.com/astrana-project/astrana-trusted-attestation-server/r
 cosign verify-blob sbom.json --bundle sbom.json.sigstore.json \
   --certificate-identity-regexp '^https://github\.com/astrana-project/astrana-trusted-attestation-server/\.github/workflows/release\.yml@refs/heads/master$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+The 1.0.0 releases have no `sbom.json.sigstore.json`, because this repository's GitHub releases can't take new files
+once they're published. Check a 1.0.0 bill of materials with the [GitHub CLI](https://cli.github.com/) instead, signed
+in to any GitHub account. It confirms that the file is the one published in that release.
+
+```bash
+curl -LO https://github.com/astrana-project/astrana-trusted-attestation-server/releases/download/dotnet-v1.0.0/sbom.json
+gh release verify-asset dotnet-v1.0.0 sbom.json --repo astrana-project/astrana-trusted-attestation-server
 ```
 
 ### Installed on a server
