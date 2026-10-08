@@ -16,7 +16,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
 /**
- * The two places this implementation departs from Spring Boot's OpenID Connect client defaults, both to
+ * The three places this implementation departs from Spring Boot's OpenID Connect client defaults, all to
  * behave as the other two implementations do.
  */
 @Configuration
@@ -31,7 +31,8 @@ public class OidcClientConfig {
     /**
      * Boot's own registration repository, built from the same {@code spring.security.oauth2.client.*}
      * properties by Boot's own mapper, after each provider's {@code issuer-uri} has been respelt the way
-     * the provider states it -- see {@link IssuerUri}. Present only when a registration is configured, which
+     * the provider states it -- see {@link IssuerUri} -- and each registration's {@code scope} list has been
+     * given the three default scopes -- see {@link OidcScopes}. Present only when a registration is configured, which
      * is the same condition Boot applies, so a SAML deployment still gets no OIDC repository at all.
      */
     @Bean
@@ -48,6 +49,10 @@ public class OidcClientConfig {
                         issuer, url -> http.get().uri(url).retrieve().body(String.class)));
             }
         });
+        properties
+                .getRegistration()
+                .values()
+                .forEach(registration -> registration.setScope(OidcScopes.withDefaults(registration.getScope())));
 
         return new InMemoryClientRegistrationRepository(new ArrayList<>(new OAuth2ClientPropertiesMapper(properties)
                 .asClientRegistrations()
