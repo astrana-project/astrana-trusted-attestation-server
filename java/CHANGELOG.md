@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.1] - 2026-10-08
+
+### Fixed
+
+- Sign-in over OpenID Connect now always asks for the `openid`, `profile` and `email` scopes, as the .NET and PHP
+  implementations do, so the `scope` setting no longer needs to list them.
+
 ## [1.0.0] - 2026-10-05
 
 ### Added

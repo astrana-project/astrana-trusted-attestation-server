@@ -243,7 +243,6 @@ spring:
             client-id: trusted-attestation
             client-secret: ...
             authorization-grant-type: authorization_code
-            scope: openid, profile, email
 
 trusted-attestation:
   tls:
@@ -285,7 +284,7 @@ The Spring keys below are shown for a registration named `keycloak`. Use the nam
 | OpenID Connect issuer        | `spring.security.oauth2.client.provider.keycloak.issuer-uri`                                                                    | Required under OpenID Connect                                                                                           |
 | Client identifier            | `spring.security.oauth2.client.registration.keycloak.client-id`                                                                 | Required under OpenID Connect                                                                                           |
 | Client secret                | `spring.security.oauth2.client.registration.keycloak.client-secret`                                                             | Required under OpenID Connect                                                                                           |
-| Scopes                       | `spring.security.oauth2.client.registration.keycloak.scope`                                                                     | None of its own. List `openid, profile, email` and any extra scope, because the list is used as written                 |
+| Extra scopes                 | `spring.security.oauth2.client.registration.keycloak.scope`                                                                     | None. A list, added to `openid`, `profile` and `email`                                                                  |
 | Subject claim                | `trusted-attestation.iam.subject-claim`                                                                                         | `sub`. See Step 1                                                                                                       |
 | Display name claim           | `trusted-attestation.iam.name-claim`                                                                                            | `name`. When your identity system sends no display name, the server shows the subject identifier                        |
 | SAML entity identifier       | `spring.security.saml2.relyingparty.registration.keycloak.entity-id`                                                            | `{baseUrl}/saml2/service-provider-metadata/keycloak`, the metadata address                                              |

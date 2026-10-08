@@ -13,7 +13,7 @@
 
   <groupId>org.astrana</groupId>
   <artifactId>trusted-attestation-server</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   <name>Astrana Trusted Attestation Server</name>
   <description>Spring Boot implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)</description>
   <!--

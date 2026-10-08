@@ -197,12 +197,6 @@ public class RelationshipService {
         return repository.findByPublicKey(publicKey);
     }
 
-    /**
-     * The member's relationship of exactly this type, or empty. Empty for a type outside the governed
-     * vocabulary without asking the database, and empty for a row the engine matched under a collation
-     * that ignores case or trailing spaces but whose own subject or type is spelt differently: the row is
-     * not the one asked for.
-     */
     /** The body of {@link #setKey}, run inside its transaction. */
     private SetKeyResult setKeyInTransaction(String iamSubjectId, String relationshipType, byte[] publicKey) {
         Optional<MemberRelationship> found = held(iamSubjectId, relationshipType);
@@ -258,6 +252,12 @@ public class RelationshipService {
         return SetKeyResult.SAVED;
     }
 
+    /**
+     * The member's relationship of exactly this type, or empty. Empty for a type outside the governed
+     * vocabulary without asking the database, and empty for a row the engine matched under a collation
+     * that ignores case or trailing spaces but whose own subject or type is spelt differently: the row is
+     * not the one asked for.
+     */
     private Optional<MemberRelationship> held(String iamSubjectId, String relationshipType) {
         if (!catalog.isGoverned(relationshipType)) {
             return Optional.empty();
