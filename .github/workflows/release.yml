@@ -37,7 +37,9 @@ on:
   workflow_dispatch:
     inputs:
       sign-existing:
-        description: Sign an existing release instead of releasing. Enter its version, such as 1.0.0, or leave it empty.
+        description:
+          Sign an existing release's container images instead of releasing. Enter its version, such as 1.0.0, or leave
+          it empty.
         required: false
         default: ""
         type: string
