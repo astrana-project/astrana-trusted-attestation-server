@@ -72,6 +72,16 @@ public static class IamAuthentication
         options.SPOptions.ReturnUrl = new Uri("/me", UriKind.Relative);
         options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
 
+        // The session a logout request from the identity provider ends. Left unset, the handler would sign
+        // out of the default sign-out scheme, which is this SAML scheme itself, so the session cookie would
+        // stay in place and the provider would get no answer.
+        options.SignOutScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+
+        // A logout request ends the session only when it is addressed here, has not expired and names the
+        // signed-in member. See ProviderLogoutRequest, whose middleware Program.cs places ahead of
+        // UseAuthentication.
+        ProviderLogoutRequest.Configure(options);
+
         // How far a SAML assertion's timestamps may be out before it is refused: 180 seconds, the same
         // value the Java (OpenSAML) and PHP (OneLogin) implementations use, so the same assertion is
         // accepted or refused whichever stack receives it. It is the low end of the three-to-five-minute
