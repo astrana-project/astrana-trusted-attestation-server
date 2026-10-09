@@ -5,8 +5,8 @@
 # leaves their Dockerfiles out. Each published image is built and Trivy scans it for HIGH and CRITICAL vulnerabilities
 # that have a fix, and scans all the repository's Dockerfiles for HIGH and CRITICAL misconfigurations. Both Trivy scans
 # fail the run if they find anything, and upload their findings to code scanning either way. A vulnerability with no
-# fix yet is left out, because nothing the project changes can remove it. Gitleaks scans the whole Git history for
-# secrets.
+# fix yet is left out, because nothing the project changes can remove it. Both scans also leave out the findings listed
+# in .trivyignore.yaml, each with its reason. Gitleaks scans the whole Git history for secrets.
 #
 # The weekly run repeats the Trivy scans, so that a vulnerability published after the last change is found.
 name: Scan
@@ -82,6 +82,7 @@ jobs:
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
           format: sarif
           limit-severities-for-sarif: true
           output: trivy-image.sarif

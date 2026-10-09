@@ -1,4 +1,5 @@
-# Findings the Trivy configuration scan in .github/workflows/scan.yml leaves out, each limited to the files it is about.
+# Findings the Trivy scans in .github/workflows/scan.yml leave out, each limited to the files it is about. An entry with
+# an expiry date stops applying on that date, so the scan fails again if the finding is still there.
 misconfigurations:
   - id: DS-0002
     paths:
@@ -7,3 +8,21 @@ misconfigurations:
     statement:
       These test images are never published. They run only in the test stacks on a developer's computer or in continuous
       integration, and are thrown away afterwards. The SimpleSAMLphp image's Apache serves as www-data.
+
+vulnerabilities:
+  - id: CVE-2026-97031
+    paths:
+      - usr/bin/pebble
+    expired_at: 2026-10-23
+    statement:
+      Pebble, Canonical's service manager, comes with the Java implementation's base image, eclipse-temurin:25-jre, but
+      the container never runs it. The flaw is in Go's TLS server code, which only a running pebble would use. No fixed
+      base image exists yet.
+  - id: CVE-2026-78667
+    paths:
+      - usr/bin/pebble
+    expired_at: 2026-10-23
+    statement:
+      Pebble, Canonical's service manager, comes with the Java implementation's base image, eclipse-temurin:25-jre, but
+      the container never runs it. The flaw is in Go's HTTP server code, which only a running pebble would use. No fixed
+      base image exists yet.
