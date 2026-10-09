@@ -16,6 +16,7 @@ use OneLogin\Saml2\Auth;
 use OneLogin\Saml2\Constants;
 use OneLogin\Saml2\LogoutRequest;
 use OneLogin\Saml2\LogoutResponse;
+use OneLogin\Saml2\Utils;
 
 /**
  * SAML 2.0 login, for orgs whose IAM speaks SAML rather than OIDC.
@@ -281,6 +282,11 @@ final class SamlController extends Controller
      * - A LogoutRequest ends the session only when it carries a signature that verifies against the IdP's
      *   certificate from its metadata. An unsigned one is refused, since anyone could have written it and
      *   neither binding gives this service any other way to know the IdP sent it.
+     * - A LogoutRequest over the Redirect binding is refused when its SigAlg names no algorithm or one weaker
+     *   than SHA-256, as a sign-in signed so is.
+     * - A verified LogoutRequest ends the session only when it is addressed to this server's single logout
+     *   address, its NotOnOrAfter time, if it has one, has not passed, and its NameID names the member signed
+     *   in here. Any other is answered with the Requester status and the session stays.
      */
     public function singleLogout(Request $request): RedirectResponse
     {
@@ -331,24 +337,128 @@ final class SamlController extends Controller
     {
         try {
             $auth = $this->saml->auth();
-            $url = $auth->processSLO(false, null, false, static fn () => self::endSession($request), true);
+            $logoutRequest = $auth->buildLogoutRequest($auth->getSettings(), (string) $request->query('SAMLRequest'));
+            $relayState = $request->query('RelayState');
+
+            // The library checks the signature with the algorithm SigAlg names, and with SHA-1 when it names
+            // none, so a request naming none or a weak one is refused before its signature is checked.
+            if (! SamlClient::isStrongAlgorithm((string) $request->query('SigAlg'))) {
+                return $this->refuseLogoutRequest($auth, $logoutRequest, $relayState, 'it was not signed with SHA-256 or stronger');
+            }
+
+            // The detached signature over the query string, checked first, so that nothing is answered for a
+            // request the IdP did not sign. The library's own checks run after the other refusals.
+            if (! Utils::validateBinarySign('SAMLRequest', $_GET, $auth->getSettings()->getIdPData())) {
+                Log::warning('A SAML LogoutRequest failed validation, so the session was left as it was.', [
+                    'reason' => 'Signature validation failed. Logout Request rejected',
+                ]);
+
+                return redirect('/');
+            }
+
+            return $this->answerSignedLogoutRequest($request, $auth, $logoutRequest, $relayState);
         } catch (\Throwable $exception) {
             Log::warning('A SAML LogoutRequest could not be processed.', ['reason' => $exception->getMessage()]);
 
             return redirect('/');
         }
+    }
 
-        if ($auth->getErrors() !== [] || ! is_string($url) || $url === '') {
+    /**
+     * The answer to a LogoutRequest whose signature has verified, on either binding. It ends the session, and
+     * the IdP gets a Success response, when the request is addressed to this server's single logout address,
+     * its NotOnOrAfter time, if it has one, has not passed, it passes the library's checks, and it names the
+     * member signed in here, or nobody is signed in. A request that fails the library's checks changes
+     * nothing. Any other is answered with the Requester status and the session stays, as Spring Security
+     * answers a request naming another member in the Java implementation, so a genuine LogoutRequest for one
+     * member, replayed from another member's browser, taken from another server or sent late, signs nobody
+     * out. The session index is not compared, as Java does not compare it.
+     */
+    private function answerSignedLogoutRequest(Request $request, Auth $auth, LogoutRequest $logoutRequest, mixed $relayState): RedirectResponse
+    {
+        // Before the library's checks, which would refuse the same two faults without an answer to the IdP.
+        $refusal = self::addressingFault($auth, $logoutRequest);
+        if ($refusal !== null) {
+            return $this->refuseLogoutRequest($auth, $logoutRequest, $relayState, $refusal);
+        }
+
+        if (! $logoutRequest->isValid()) {
             Log::warning('A SAML LogoutRequest failed validation, so the session was left as it was.', [
-                'errors' => $auth->getErrors(),
-                'reason' => $auth->getLastErrorReason(),
+                'reason' => $logoutRequest->getError(),
             ]);
 
             return redirect('/');
         }
 
-        // The library has ended the session through the callback and built the signed LogoutResponse.
-        return redirect()->away($url);
+        if (! self::namesTheSignedInMember($request, $auth, $logoutRequest)) {
+            return $this->refuseLogoutRequest($auth, $logoutRequest, $relayState, 'it named a different member from the one signed in');
+        }
+
+        self::endSession($request);
+
+        return redirect()->away($this->logoutResponseUrl($auth, (string) $logoutRequest->id, $relayState, Constants::STATUS_SUCCESS));
+    }
+
+    /** Answers the LogoutRequest with the Requester status, leaving the session as it was, and logs why. */
+    private function refuseLogoutRequest(Auth $auth, LogoutRequest $logoutRequest, mixed $relayState, string $reason): RedirectResponse
+    {
+        Log::warning("A SAML LogoutRequest was refused because {$reason}, so the session was left as it was.", [
+            'reason' => $reason,
+        ]);
+
+        return redirect()->away($this->logoutResponseUrl($auth, (string) $logoutRequest->id, $relayState, Constants::STATUS_REQUESTER));
+    }
+
+    /**
+     * Why the LogoutRequest is not for this server now, or null when it is: it has to name this server's single
+     * logout address as its Destination, exactly, since a signed request has to say where it is going, and its
+     * NotOnOrAfter time, if it has one, must not have passed, with no allowance for clock difference, as the
+     * library checks it. A time that cannot be read has passed. A request that cannot be read is left to the
+     * library's checks, which refuse it.
+     */
+    private static function addressingFault(Auth $auth, LogoutRequest $logoutRequest): ?string
+    {
+        try {
+            $root = Utils::loadXML(new \DOMDocument, $logoutRequest->getXML())->documentElement;
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($root->getAttribute('Destination') !== $auth->getSettings()->getSPData()['singleLogoutService']['url']) {
+            return "it was not addressed to this server's single logout address";
+        }
+
+        if ($root->hasAttribute('NotOnOrAfter') && self::hasPassed($root->getAttribute('NotOnOrAfter'))) {
+            return 'its NotOnOrAfter time had passed';
+        }
+
+        return null;
+    }
+
+    private static function hasPassed(string $time): bool
+    {
+        try {
+            return Utils::parseSAML2Time($time) <= time();
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
+    /**
+     * Whether the LogoutRequest's NameID is the one the member signed in with, which acs() keeps in the
+     * session, compared exactly, as Java compares it. With nobody signed in it is taken as named, because
+     * there is no member it could name wrongly.
+     */
+    private static function namesTheSignedInMember(Request $request, Auth $auth, LogoutRequest $logoutRequest): bool
+    {
+        if (! $request->session()->has(MemberIdentityResolver::SESSION_KEY)) {
+            return true;
+        }
+
+        $signedIn = $request->session()->get(self::NAME_ID);
+
+        return is_string($signedIn)
+            && $signedIn === LogoutRequest::getNameId($logoutRequest->getXML(), $auth->getSettings()->getSPkey());
     }
 
     /**
@@ -406,11 +516,11 @@ final class SamlController extends Controller
     {
         try {
             $auth = $this->saml->auth();
-            $logoutRequest = $this->validPostedLogoutRequest($request, $auth);
-            if ($logoutRequest !== null) {
-                self::endSession($request);
+            $encoded = $this->verifiedPostedMessage($request, 'SAMLRequest', PostBindingMessage::LOGOUT_REQUEST, $auth);
+            if ($encoded !== null) {
+                $logoutRequest = $auth->buildLogoutRequest($auth->getSettings(), $encoded);
 
-                return redirect()->away($this->logoutResponseUrl($auth, (string) $logoutRequest->id, $request->post('RelayState')));
+                return $this->answerSignedLogoutRequest($request, $auth, $logoutRequest, $request->post('RelayState'));
             }
         } catch (\Throwable $exception) {
             Log::warning('A SAML LogoutRequest could not be processed.', ['reason' => $exception->getMessage()]);
@@ -418,29 +528,6 @@ final class SamlController extends Controller
 
         // Refused, with the reason logged, so the session is left as it was.
         return redirect('/');
-    }
-
-    /**
-     * The posted LogoutRequest, once its enveloped signature has verified and it has passed the library's
-     * checks. Null, with the reason logged, when it is refused.
-     */
-    private function validPostedLogoutRequest(Request $request, Auth $auth): ?LogoutRequest
-    {
-        $encoded = $this->verifiedPostedMessage($request, 'SAMLRequest', PostBindingMessage::LOGOUT_REQUEST, $auth);
-        if ($encoded === null) {
-            return null;
-        }
-
-        $logoutRequest = $auth->buildLogoutRequest($auth->getSettings(), $encoded);
-        if ($logoutRequest->isValid()) {
-            return $logoutRequest;
-        }
-
-        Log::warning('A SAML LogoutRequest failed validation, so the session was left as it was.', [
-            'reason' => $logoutRequest->getError(),
-        ]);
-
-        return null;
     }
 
     /**
@@ -481,14 +568,16 @@ final class SamlController extends Controller
 
     /**
      * Where a verified LogoutRequest sends the member next: the IdP's single logout response address, over
-     * the Redirect binding, carrying a LogoutResponse signed when this service provider holds a key, and the
-     * RelayState the IdP sent. Built from the same library calls processSLO makes for the Redirect path.
+     * the Redirect binding, carrying a LogoutResponse with the given status, signed when this service provider
+     * holds a key, and the RelayState the IdP sent. Built from the same library calls processSLO makes. The
+     * library only builds a Success response, so any other status replaces it in the XML before encoding.
      */
-    private function logoutResponseUrl(Auth $auth, string $inResponseTo, mixed $relayState): string
+    private function logoutResponseUrl(Auth $auth, string $inResponseTo, mixed $relayState, string $status): string
     {
         $builder = $auth->buildLogoutResponse($auth->getSettings());
         $builder->build($inResponseTo);
-        $logoutResponse = $builder->getResponse();
+        $xml = str_replace('"'.Constants::STATUS_SUCCESS.'"', '"'.$status.'"', $builder->getXML());
+        $logoutResponse = base64_encode($auth->getSettings()->shouldCompressResponses() ? (string) gzdeflate($xml) : $xml);
 
         $parameters = ['SAMLResponse' => $logoutResponse];
         if (is_string($relayState) && $relayState !== '') {

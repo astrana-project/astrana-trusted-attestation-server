@@ -12,6 +12,8 @@ use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use OneLogin\Saml2\Constants;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
@@ -48,6 +50,9 @@ final class SamlControllerTest extends TestCase
     private const IDP_METADATA_URL = 'https://idp.example/metadata';
 
     private const SIGNATURE_ALGORITHM = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+
+    /** This server's single logout address, where a logout request from the IdP has to be addressed. */
+    private const SINGLE_LOGOUT = self::APP_URL.'/auth/saml/logout';
 
     /** The IdP's signing certificate, seeded into its metadata. */
     private string $idpCert;
@@ -101,19 +106,24 @@ final class SamlControllerTest extends TestCase
 
     /**
      * A logout message as the IdP sends it over the HTTP-Redirect binding: deflated, base64-encoded, and,
-     * when $signed, signed over the query string with the IdP's key. Placed in $_GET, where OneLogin reads
-     * it, and returned as the query for the request.
+     * when $signed, signed over the query string with the IdP's key, naming $signatureAlgorithm in SigAlg,
+     * or naming none when it is null. Placed in $_GET, where OneLogin reads it, and returned as the query for
+     * the request.
      *
      * @return array<string, string>
      */
-    private function redirectBindingMessage(string $parameter, string $xml, bool $signed): array
+    private function redirectBindingMessage(string $parameter, string $xml, bool $signed, ?string $signatureAlgorithm = self::SIGNATURE_ALGORITHM): array
     {
         $query = [$parameter => base64_encode((string) gzdeflate($xml))];
 
         if ($signed) {
-            $query['SigAlg'] = self::SIGNATURE_ALGORITHM;
-            $signedQuery = $parameter.'='.urlencode($query[$parameter]).'&SigAlg='.urlencode($query['SigAlg']);
-            openssl_sign($signedQuery, $signature, $this->idpKey, OPENSSL_ALGO_SHA256);
+            $signedQuery = $parameter.'='.urlencode($query[$parameter]);
+            if ($signatureAlgorithm !== null) {
+                $query['SigAlg'] = $signatureAlgorithm;
+                $signedQuery .= '&SigAlg='.urlencode($signatureAlgorithm);
+            }
+            $digest = $signatureAlgorithm === self::SIGNATURE_ALGORITHM ? OPENSSL_ALGO_SHA256 : OPENSSL_ALGO_SHA1;
+            openssl_sign($signedQuery, $signature, $this->idpKey, $digest);
             $query['Signature'] = base64_encode($signature);
         }
 
@@ -144,6 +154,27 @@ final class SamlControllerTest extends TestCase
     private function newSession(): Store
     {
         return new Store('ata_session', new ArraySessionHandler(60));
+    }
+
+    /** A session a member signed in to over SAML, holding what acs() keeps for single logout. */
+    private function signedInSession(string $nameId): Store
+    {
+        $session = $this->newSession();
+        $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
+        $session->put('trusted_attestation.saml.name_id', $nameId);
+        $session->put('trusted_attestation.saml.session_index', 'the-session-index');
+
+        return $session;
+    }
+
+    /** The status of the LogoutResponse a redirect to the IdP's single logout address carries. */
+    private function answeredStatus(string $url): string
+    {
+        self::assertStringStartsWith('https://idp.example/slo?', $url);
+        parse_str((string) parse_url($url, PHP_URL_QUERY), $params);
+        preg_match('/StatusCode Value="([^"]+)"/', (string) gzinflate((string) base64_decode($params['SAMLResponse'])), $status);
+
+        return $status[1] ?? '';
     }
 
     /**
@@ -457,17 +488,94 @@ final class SamlControllerTest extends TestCase
     public function a_logout_request_signed_by_the_idp_ends_the_session_and_answers_it(): void
     {
         // The member signed out of another service at the IdP, which tells this one. A LogoutRequest the
-        // IdP signed ends the local session, and the member is sent back with a LogoutResponse.
-        $session = $this->newSession();
-        $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
-        $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(), true);
+        // IdP signed, naming the member signed in here, ends the local session, and the member is sent back
+        // with a LogoutResponse. The session index is not compared, as Java does not compare it.
+        $session = $this->signedInSession('the-name-id');
+        $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(self::SINGLE_LOGOUT), true);
 
         $response = $this->controller()->singleLogout($this->request($session, $query));
 
-        self::assertStringStartsWith('https://idp.example/slo?', $response->getTargetUrl());
-        parse_str((string) parse_url($response->getTargetUrl(), PHP_URL_QUERY), $params);
-        self::assertNotEmpty($params['SAMLResponse']);
+        self::assertSame(Constants::STATUS_SUCCESS, $this->answeredStatus($response->getTargetUrl()));
         self::assertNull($session->get(MemberIdentityResolver::SESSION_KEY));
+    }
+
+    #[Test]
+    public function a_logout_request_signed_by_the_idp_naming_another_member_keeps_the_session_and_is_refused(): void
+    {
+        // A genuine LogoutRequest for one member, replayed from another member's browser. It is answered with
+        // the Requester status, as Spring Security answers it in the Java implementation, and the member
+        // signed in here stays signed in.
+        Log::spy();
+        $session = $this->signedInSession('member-a');
+        $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(self::SINGLE_LOGOUT, 'member-b'), true);
+
+        $response = $this->controller()->singleLogout($this->request($session, $query));
+
+        self::assertSame(Constants::STATUS_REQUESTER, $this->answeredStatus($response->getTargetUrl()));
+        self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message): bool => str_contains($message, 'named a different member'))
+            ->once();
+    }
+
+    /** @return iterable<string, array{string, ?string, string}> */
+    public static function logoutRequestsRefusedWithRequester(): iterable
+    {
+        $inAMinute = time() + 60;
+        $addressedHere = self::logoutRequestXml(self::SINGLE_LOGOUT, 'the-name-id', self::IDP_ENTITY_ID, $inAMinute);
+
+        yield 'no SigAlg' => [$addressedHere, null, 'not signed with SHA-256'];
+        yield 'a SHA-1 SigAlg' => [$addressedHere, 'http://www.w3.org/2000/09/xmldsig#rsa-sha1', 'not signed with SHA-256'];
+        yield 'no Destination' => [self::logoutRequestXml(null, 'the-name-id', self::IDP_ENTITY_ID, $inAMinute), self::SIGNATURE_ALGORITHM, 'not addressed to'];
+        yield 'another Destination' => [self::logoutRequestXml('https://other.example/auth/saml/logout', 'the-name-id', self::IDP_ENTITY_ID, $inAMinute), self::SIGNATURE_ALGORITHM, 'not addressed to'];
+        yield 'a NotOnOrAfter that has passed' => [self::logoutRequestXml(self::SINGLE_LOGOUT, 'the-name-id', self::IDP_ENTITY_ID, time() - 60), self::SIGNATURE_ALGORITHM, 'NotOnOrAfter'];
+    }
+
+    #[Test]
+    #[DataProvider('logoutRequestsRefusedWithRequester')]
+    public function a_logout_request_the_idp_signs_is_refused_with_requester_when_it_fails_a_check(string $xml, ?string $signatureAlgorithm, string $reason): void
+    {
+        // Each would otherwise end the session of the member it names. A request signed with SHA-1, or naming
+        // no algorithm, is refused as a sign-in signed so is, and one addressed to another server or sent after
+        // its NotOnOrAfter time is refused as the other two implementations refuse it. Each is answered as a
+        // request naming another member is, with the Requester status, and the member stays signed in.
+        Log::spy();
+        $session = $this->signedInSession('the-name-id');
+        $query = $this->redirectBindingMessage('SAMLRequest', $xml, true, $signatureAlgorithm);
+
+        $response = $this->controller()->singleLogout($this->request($session, $query));
+
+        self::assertSame(Constants::STATUS_REQUESTER, $this->answeredStatus($response->getTargetUrl()));
+        self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context = []): bool => str_contains((string) ($context['reason'] ?? ''), $reason))
+            ->once();
+    }
+
+    #[Test]
+    public function a_logout_request_the_idp_signs_still_within_its_not_on_or_after_time_ends_the_session(): void
+    {
+        $session = $this->signedInSession('the-name-id');
+        $xml = self::logoutRequestXml(self::SINGLE_LOGOUT, 'the-name-id', self::IDP_ENTITY_ID, time() + 60);
+        $query = $this->redirectBindingMessage('SAMLRequest', $xml, true);
+
+        $response = $this->controller()->singleLogout($this->request($session, $query));
+
+        self::assertSame(Constants::STATUS_SUCCESS, $this->answeredStatus($response->getTargetUrl()));
+        self::assertNull($session->get(MemberIdentityResolver::SESSION_KEY));
+    }
+
+    #[Test]
+    public function a_logout_request_signed_by_the_idp_with_no_session_is_answered(): void
+    {
+        // With nobody signed in there is no member the request could name wrongly, so it is answered with
+        // Success, as Java answers it.
+        $session = $this->newSession();
+        $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(self::SINGLE_LOGOUT, 'member-b'), true);
+
+        $response = $this->controller()->singleLogout($this->request($session, $query));
+
+        self::assertSame(Constants::STATUS_SUCCESS, $this->answeredStatus($response->getTargetUrl()));
     }
 
     #[Test]
@@ -516,8 +624,7 @@ final class SamlControllerTest extends TestCase
         // enveloped in the XML. It ends the local session and the member is sent back to the IdP's single
         // logout address with a LogoutResponse and the RelayState the IdP sent. The Destination names this
         // address, and the library's destination check passes it as it does on the Redirect binding.
-        $session = $this->newSession();
-        $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
+        $session = $this->signedInSession('the-name-id');
         $xml = $this->signedByIdp(self::logoutRequestXml(self::APP_URL.'/auth/saml/logout'));
 
         $response = $this->controller()->singleLogout($this->request($session, [], [
@@ -533,7 +640,53 @@ final class SamlControllerTest extends TestCase
         preg_match('/ ID="([^"]+)"/', $xml, $id);
         self::assertStringContainsString('InResponseTo="'.$id[1].'"', (string) gzinflate((string) base64_decode($params['SAMLResponse'])));
         self::assertSame('the-relay-state', $params['RelayState']);
+        self::assertSame(Constants::STATUS_SUCCESS, $this->answeredStatus($response->getTargetUrl()));
         self::assertNull($session->get(MemberIdentityResolver::SESSION_KEY));
+    }
+
+    #[Test]
+    public function a_logout_request_posted_by_the_idp_naming_another_member_keeps_the_session_and_is_refused(): void
+    {
+        Log::spy();
+        $session = $this->signedInSession('member-a');
+        $xml = $this->signedByIdp(self::logoutRequestXml(self::APP_URL.'/auth/saml/logout', 'member-b'));
+
+        $response = $this->controller()->singleLogout($this->request($session, [], [
+            'SAMLRequest' => self::posted($xml),
+            'RelayState' => 'the-relay-state',
+        ]));
+
+        self::assertSame(Constants::STATUS_REQUESTER, $this->answeredStatus($response->getTargetUrl()));
+        parse_str((string) parse_url($response->getTargetUrl(), PHP_URL_QUERY), $params);
+        self::assertSame('the-relay-state', $params['RelayState']);
+        self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message): bool => str_contains($message, 'named a different member'))
+            ->once();
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function postedLogoutRequestsRefusedWithRequester(): iterable
+    {
+        yield 'no Destination' => [self::logoutRequestXml(), 'not addressed to'];
+        yield 'another Destination' => [self::logoutRequestXml('https://other.example/auth/saml/logout'), 'not addressed to'];
+        yield 'a NotOnOrAfter that has passed' => [self::logoutRequestXml(self::SINGLE_LOGOUT, 'the-name-id', self::IDP_ENTITY_ID, time() - 60), 'NotOnOrAfter'];
+    }
+
+    #[Test]
+    #[DataProvider('postedLogoutRequestsRefusedWithRequester')]
+    public function a_logout_request_the_idp_posts_is_refused_with_requester_when_it_fails_a_check(string $xml, string $reason): void
+    {
+        Log::spy();
+        $session = $this->signedInSession('the-name-id');
+
+        $response = $this->controller()->singleLogout($this->request($session, [], ['SAMLRequest' => self::posted($this->signedByIdp($xml))]));
+
+        self::assertSame(Constants::STATUS_REQUESTER, $this->answeredStatus($response->getTargetUrl()));
+        self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context = []): bool => str_contains((string) ($context['reason'] ?? ''), $reason))
+            ->once();
     }
 
     #[Test]
@@ -677,7 +830,7 @@ final class SamlControllerTest extends TestCase
         // The enveloped signature verifies, but the message names another issuer. The library's own checks
         // still run after the signature, and refuse it.
         $this->assertPostedLogoutRequestIsRefused(
-            $this->signedByIdp(self::logoutRequestXml(null, 'the-name-id', 'https://someone-else.example/saml')),
+            $this->signedByIdp(self::logoutRequestXml(self::SINGLE_LOGOUT, 'the-name-id', 'https://someone-else.example/saml')),
             'Invalid issuer',
         );
     }

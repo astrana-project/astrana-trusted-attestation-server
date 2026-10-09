@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.2] - 2026-10-10
+
+### Fixed
+
+- A SAML logout request from the identity system that has expired is now refused, and the member stays signed in,
+  instead of signing the member out.
+
 ## [1.0.1] - 2026-10-08
 
 ### Fixed

@@ -21,10 +21,10 @@
             }
         ],
         "component": {
-            "bom-ref": "astrana/trusted-attestation-server-1.0.1.0",
+            "bom-ref": "astrana/trusted-attestation-server-1.0.2.0",
             "type": "application",
             "name": "trusted-attestation-server",
-            "version": "1.0.1",
+            "version": "1.0.2",
             "group": "astrana",
             "description": "Laravel implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)",
             "licenses": [
@@ -35,7 +35,7 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/astrana/trusted-attestation-server@1.0.1",
+            "purl": "pkg:composer/astrana/trusted-attestation-server@1.0.2",
             "properties": [
                 {
                     "name": "cdx:composer:package:type",
@@ -4860,7 +4860,7 @@
             "ref": "voku/portable-ascii-2.1.1.0"
         },
         {
-            "ref": "astrana/trusted-attestation-server-1.0.1.0",
+            "ref": "astrana/trusted-attestation-server-1.0.2.0",
             "dependsOn": [
                 "firebase/php-jwt-7.1.0.0",
                 "laravel/framework-13.34.0.0",

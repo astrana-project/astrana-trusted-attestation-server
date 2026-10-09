@@ -37,13 +37,18 @@ trait BuildsSamlLogoutMessages
         return [$certPem, $keyPem];
     }
 
-    private static function logoutRequestXml(?string $destination = null, string $nameId = 'the-name-id', string $issuer = self::IDP_ENTITY_ID): string
-    {
+    private static function logoutRequestXml(
+        ?string $destination = null,
+        string $nameId = 'the-name-id',
+        string $issuer = self::IDP_ENTITY_ID,
+        ?int $notOnOrAfter = null,
+    ): string {
         $destinationAttribute = $destination === null ? '' : ' Destination="'.$destination.'"';
+        $notOnOrAfterAttribute = $notOnOrAfter === null ? '' : ' NotOnOrAfter="'.gmdate('Y-m-d\TH:i:s\Z', $notOnOrAfter).'"';
 
         return '<samlp:LogoutRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" '
             .'xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_request-1" Version="2.0" '
-            .'IssueInstant="'.gmdate('Y-m-d\TH:i:s\Z').'"'.$destinationAttribute.'>'
+            .'IssueInstant="'.gmdate('Y-m-d\TH:i:s\Z').'"'.$destinationAttribute.$notOnOrAfterAttribute.'>'
             .'<saml:Issuer>'.$issuer.'</saml:Issuer>'
             .'<saml:NameID>'.$nameId.'</saml:NameID>'
             .'</samlp:LogoutRequest>';

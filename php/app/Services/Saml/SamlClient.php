@@ -202,13 +202,21 @@ final class SamlClient
         $weak = [];
         foreach ($xpath->query('//ds:SignatureMethod/@Algorithm | //ds:DigestMethod/@Algorithm') as $attribute) {
             $algorithm = (string) $attribute->nodeValue;
-            // Strong iff the URI names SHA-256/384/512; SHA-1 (…#sha1, …#rsa-sha1) and MD5 do not match.
-            if (preg_match('/sha(256|384|512)$/i', $algorithm) !== 1) {
+            if (! self::isStrongAlgorithm($algorithm)) {
                 $weak[] = $algorithm;
             }
         }
 
         return array_values(array_unique($weak));
+    }
+
+    /**
+     * Whether a signature or digest algorithm URI names SHA-256, SHA-384 or SHA-512. SHA-1 (…#sha1, …#rsa-sha1)
+     * and MD5 do not, and neither does an empty one.
+     */
+    public static function isStrongAlgorithm(string $algorithm): bool
+    {
+        return preg_match('/sha(256|384|512)$/i', $algorithm) === 1;
     }
 
     /**
