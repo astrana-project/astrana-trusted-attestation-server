@@ -59,10 +59,10 @@ application or a relying party. It is a web application with a client secret, wh
 member's details from the sign-in service after they sign in. Register the addresses below exactly as written, with your
 own host name.
 
-| Protocol       | Addresses to register                                                                                                                                                                                                                                 |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| OpenID Connect | Redirect address `https://your-server/auth/callback`. Sign-out return address `https://your-server/signed-out`.                                                                                                                                       |
-| SAML           | Assertion consumer address `https://your-server/auth/saml/acs`. Single logout address `https://your-server/auth/saml/logout`, which accepts the Redirect and the POST binding. Service provider metadata at `https://your-server/auth/saml/metadata`. |
+| Protocol       | Addresses to register                                                                                                                                                                                                                                                                     |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OpenID Connect | Redirect address `https://your-server/auth/callback`. Sign-out return address `https://your-server/signed-out`.                                                                                                                                                                           |
+| SAML           | Assertion consumer address `https://your-server/auth/saml/acs`. Single logout address `https://your-server/auth/saml/logout`, which accepts the Redirect and the POST binding and is used only with a signing key. Service provider metadata at `https://your-server/auth/saml/metadata`. |
 
 Microsoft takes the sign-out return address as a second redirect address. Google has no sign-out address to register.
 
@@ -98,9 +98,10 @@ service can import. Record the identity provider's metadata address.
 
 Give the server a signing certificate and private key of its own. Most sign-in services require signed authentication
 requests, and single logout always does. Without them the server can sign members in only through a sign-in service that
-does not ask for signed requests. Generate them in the application folder with OpenSSL, with your own host name in place
-of the example. On Windows, run it in Git Bash, which comes with Git for Windows and includes OpenSSL.
-`MSYS_NO_PATHCONV=1` at the start stops Git Bash rewriting `/CN=...` as a Windows path, and does nothing elsewhere.
+does not ask for signed requests, and single logout is not available. Generate them in the application folder with
+OpenSSL, with your own host name in place of the example. On Windows, run it in Git Bash, which comes with Git for
+Windows and includes OpenSSL. `MSYS_NO_PATHCONV=1` at the start stops Git Bash rewriting `/CN=...` as a Windows path,
+and does nothing elsewhere.
 
 ```bash
 mkdir -p saml
@@ -110,6 +111,17 @@ MSYS_NO_PATHCONV=1 openssl req -x509 -newkey rsa:3072 -sha256 -nodes -days 1095 
 
 The server's entity identifier is the name the sign-in service knows it by. It is the metadata address unless you set
 another, and it must match what the sign-in service has on record exactly.
+
+Signing out can also end the member's session at the sign-in service, through SAML single logout. That needs three
+things:
+
+- The signing key and certificate above.
+- A sign-in service that supports single logout. If it does, its metadata lists a single logout address.
+- The server's single logout address from the table above, registered with the sign-in service.
+
+Without all three, signing out ends the session at the server only. Without the signing key, the server doesn't offer
+single logout, and if the sign-in service sends a logout request anyway, the server answers it with HTTP 404 - Not Found
+and the member stays signed in.
 
 ### Which claim identifies the member
 

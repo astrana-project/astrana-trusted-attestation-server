@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.3] - 2026-10-10
+
+### Fixed
+
+- With no SAML signing key configured, a logout request from the identity system is now answered with HTTP 404 - Not
+  Found, and the member stays signed in, instead of the server signing the member out and replying with an unsigned
+  logout response.
+- With no SAML signing key configured, signing out now ends the session at the server only and lands on the signed-out
+  page, instead of also sending an unsigned logout request to an identity system that offers single logout.
+- With no SAML signing key configured, the server's metadata no longer offers single logout.
+
 ## [1.0.2] - 2026-10-10
 
 ### Fixed
@@ -21,9 +32,9 @@ number means and how the versions of the three implementations relate.
 
 ### Fixed
 
-- When the SAML sign-in service asks for signed sign-in requests and no signing key is configured, the server no longer
-  sends it an unsigned request it would refuse. The sign-in stops at the server with an error, and the log says the
-  sign-in service wants signed requests and no signing key is configured.
+- When the identity system asks for signed SAML sign-in requests and no SAML signing key is configured, the server no
+  longer sends it an unsigned request it would refuse. The sign-in stops at the server with an error, and the log says
+  the identity system wants signed requests and no signing key is configured.
 
 ## [1.0.0] - 2026-10-05
 

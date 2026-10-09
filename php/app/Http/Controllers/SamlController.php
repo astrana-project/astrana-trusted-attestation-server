@@ -232,8 +232,10 @@ final class SamlController extends Controller
      * Reached only from the CSRF-protected POST /signout (AuthController::signout), never from a GET, so a
      * cross-site page cannot sign a member out. The local session is ended first and unconditionally: an
      * IdP that publishes no single logout service, or whose metadata cannot be read just now, leaves the
-     * local session ended and nothing more, which is all this service can honestly do about it. Either way
-     * the member lands on /signed-out, the one address sign-out ends at in all three implementations.
+     * local session ended and nothing more, which is all this service can honestly do about it. So does a
+     * deployment with no signing key, because single logout needs a signed LogoutRequest, and the other two
+     * implementations send none without one. Either way the member lands on /signed-out, the one address
+     * sign-out ends at in all three implementations.
      */
     public function signOut(Request $request): RedirectResponse
     {
@@ -241,6 +243,12 @@ final class SamlController extends Controller
         $sessionIndex = $request->session()->get(self::SESSION_INDEX);
 
         self::endSession($request);
+
+        if (! $this->saml->hasSigningKey()) {
+            Log::info('No signing key is configured, so single logout is not offered and only the local session was ended.');
+
+            return redirect(self::SIGNED_OUT);
+        }
 
         try {
             $auth = $this->saml->auth();
@@ -287,9 +295,18 @@ final class SamlController extends Controller
      * - A verified LogoutRequest ends the session only when it is addressed to this server's single logout
      *   address, its NotOnOrAfter time, if it has one, has not passed, and its NameID names the member signed
      *   in here. Any other is answered with the Requester status and the session stays.
+     * - Without a signing key a LogoutRequest is answered HTTP 404 with no body, as if the address were
+     *   absent, because its answer must be a signed LogoutResponse and so single logout is not offered and
+     *   not in the metadata. The session is left as it was. The other two implementations answer the same.
      */
     public function singleLogout(Request $request): RedirectResponse
     {
+        if (self::carriesLogoutRequest($request) && ! $this->saml->hasSigningKey()) {
+            Log::warning('A SAML LogoutRequest arrived, but no signing key is configured to answer it, so single logout is not offered and the request was refused.');
+
+            abort(Response::HTTP_NOT_FOUND, '');
+        }
+
         if ($request->isMethod('POST')) {
             return $this->singleLogoutOverPost($request);
         }
@@ -305,6 +322,16 @@ final class SamlController extends Controller
         Log::warning('A single logout request carried no signed SAML logout message, so nothing was changed.');
 
         return redirect('/');
+    }
+
+    /**
+     * Whether the request carries a LogoutRequest, in its query or its body whatever the method, as the other
+     * two implementations look for one. An empty SAMLRequest counts, so the parameter's presence is tested:
+     * Laravel turns an empty input into null on its way in.
+     */
+    private static function carriesLogoutRequest(Request $request): bool
+    {
+        return $request->query->has('SAMLRequest') || $request->request->has('SAMLRequest');
     }
 
     private function completeSignOut(Request $request): RedirectResponse

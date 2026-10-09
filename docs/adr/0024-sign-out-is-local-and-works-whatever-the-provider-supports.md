@@ -1,6 +1,6 @@
 # 24. Sign-out is local and works whatever the provider supports
 
-Accepted on 2026-10-05.
+Superseded by record 42 on 2026-10-10.
 
 ## Context
 

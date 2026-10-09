@@ -207,10 +207,12 @@ app.UseSecurityHeadersAndSchemeGuard(settings.Tls);
 app.UseStaticFiles();
 
 // Ahead of UseAuthentication, so they wrap the handler that processes the assertion and the logout
-// requests. The second reads the session a logout request is compared with, see ProviderLogoutRequest.
+// requests. A logout request the server has no certificate to answer is refused before the handler takes it.
+// The last reads the session a logout request is compared with, see ProviderLogoutRequest.
 if (settings.Iam.Protocol == IamProtocol.Saml)
 {
     app.UseSamlFailureHandling(IamAuthentication.SamlModulePath);
+    app.UseSamlLogoutRequestRefusal(IamAuthentication.SamlModulePath);
     app.UseSessionForProviderLogout(IamAuthentication.SamlModulePath);
 }
 

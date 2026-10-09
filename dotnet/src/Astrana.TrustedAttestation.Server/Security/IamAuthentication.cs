@@ -101,7 +101,9 @@ public static class IamAuthentication
             (commandResult, _) => SignInFailure.RefuseAssertionWithoutSubject(commandResult, iam);
 
         // Signs AuthnRequests, and lets the IdP verify them. Most IdPs advertise
-        // WantAuthnRequestsSigned, and single logout needs a signature regardless.
+        // WantAuthnRequestsSigned, and single logout needs a signature regardless. Without a certificate the
+        // handler offers no single logout: its metadata advertises none, a member's sign-out stays local, and
+        // a logout request the identity provider sends anyway is answered as absent (SamlLogoutRequestRefusal).
         if (signingCertificate is not null)
         {
             options.SPOptions.ServiceCertificates.Add(signingCertificate);

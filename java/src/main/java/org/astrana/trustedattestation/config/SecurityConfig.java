@@ -12,7 +12,9 @@ import java.util.regex.Pattern;
 import org.astrana.trustedattestation.config.TrustedAttestationProperties.Protocol;
 import org.astrana.trustedattestation.security.MemberIdentityResolver;
 import org.astrana.trustedattestation.security.SessionContents;
+import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.saml2.assertion.SAML2AssertionValidationParameters;
+import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -25,7 +27,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl;
 import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -51,9 +52,11 @@ import org.springframework.security.saml2.provider.service.authentication.Saml2A
 import org.springframework.security.saml2.provider.service.authentication.Saml2Authentication;
 import org.springframework.security.saml2.provider.service.authentication.Saml2AuthenticationException;
 import org.springframework.security.saml2.provider.service.authentication.logout.OpenSaml5LogoutRequestValidator;
+import org.springframework.security.saml2.provider.service.metadata.OpenSaml5MetadataResolver;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistration;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistrationRepository;
 import org.springframework.security.saml2.provider.service.web.Saml2AuthenticationRequestRepository;
+import org.springframework.security.saml2.provider.service.web.metadata.RequestMatcherMetadataResponseResolver;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.DefaultRedirectStrategy;
 import org.springframework.security.web.RedirectStrategy;
@@ -363,8 +366,19 @@ public class SecurityConfig {
             // goes straight after the header writer, which comes before both.
             http.addFilterAfter(new SamlRequestParameterScope(), HeaderWriterFilter.class);
 
-            // Publishes this SP's own metadata, which is what an IdP administrator registers.
-            http.saml2Metadata(Customizer.withDefaults());
+            // Without a signing key, a logout request the identity provider sends is answered as if the single
+            // logout address were absent, ahead of Spring's single logout filter for the same reason. See
+            // UnofferedSingleLogout.
+            http.addFilterAfter(
+                    new UnofferedSingleLogout(relyingParties, SecurityConfig::signsLogoutMessages),
+                    HeaderWriterFilter.class);
+
+            // Publishes this SP's own metadata, which is what an IdP administrator registers. It advertises
+            // single logout only with a signing key, see withoutSingleLogoutUnlessSigned.
+            OpenSaml5MetadataResolver metadata = new OpenSaml5MetadataResolver();
+            metadata.setEntityDescriptorCustomizer(SecurityConfig::withoutSingleLogoutUnlessSigned);
+            http.saml2Metadata(saml -> saml.metadataResponseResolver(
+                    new RequestMatcherMetadataResponseResolver(relyingParties, metadata)));
         } else {
             // Authorization Code + PKCE, the OAuth 2.1 profile decision record 22 in docs/adr requires: no implicit
             // grant, no password grant. PKCE has to be asked for explicitly here, because Spring Security
@@ -528,7 +542,7 @@ public class SecurityConfig {
      * to, and the registration has a signing key. Without the address, Spring refuses the response and the
      * member would see an error page. Without the key, Spring cannot make the LogoutRequest at all, because
      * it signs every one. In either case the sign-out stays local and lands on /signed-out, which works
-     * whatever the provider supports (decision record 24).
+     * whatever the provider supports (decision record 42).
      */
     static RequestMatcher singleLogoutAvailable(RelyingPartyRegistrationRepository registrations) {
         return request -> {
@@ -544,8 +558,29 @@ public class SecurityConfig {
                             registration.getAssertingPartyMetadata().getSingleLogoutServiceLocation())
                     && StringUtils.hasText(registration.getSingleLogoutServiceLocation())
                     && StringUtils.hasText(registration.getSingleLogoutServiceResponseLocation())
-                    && !registration.getSigningX509Credentials().isEmpty();
+                    && signsLogoutMessages(registration);
         };
+    }
+
+    /**
+     * Whether this service provider can take part in single logout at all. Spring signs every LogoutRequest and
+     * LogoutResponse it sends and cannot send one unsigned, so without a signing key there is no single logout
+     * in either direction, as in the other two implementations.
+     */
+    static boolean signsLogoutMessages(RelyingPartyRegistration registration) {
+        return !registration.getSigningX509Credentials().isEmpty();
+    }
+
+    /**
+     * Leaves the single logout endpoint out of this service provider's metadata when it has no signing key,
+     * so an identity provider that imports the metadata is not told to send logout requests this server
+     * cannot answer. The .NET implementation leaves it out on the same condition.
+     */
+    static void withoutSingleLogoutUnlessSigned(OpenSaml5MetadataResolver.EntityDescriptorParameters parameters) {
+        SPSSODescriptor descriptor = parameters.getEntityDescriptor().getSPSSODescriptor(SAMLConstants.SAML20P_NS);
+        if (descriptor != null && !signsLogoutMessages(parameters.getRelyingPartyRegistration())) {
+            descriptor.getSingleLogoutServices().clear();
+        }
     }
 
     /**

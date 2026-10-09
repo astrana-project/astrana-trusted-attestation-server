@@ -1298,7 +1298,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
 
     carries_switcher("/", "fr")
 
-    # Signing out lands on the landing page with a confirmation (decision record 24), at one fixed address
+    # Signing out lands on the landing page with a confirmation (decision record 42), at one fixed address
     # every implementation shares, so the provider's post-logout redirect can be registered once. The
     # confirmation is a shared string in the resolved locale, and it appears only there: the plain landing
     # page says nothing about a sign-out that did not happen.
@@ -2205,7 +2205,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
             results.check("after signing out, the API no longer sees a session", after, 401)
 
     # Signing out with no session has nothing to end, so it answers the redirect to /signed-out whatever
-    # the anti-forgery token says (decision record 24). A fresh client, so there is no session and no token at all.
+    # the anti-forgery token says (decision record 42). A fresh client, so there is no session and no token at all.
     status, signout_headers, _ = Client(verify_tls).request_without_following(
         "POST", f"{base_url}/signout", b"", {"Content-Type": "application/x-www-form-urlencoded"})
     results.check_that("signing out with no session answers a redirect", status in _REDIRECTS, f"got {status}")

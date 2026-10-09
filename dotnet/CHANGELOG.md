@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.2] - 2026-10-10
+
+### Fixed
+
+- With no SAML signing key configured, a logout request from the identity system is now answered with HTTP 404 - Not
+  Found, and the member stays signed in, instead of the server failing with HTTP 500 - Internal Server Error.
+
 ## [1.0.1] - 2026-10-09
 
 ### Fixed

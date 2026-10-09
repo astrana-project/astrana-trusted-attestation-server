@@ -29,7 +29,8 @@ public static class SignOutEndpoint
 
     /// <param name="identitySystemSignsOut">
     /// Whether the identity system is asked to end its own session too. Under SAML it always is, and the
-    /// SAML handler degrades on its own when the identity provider publishes no single logout address.
+    /// SAML handler degrades on its own to a local sign-out when the identity provider publishes no single
+    /// logout address, or when the server has no signing certificate, since single logout needs a signature.
     /// </param>
     internal static async Task<IResult> SignOutAsync(
         HttpContext http,

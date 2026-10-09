@@ -51,10 +51,10 @@ Create a client for the server. Some systems call it an application or a relying
 exactly as written, with your own host name. Each address contains the name you give this registration in the server's
 configuration. This page's examples use `keycloak`.
 
-| Protocol       | Addresses to register                                                                                                                                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| OpenID Connect | Redirect address `https://your-server/login/oauth2/code/keycloak`. Post-logout redirect address `https://your-server/signed-out`.                                                                                                     |
-| SAML           | Assertion consumer address `https://your-server/login/saml2/sso/keycloak`. Service provider metadata at `https://your-server/saml2/service-provider-metadata/keycloak`. Single logout address `https://your-server/logout/saml2/slo`. |
+| Protocol       | Addresses to register                                                                                                                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OpenID Connect | Redirect address `https://your-server/login/oauth2/code/keycloak`. Post-logout redirect address `https://your-server/signed-out`.                                                                                                                                   |
+| SAML           | Assertion consumer address `https://your-server/login/saml2/sso/keycloak`. Service provider metadata at `https://your-server/saml2/service-provider-metadata/keycloak`. Single logout address `https://your-server/logout/saml2/slo`, used only with a signing key. |
 
 ### OpenID Connect
 
@@ -87,7 +87,9 @@ Signing out can end the session at the identity system as well, over SAML single
 - A single logout endpoint advertised in the identity system's metadata.
 - The server's own single logout address, set in Step 3 and registered with the identity system for its logout response.
 
-Without all three, signing out ends the session at the server only.
+Without all three, signing out ends the session at the server only. Without the signing key, the server also leaves its
+single logout address out of its metadata and answers a logout request the identity system sends with HTTP 404 - Not
+Found, leaving the member signed in.
 
 ### Which claim identifies the member
 
