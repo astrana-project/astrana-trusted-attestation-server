@@ -50,6 +50,7 @@ import org.springframework.security.saml2.provider.service.authentication.Saml2A
 import org.springframework.security.saml2.provider.service.authentication.Saml2AuthenticatedPrincipal;
 import org.springframework.security.saml2.provider.service.authentication.Saml2Authentication;
 import org.springframework.security.saml2.provider.service.authentication.Saml2AuthenticationException;
+import org.springframework.security.saml2.provider.service.authentication.logout.OpenSaml5LogoutRequestValidator;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistration;
 import org.springframework.security.saml2.provider.service.registration.RelyingPartyRegistrationRepository;
 import org.springframework.security.saml2.provider.service.web.Saml2AuthenticationRequestRepository;
@@ -341,8 +342,12 @@ public class SecurityConfig {
             // there, because the LogoutResponse is answered with the same success handler.
             RelyingPartyRegistrationRepository relyingParties = samlRegistrations.getIfAvailable();
             http.saml2Logout(logout -> logout.logoutUrl(SIGN_OUT_URL)
-                    .logoutRequest(request ->
-                            request.logoutRequestRepository(new CookieSaml2LogoutRequestRepository(relyingParties)))
+                    .logoutRequest(request -> request.logoutRequestRepository(
+                                    new CookieSaml2LogoutRequestRepository(relyingParties))
+                            // A logout request the identity provider sends is refused once its NotOnOrAfter
+                            // has passed, see UnexpiredLogoutRequestValidator.
+                            .logoutRequestValidator(
+                                    new UnexpiredLogoutRequestValidator(new OpenSaml5LogoutRequestValidator())))
                     .withObjectPostProcessor(new ObjectPostProcessor<LogoutFilter>() {
                         @Override
                         public <O extends LogoutFilter> O postProcess(O filter) {

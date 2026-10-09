@@ -101,7 +101,8 @@ final class SamlSignOutRouteTest extends TestCase
     public function a_logout_request_the_idp_posts_ends_the_session_through_the_whole_stack(): void
     {
         // The IdP's cross-site POST, as the browser delivers it: no CSRF token, the message in the form body,
-        // through every middleware in the web group. Only the signature lets it end the session.
+        // through every middleware in the web group. Only the signature, on a request naming the member signed
+        // in, lets it end the session.
         [$idpCert, $idpKey] = self::selfSignedCertificate();
         config(['trusted_attestation.iam.saml.idp_metadata_url' => self::IDP_METADATA_URL]);
         Cache::put(SamlClient::metadataCacheKey(self::IDP_METADATA_URL), [
@@ -113,9 +114,12 @@ final class SamlSignOutRouteTest extends TestCase
             ],
         ], 3600);
 
-        $response = $this->withSession([MemberIdentityResolver::SESSION_KEY => ['sub' => 'member-subject']])
+        $response = $this->withSession([
+            MemberIdentityResolver::SESSION_KEY => ['sub' => 'member-subject'],
+            'trusted_attestation.saml.name_id' => 'the-name-id',
+        ])
             ->post('/auth/saml/logout', [
-                'SAMLRequest' => self::posted(self::enveloped(self::logoutRequestXml(), $idpKey, $idpCert)),
+                'SAMLRequest' => self::posted(self::enveloped(self::logoutRequestXml(rtrim((string) config('app.url'), '/').'/auth/saml/logout'), $idpKey, $idpCert)),
                 'RelayState' => 'the-relay-state',
             ]);
 

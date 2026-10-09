@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.2] - 2026-10-10
+
+### Fixed
+
+- A SAML logout request from the identity system is now refused, and the member stays signed in, when it names a
+  different member from the one signed in or does not say which server it is for, instead of signing the member out.
+- A SAML logout request over the redirect binding is now refused, and the member stays signed in, when it is signed with
+  SHA-1 or names no signature algorithm, instead of signing the member out.
+- The identity system now gets a refusal in reply to a SAML logout request that is for another server or has expired,
+  instead of no reply.
+
 ## [1.0.1] - 2026-10-09
 
 ### Fixed
