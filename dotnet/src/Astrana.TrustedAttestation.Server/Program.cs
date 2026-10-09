@@ -206,10 +206,12 @@ app.UseSecurityHeadersAndSchemeGuard(settings.Tls);
 // UseAuthentication, so the assets stay anonymous.
 app.UseStaticFiles();
 
-// Ahead of UseAuthentication, so it wraps the handler that processes the assertion.
+// Ahead of UseAuthentication, so they wrap the handler that processes the assertion and the logout
+// requests. The second reads the session a logout request is compared with, see ProviderLogoutRequest.
 if (settings.Iam.Protocol == IamProtocol.Saml)
 {
     app.UseSamlFailureHandling(IamAuthentication.SamlModulePath);
+    app.UseSessionForProviderLogout(IamAuthentication.SamlModulePath);
 }
 
 // JSON goes out as a bare "application/json", as the other two implementations send it. See JsonContentType.
