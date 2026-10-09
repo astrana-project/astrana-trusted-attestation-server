@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.1] - 2026-10-09
+
+### Fixed
+
+- When the SAML sign-in service asks for signed sign-in requests and no signing key is configured, the server no longer
+  sends it an unsigned request it would refuse. The sign-in stops at the server with an error, and the log says the
+  sign-in service wants signed requests and no signing key is configured.
+
 ## [1.0.0] - 2026-10-05
 
 ### Added

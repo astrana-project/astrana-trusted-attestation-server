@@ -97,9 +97,9 @@ provider. The server publishes its own metadata, a description of itself, at the
 service can import. Record the identity provider's metadata address.
 
 Give the server a signing certificate and private key of its own. Most sign-in services require signed authentication
-requests, and single logout always does. Without them the server sends its requests unsigned, and a sign-in service that
-requires signed requests refuses them. Generate them in the application folder with OpenSSL, with your own host name in
-place of the example. On Windows, run it in Git Bash, which comes with Git for Windows and includes OpenSSL.
+requests, and single logout always does. Without them the server can sign members in only through a sign-in service that
+does not ask for signed requests. Generate them in the application folder with OpenSSL, with your own host name in place
+of the example. On Windows, run it in Git Bash, which comes with Git for Windows and includes OpenSSL.
 `MSYS_NO_PATHCONV=1` at the start stops Git Bash rewriting `/CN=...` as a Windows path, and does nothing elsewhere.
 
 ```bash

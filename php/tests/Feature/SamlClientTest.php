@@ -58,26 +58,45 @@ final class SamlClientTest extends TestCase
             'trusted_attestation.iam.saml.sp_private_key_path' => null,
         ]);
 
-        $this->seedIdpMetadata([
-            'idp' => [
-                'entityId' => self::IDP_ENTITY_ID,
-                'singleSignOnService' => [
-                    'url' => 'https://idp.example/sso',
-                    'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-                ],
-                'singleLogoutService' => [
-                    'url' => 'https://idp.example/slo',
-                    'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-                ],
-                'x509cert' => $this->idpCert,
+        $this->seedIdpMetadata(['idp' => $this->idp()]);
+    }
+
+    /** @return array<string, mixed> the identity provider as its parsed metadata describes it */
+    private function idp(): array
+    {
+        return [
+            'entityId' => self::IDP_ENTITY_ID,
+            'singleSignOnService' => [
+                'url' => 'https://idp.example/sso',
+                'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
             ],
-        ]);
+            'singleLogoutService' => [
+                'url' => 'https://idp.example/slo',
+                'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+            ],
+            'x509cert' => $this->idpCert,
+        ];
+    }
+
+    /** Seeds metadata whose descriptor says whether the identity provider wants signed authentication requests. */
+    private function seedIdpWantingSignedRequests(bool $wanted): void
+    {
+        $this->seedIdpMetadata(['idp' => $this->idp() + [IdpMetadataSource::WANTS_SIGNED_REQUESTS => $wanted]]);
+    }
+
+    /** @return array<string, string> the query parameters of the sign-in redirect the client builds */
+    private static function signInQuery(SamlClient $client): array
+    {
+        $url = $client->signInAuth()->login('https://ata.example/me', [], false, false, true);
+        parse_str((string) parse_url((string) $url, PHP_URL_QUERY), $query);
+
+        return $query;
     }
 
     /** Seeds the parse result into the exact cache key the client reads, so no network fetch happens. */
     private function seedIdpMetadata(array $parsed): void
     {
-        Cache::put('trusted_attestation.saml.idp-metadata.'.hash('sha256', self::IDP_METADATA_URL), $parsed, 3600);
+        Cache::put(SamlClient::metadataCacheKey(self::IDP_METADATA_URL), $parsed, 3600);
     }
 
     /** @return array{0: string, 1: string} the certificate body and the private key, both PEM-stripped bodies */
@@ -227,33 +246,54 @@ final class SamlClientTest extends TestCase
         // the server's certificate verified (IdpMetadataSourceTest pins that). A client that fetched it any
         // other way would bypass the check.
         Cache::flush();
-
-        $source = new class($this->idpCert) extends IdpMetadataSource
-        {
-            /** @var list<string> */
-            public array $fetched = [];
-
-            public function __construct(private readonly string $certificate) {}
-
-            public function fetch(string $url): array
-            {
-                $this->fetched[] = $url;
-
-                return ['idp' => [
-                    'entityId' => 'https://idp.example/saml',
-                    'singleSignOnService' => [
-                        'url' => 'https://idp.example/sso',
-                        'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-                    ],
-                    'x509cert' => $this->certificate,
-                ]];
-            }
-        };
+        $source = self::recordingSource(['idp' => $this->idp()]);
 
         $auth = (new SamlClient($source))->auth();
 
         self::assertSame([self::IDP_METADATA_URL], $source->fetched);
         self::assertSame(self::IDP_ENTITY_ID, $auth->getSettings()->getIdPData()['entityId']);
+    }
+
+    #[Test]
+    public function metadata_cached_by_version_1_0_0_is_never_read(): void
+    {
+        // Version 1.0.0 cached the parsed metadata without the flag saying whether the identity provider wants
+        // signed requests. Read after an upgrade, such an entry would let unsigned requests through for up to
+        // an hour, so the client keys its cache differently and fetches the metadata afresh.
+        Cache::flush();
+        Cache::put('trusted_attestation.saml.idp-metadata.'.hash('sha256', self::IDP_METADATA_URL), ['idp' => $this->idp()], 3600);
+        $source = self::recordingSource(['idp' => $this->idp() + [IdpMetadataSource::WANTS_SIGNED_REQUESTS => true]]);
+
+        try {
+            (new SamlClient($source))->signInAuth();
+            self::fail('a sign-in was started from metadata cached by version 1.0.0');
+        } catch (ConfigurationException) {
+            self::assertSame([self::IDP_METADATA_URL], $source->fetched);
+        }
+    }
+
+    /**
+     * A metadata source that answers with the given parse result and records each address it was asked for.
+     *
+     * @param  array<string, mixed>  $parsed
+     */
+    private static function recordingSource(array $parsed): IdpMetadataSource
+    {
+        return new class($parsed) extends IdpMetadataSource
+        {
+            /** @var list<string> */
+            public array $fetched = [];
+
+            /** @param array<string, mixed> $parsed */
+            public function __construct(private readonly array $parsed) {}
+
+            public function fetch(string $url): array
+            {
+                $this->fetched[] = $url;
+
+                return $this->parsed;
+            }
+        };
     }
 
     #[Test]
@@ -270,6 +310,45 @@ final class SamlClientTest extends TestCase
         $this->withSpKeypair();
         $withKey = (new SamlClient)->auth()->getSettings()->getSecurityData();
         self::assertTrue($withKey['authnRequestsSigned']);
+    }
+
+    // -- identity providers that want signed requests ------------------------------------------------
+
+    #[Test]
+    public function a_sign_in_is_refused_when_the_identity_provider_wants_signed_requests_and_there_is_no_key(): void
+    {
+        // An unsigned request would only be refused by the identity provider, so it is never sent. The .NET
+        // (Sustainsys) and Java (Spring Security) implementations refuse to build it as well, and all three
+        // answer HTTP 500 - Internal Server Error with the cause in the log.
+        $this->seedIdpWantingSignedRequests(true);
+
+        $this->expectException(ConfigurationException::class);
+        $this->expectExceptionMessage('The identity provider asks for signed authentication requests and no SAML signing key is configured');
+
+        (new SamlClient)->signInAuth();
+    }
+
+    #[Test]
+    public function a_sign_in_is_signed_when_the_identity_provider_wants_signed_requests_and_there_is_a_key(): void
+    {
+        $this->seedIdpWantingSignedRequests(true);
+        $this->withSpKeypair();
+
+        $query = self::signInQuery(new SamlClient);
+
+        self::assertArrayHasKey('SAMLRequest', $query);
+        self::assertNotEmpty($query['Signature'] ?? null, 'the authentication request was not signed');
+    }
+
+    #[Test]
+    public function a_sign_in_without_a_key_goes_ahead_when_the_identity_provider_does_not_ask_for_signed_requests(): void
+    {
+        $this->seedIdpWantingSignedRequests(false);
+
+        $query = self::signInQuery(new SamlClient);
+
+        self::assertArrayHasKey('SAMLRequest', $query);
+        self::assertArrayNotHasKey('Signature', $query);
     }
 
     // -- refusals ------------------------------------------------------------------------------------

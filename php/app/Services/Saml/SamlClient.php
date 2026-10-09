@@ -33,6 +33,30 @@ final class SamlClient
     }
 
     /**
+     * The Auth a sign-in starts from, refused when the identity provider's metadata asks for signed
+     * authentication requests and this service provider has no key to sign them with. Such a request would
+     * only be refused by the identity provider, so it is never sent. The .NET (Sustainsys) and Java (Spring
+     * Security) implementations refuse to build it too, and in all three the member gets HTTP 500 - Internal
+     * Server Error and the cause goes to the log.
+     */
+    public function signInAuth(): Auth
+    {
+        $auth = $this->auth();
+        $settings = $auth->getSettings();
+
+        $wantsSigned = ($settings->getIdPData()[IdpMetadataSource::WANTS_SIGNED_REQUESTS] ?? false) === true;
+        if ($wantsSigned && empty($settings->getSecurityData()['authnRequestsSigned'])) {
+            throw new ConfigurationException(
+                'The identity provider asks for signed authentication requests and no SAML signing key is configured, '
+                .'so the sign-in was not started. Set TRUSTED_ATTESTATION_SAML_SP_CERTIFICATE and '
+                .'TRUSTED_ATTESTATION_SAML_SP_PRIVATE_KEY.'
+            );
+        }
+
+        return $auth;
+    }
+
+    /**
      * The SP's own metadata, which is what an IdP administrator registers. Generated from the same
      * settings the app runs on, so the two cannot disagree.
      */
@@ -210,7 +234,8 @@ final class SamlClient
      * The IdP half of the settings, parsed from its published metadata and cached. Endpoints, bindings
      * and the certificate assertions are verified against all come from there; none of it is configured
      * by hand. Because that certificate decides which assertions are trusted, the metadata is fetched
-     * through IdpMetadataSource, which verifies the server's TLS certificate.
+     * through IdpMetadataSource, which verifies the server's TLS certificate. It also records whether the
+     * IdP wants signed authentication requests, which signInAuth() reads.
      *
      * @return array<string, mixed>
      */
@@ -226,7 +251,7 @@ final class SamlClient
         // Keyed by the metadata URL for the same reason the OIDC client keys by issuer: pointing the app
         // at a different IdP must not be served the previous one's metadata.
         $parsed = Cache::remember(
-            'trusted_attestation.saml.idp-metadata.'.hash('sha256', $metadataUrl),
+            self::metadataCacheKey($metadataUrl),
             self::CACHE_SECONDS,
             fn (): array => $this->metadataSource->fetch($metadataUrl)
         );
@@ -236,6 +261,17 @@ final class SamlClient
         }
 
         return $parsed['idp'];
+    }
+
+    /**
+     * Where the parsed metadata from the given address is cached. The version segment names the shape of
+     * the cached entry, which includes whether the IdP wants signed authentication requests. It changes
+     * whenever that shape does, so an entry of another shape is never read, and an entry that lacks the
+     * signing flag cannot let an unsigned request through until it expires.
+     */
+    public static function metadataCacheKey(string $metadataUrl): string
+    {
+        return 'trusted_attestation.saml.idp-metadata.v2.'.hash('sha256', $metadataUrl);
     }
 
     private function readFile(?string $path): ?string

@@ -133,7 +133,7 @@ final class SamlControllerTest extends TestCase
 
     private function seedIdpMetadata(array $parsed): void
     {
-        Cache::put('trusted_attestation.saml.idp-metadata.'.hash('sha256', self::IDP_METADATA_URL), $parsed, 3600);
+        Cache::put(SamlClient::metadataCacheKey(self::IDP_METADATA_URL), $parsed, 3600);
     }
 
     private function controller(): SamlController
