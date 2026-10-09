@@ -49,6 +49,7 @@ final class SamlSignOutRouteTest extends TestCase
     {
         putenv('TRUSTED_ATTESTATION_IAM_PROTOCOL');
         unset($_ENV['TRUSTED_ATTESTATION_IAM_PROTOCOL']);
+        $this->removeSpKeypair();
 
         parent::tearDown();
     }
@@ -102,7 +103,8 @@ final class SamlSignOutRouteTest extends TestCase
     {
         // The IdP's cross-site POST, as the browser delivers it: no CSRF token, the message in the form body,
         // through every middleware in the web group. Only the signature, on a request naming the member signed
-        // in, lets it end the session.
+        // in, lets it end the session, and only a service provider with a signing key of its own can answer it.
+        $this->withSpKeypair();
         [$idpCert, $idpKey] = self::selfSignedCertificate();
         config(['trusted_attestation.iam.saml.idp_metadata_url' => self::IDP_METADATA_URL]);
         Cache::put(SamlClient::metadataCacheKey(self::IDP_METADATA_URL), [
@@ -126,6 +128,47 @@ final class SamlSignOutRouteTest extends TestCase
         self::assertSame(302, $response->getStatusCode());
         self::assertStringStartsWith('https://idp.example/slo?', (string) $response->headers->get('Location'));
         $response->assertSessionMissing(MemberIdentityResolver::SESSION_KEY);
+    }
+
+    #[Test]
+    public function without_a_signing_key_a_logout_request_the_idp_posts_is_answered_as_absent(): void
+    {
+        // Through the whole stack: single logout is not offered, so the address answers HTTP 404 with no body
+        // and no Content-Type (decision record 26), and the member stays signed in.
+        config([
+            'trusted_attestation.iam.saml.sp_certificate_path' => null,
+            'trusted_attestation.iam.saml.sp_private_key_path' => null,
+        ]);
+        [$idpCert, $idpKey] = self::selfSignedCertificate();
+
+        $response = $this->withSession([MemberIdentityResolver::SESSION_KEY => ['sub' => 'member-subject']])
+            ->post('/auth/saml/logout', [
+                'SAMLRequest' => self::posted(self::enveloped(self::logoutRequestXml(), $idpKey, $idpCert)),
+            ]);
+
+        self::assertSame(404, $response->getStatusCode());
+        self::assertSame('', $response->getContent());
+        self::assertFalse($response->headers->has('Content-Type'));
+        $response->assertSessionHas(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
+    }
+
+    #[Test]
+    public function without_a_signing_key_an_empty_logout_request_is_answered_as_absent_too(): void
+    {
+        // A SAMLRequest parameter that is present but empty still asks for single logout, as the other two
+        // implementations read it, in the query or in the body. Laravel turns an empty input into null on its
+        // way in, so the parameter's presence is what is tested, not its value.
+        config([
+            'trusted_attestation.iam.saml.sp_certificate_path' => null,
+            'trusted_attestation.iam.saml.sp_private_key_path' => null,
+        ]);
+        $session = [MemberIdentityResolver::SESSION_KEY => ['sub' => 'member-subject']];
+
+        $inQuery = $this->withSession($session)->get('/auth/saml/logout?SAMLRequest=');
+        $inBody = $this->withSession($session)->post('/auth/saml/logout', ['SAMLRequest' => '']);
+
+        self::assertSame(404, $inQuery->getStatusCode());
+        self::assertSame(404, $inBody->getStatusCode());
     }
 
     #[Test]

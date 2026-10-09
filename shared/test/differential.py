@@ -261,7 +261,7 @@ def cases():
     out.append(page("signed-out page supported lang", "GET", "/signed-out", {"Accept-Language": "fr"}))
 
     # -- signing out with no session: nothing to end, so every implementation sends the browser to the
-    #    signed-out page, whatever the anti-forgery token says (decision record 24) --------------------------------
+    #    signed-out page, whatever the anti-forgery token says (decision record 42) --------------------------------
     out.append(landing_hop("sign-out with no session goes to the signed-out page", "POST", "/signout"))
 
     # -- the language switcher: the cookie it sets, and the cookie's effect. The chosen locale outranks

@@ -37,6 +37,53 @@ trait BuildsSamlLogoutMessages
         return [$certPem, $keyPem];
     }
 
+    /**
+     * The service provider's certificate and key, generated once for the test class, since generating an RSA
+     * key is slow and no test depends on having a key of its own.
+     *
+     * @var array{0: string, 1: string}|null
+     */
+    private static ?array $spKeypair = null;
+
+    /** The folder withSpKeypair() wrote the key files to, until removeSpKeypair() takes it away. */
+    private ?string $spKeypairDirectory = null;
+
+    /**
+     * Gives this service provider a signing key and certificate of its own, as a deployment configures them.
+     * Single logout needs one in both directions. The files are written to a folder of their own, which the
+     * test class removes in tearDown with removeSpKeypair().
+     */
+    private function withSpKeypair(): void
+    {
+        [$certificate, $key] = self::$spKeypair ??= self::selfSignedCertificate();
+
+        if ($this->spKeypairDirectory === null) {
+            $this->spKeypairDirectory = sys_get_temp_dir().'/ata-saml-'.bin2hex(random_bytes(6));
+            mkdir($this->spKeypairDirectory);
+            file_put_contents($this->spKeypairDirectory.'/sp.crt', $certificate);
+            file_put_contents($this->spKeypairDirectory.'/sp.key', $key);
+        }
+
+        config([
+            'trusted_attestation.iam.saml.sp_certificate_path' => $this->spKeypairDirectory.'/sp.crt',
+            'trusted_attestation.iam.saml.sp_private_key_path' => $this->spKeypairDirectory.'/sp.key',
+        ]);
+    }
+
+    /** Removes the key files withSpKeypair() wrote, and their folder. Nothing to do when it wrote none. */
+    private function removeSpKeypair(): void
+    {
+        if ($this->spKeypairDirectory === null) {
+            return;
+        }
+
+        foreach (['sp.crt', 'sp.key'] as $file) {
+            @unlink($this->spKeypairDirectory.'/'.$file);
+        }
+        @rmdir($this->spKeypairDirectory);
+        $this->spKeypairDirectory = null;
+    }
+
     private static function logoutRequestXml(
         ?string $destination = null,
         string $nameId = 'the-name-id',

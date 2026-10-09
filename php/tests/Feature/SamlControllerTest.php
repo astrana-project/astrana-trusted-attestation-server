@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Support\BuildsSamlLogoutMessages;
 use Tests\TestCase;
 
@@ -60,6 +61,14 @@ final class SamlControllerTest extends TestCase
     /** The IdP's signing key, matching the certificate. */
     private string $idpKey;
 
+    /**
+     * The IdP's certificate and key, generated once for the class, since generating an RSA key is slow. A
+     * test that needs a different key makes its own.
+     *
+     * @var array{0: string, 1: string}|null
+     */
+    private static ?array $idpKeypair = null;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -76,11 +85,13 @@ final class SamlControllerTest extends TestCase
             'trusted_attestation.iam.subject_claim' => 'sub',
             'trusted_attestation.iam.saml.idp_metadata_url' => self::IDP_METADATA_URL,
             'trusted_attestation.iam.saml.entity_id' => '',
-            'trusted_attestation.iam.saml.sp_certificate_path' => null,
-            'trusted_attestation.iam.saml.sp_private_key_path' => null,
         ]);
 
-        [$this->idpCert, $this->idpKey] = self::selfSignedCertificate();
+        // A signing key, as a deployment that offers single logout has. The tests of a deployment without
+        // one take it away with withoutSpKeypair().
+        $this->withSpKeypair();
+
+        [$this->idpCert, $this->idpKey] = self::$idpKeypair ??= self::selfSignedCertificate();
         $this->seedIdpMetadata([
             'idp' => [
                 'entityId' => 'https://idp.example/saml',
@@ -101,6 +112,7 @@ final class SamlControllerTest extends TestCase
     {
         unset($_POST['SAMLResponse'], $_POST['RelayState']);
         $_GET = [];
+        $this->removeSpKeypair();
         parent::tearDown();
     }
 
@@ -144,6 +156,15 @@ final class SamlControllerTest extends TestCase
     private function seedIdpMetadata(array $parsed): void
     {
         Cache::put(SamlClient::metadataCacheKey(self::IDP_METADATA_URL), $parsed, 3600);
+    }
+
+    /** Takes this service provider's signing key away, as a deployment that configures none. */
+    private function withoutSpKeypair(): void
+    {
+        config([
+            'trusted_attestation.iam.saml.sp_certificate_path' => null,
+            'trusted_attestation.iam.saml.sp_private_key_path' => null,
+        ]);
     }
 
     private function controller(): SamlController
@@ -267,6 +288,21 @@ final class SamlControllerTest extends TestCase
         self::assertSame(200, $response->getStatusCode());
         self::assertSame('text/xml', $response->headers->get('Content-Type'));
         self::assertStringContainsString('AssertionConsumerService', (string) $response->getContent());
+    }
+
+    #[Test]
+    public function the_metadata_advertises_single_logout_only_with_a_signing_key(): void
+    {
+        // Single logout needs a signed answer, so a service provider with no key does not tell the identity
+        // provider to send it logout requests it cannot answer. The other two implementations leave the
+        // endpoint out of their metadata on the same condition.
+        self::assertStringContainsString('SingleLogoutService', (string) $this->controller()->metadata()->getContent());
+
+        $this->withoutSpKeypair();
+
+        $metadata = (string) $this->controller()->metadata()->getContent();
+        self::assertStringContainsString('AssertionConsumerService', $metadata);
+        self::assertStringNotContainsString('SingleLogoutService', $metadata);
     }
 
     // -- acs (only the reachable refusal branch; see the class docblock) -----------------------------
@@ -417,7 +453,8 @@ final class SamlControllerTest extends TestCase
         // The member's own sign-out, reached from the CSRF-protected POST /signout: the local session is
         // ended and the member is sent on to the IdP's SLO endpoint, carrying the name id and session index
         // stashed at login so the IdP knows which session ends. The LogoutRequest id is remembered in the
-        // fresh session, so the IdP's answer can be tied back to it.
+        // fresh session, so the IdP's answer can be tied back to it. The LogoutRequest is signed, since this
+        // service provider holds a key.
         $session = $this->newSession();
         $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
         $session->put('trusted_attestation.saml.name_id', 'the-name-id');
@@ -428,8 +465,30 @@ final class SamlControllerTest extends TestCase
         self::assertStringStartsWith('https://idp.example/slo?', $response->getTargetUrl());
         parse_str((string) parse_url($response->getTargetUrl(), PHP_URL_QUERY), $params);
         self::assertNotEmpty($params['SAMLRequest']);
+        self::assertNotEmpty($params['Signature']);
         self::assertNull($session->get(MemberIdentityResolver::SESSION_KEY));
         self::assertNotEmpty($session->get('trusted_attestation.saml.logout_request_id'));
+    }
+
+    #[Test]
+    public function sign_out_without_a_signing_key_stays_local_even_when_the_idp_offers_single_logout(): void
+    {
+        // Single logout needs a signed LogoutRequest, and an unsigned one is no more than a request anyone
+        // could have written. With no key the session ends here and the member lands on /signed-out, exactly
+        // as against an IdP that offers no single logout, which is what the other two implementations do
+        // (decision record 42).
+        $this->withoutSpKeypair();
+        $session = $this->newSession();
+        $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
+        $session->put('trusted_attestation.saml.name_id', 'the-name-id');
+        $session->put('trusted_attestation.saml.session_index', 'the-session-index');
+
+        $response = $this->controller()->signOut($this->request($session, [], ['_token' => 'the-token']));
+
+        self::assertSame('/signed-out', $this->pathOf($response->getTargetUrl()));
+        self::assertStringNotContainsString('/slo', $response->getTargetUrl());
+        self::assertNull($session->get(MemberIdentityResolver::SESSION_KEY));
+        self::assertNull($session->get('trusted_attestation.saml.logout_request_id'));
     }
 
     #[Test]
@@ -496,6 +555,8 @@ final class SamlControllerTest extends TestCase
         $response = $this->controller()->singleLogout($this->request($session, $query));
 
         self::assertSame(Constants::STATUS_SUCCESS, $this->answeredStatus($response->getTargetUrl()));
+        parse_str((string) parse_url($response->getTargetUrl(), PHP_URL_QUERY), $params);
+        self::assertNotEmpty($params['Signature']);
         self::assertNull($session->get(MemberIdentityResolver::SESSION_KEY));
     }
 
@@ -576,6 +637,78 @@ final class SamlControllerTest extends TestCase
         $response = $this->controller()->singleLogout($this->request($session, $query));
 
         self::assertSame(Constants::STATUS_SUCCESS, $this->answeredStatus($response->getTargetUrl()));
+    }
+
+    #[Test]
+    public function without_a_signing_key_a_logout_request_signed_by_the_idp_is_answered_as_absent(): void
+    {
+        // The answer to a LogoutRequest has to be a signed LogoutResponse, and with no key single logout is
+        // not offered at all, so its address behaves as absent: HTTP 404, the member stays signed in, nothing
+        // goes back to the IdP and a warning names the cause. The same answer as the other two
+        // implementations. SamlSignOutRouteTest shows the 404 goes out with no body and no Content-Type.
+        $this->withoutSpKeypair();
+        $session = $this->newSession();
+        $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
+        $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(), true);
+
+        $this->assertAnsweredAsAbsent($session, $this->request($session, $query));
+    }
+
+    #[Test]
+    public function without_a_signing_key_a_logout_request_posted_by_the_idp_is_answered_as_absent(): void
+    {
+        $this->withoutSpKeypair();
+        $session = $this->newSession();
+        $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
+        $xml = $this->signedByIdp(self::logoutRequestXml(self::APP_URL.'/auth/saml/logout'));
+
+        $this->assertAnsweredAsAbsent($session, $this->request($session, [], ['SAMLRequest' => self::posted($xml)]));
+    }
+
+    #[Test]
+    public function without_a_signing_key_a_logout_request_in_the_query_of_a_post_is_answered_as_absent(): void
+    {
+        // The request is looked for in the query and the body whatever the method, as the other two
+        // implementations look for it, so the binding a provider happens to use cannot change the answer.
+        $this->withoutSpKeypair();
+        $session = $this->newSession();
+        $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
+        $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(), true);
+        $request = Request::create('/auth/saml/logout?'.http_build_query($query), 'POST');
+        $request->setLaravelSession($session);
+
+        $this->assertAnsweredAsAbsent($session, $request);
+    }
+
+    #[Test]
+    public function without_a_signing_key_a_logout_request_in_the_body_of_a_get_is_answered_as_absent(): void
+    {
+        $this->withoutSpKeypair();
+        $session = $this->newSession();
+        $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
+        $xml = $this->signedByIdp(self::logoutRequestXml(self::APP_URL.'/auth/saml/logout'));
+        $request = Request::create('/auth/saml/logout', 'GET');
+        $request->request->set('SAMLRequest', self::posted($xml));
+        $request->setLaravelSession($session);
+
+        $this->assertAnsweredAsAbsent($session, $request);
+    }
+
+    private function assertAnsweredAsAbsent(Store $session, Request $request): void
+    {
+        Log::spy();
+
+        try {
+            $this->controller()->singleLogout($request);
+            self::fail('the logout request was answered');
+        } catch (HttpException $refusal) {
+            self::assertSame(404, $refusal->getStatusCode());
+        }
+
+        self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message): bool => str_contains($message, 'no signing key'))
+            ->once();
     }
 
     #[Test]

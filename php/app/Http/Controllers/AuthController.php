@@ -150,7 +150,7 @@ final class AuthController extends Controller
      * With no live session there is nothing to end, here or at the identity provider, so the answer is
      * the redirect to /signed-out, and the anti-forgery check does not apply (see
      * PreventRequestForgeryUnlessSignedOut), because with nothing to end the anti-forgery token cannot
-     * matter (decision record 24 in docs/adr).
+     * matter (decision record 42 in docs/adr).
      */
     public function signout(Request $request): RedirectResponse
     {

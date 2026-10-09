@@ -103,6 +103,7 @@ final class SamlClient
 
         $certificate = $this->readFile($config['sp_certificate_path'] ?? null);
         $privateKey = $this->readFile($config['sp_private_key_path'] ?? null);
+        $hasSigningKey = $this->hasSigningKey();
 
         return [
             // Rejects anything that does not validate, rather than logging and continuing. An assertion
@@ -117,10 +118,7 @@ final class SamlClient
                     'url' => $baseUrl.'/auth/saml/acs',
                     'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
                 ],
-                'singleLogoutService' => [
-                    'url' => $baseUrl.'/auth/saml/logout',
-                    'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-                ],
+                ...self::singleLogoutService($baseUrl, $hasSigningKey),
 
                 // Unspecified, so the identity system sends the NameID it is configured to send. Asking for
                 // a persistent one would have it mint a pseudonym at first sign-in, which no grant can name
@@ -132,8 +130,43 @@ final class SamlClient
                 'privateKey' => $privateKey ?? '',
             ],
 
-            'security' => $this->securitySettings($privateKey !== null),
+            'security' => $this->securitySettings($hasSigningKey),
         ];
+    }
+
+    /**
+     * This service provider's single logout service, offered and published in its metadata only with a
+     * signing key, because every message single logout sends must be signed. Without one the identity
+     * provider is not told to send logout requests this service provider could not answer. The other two
+     * implementations leave it out on the same condition.
+     *
+     * @return array<string, array<string, string>>
+     */
+    private static function singleLogoutService(string $baseUrl, bool $hasSigningKey): array
+    {
+        if (! $hasSigningKey) {
+            return [];
+        }
+
+        return ['singleLogoutService' => [
+            'url' => $baseUrl.'/auth/saml/logout',
+            'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+        ]];
+    }
+
+    /**
+     * Whether this service provider has a signing key, which is whether it can take part in single logout
+     * in either direction. Read from the configuration alone, so it needs neither the key file nor the IdP.
+     */
+    public function hasSigningKey(): bool
+    {
+        return self::isConfigured(config('trusted_attestation.iam.saml.sp_private_key_path'));
+    }
+
+    /** Whether a configured file path is set, which a blank one is not. */
+    private static function isConfigured(?string $path): bool
+    {
+        return $path !== null && trim($path) !== '';
     }
 
     /**
@@ -284,7 +317,7 @@ final class SamlClient
 
     private function readFile(?string $path): ?string
     {
-        if ($path === null || trim($path) === '') {
+        if (! self::isConfigured($path)) {
             return null;
         }
 

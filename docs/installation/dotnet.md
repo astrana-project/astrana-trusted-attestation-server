@@ -80,6 +80,16 @@ openssl pkcs12 -export -inkey sp.key -in sp.crt -out sp.pfx -passout pass:change
 
 Record the service provider's entity identifier. It must match what the identity system has on record exactly.
 
+Signing out can end the session at the identity system as well, over SAML single logout. That needs three things:
+
+- The signing certificate above.
+- A single logout endpoint advertised in the identity system's metadata.
+- The server's single logout address from the table above, registered with the identity system.
+
+Without all three, signing out ends the session at the server only. Without the signing certificate, the server also
+leaves its single logout address out of its metadata and answers a logout request the identity system sends with HTTP
+404 - Not Found, leaving the member signed in.
+
 ### Which claim identifies the member
 
 You grant a relationship to an identifier before the member has ever signed in. The server matches the member to it when

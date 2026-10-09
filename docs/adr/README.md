@@ -48,12 +48,13 @@ Never edit a record into a different decision. The old record is the history of 
 
 ## The member
 
-|     | Record                                                                                                                                                                       | Derives from |
-| --: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-|  21 | [One session cookie identifies the member, and it never crosses sites](0021-one-session-cookie-identifies-the-member-and-it-never-crosses-sites.md)                          | 2            |
-|  22 | [Authorisation code with PKCE is the only OAuth flow](0022-authorisation-code-with-pkce-is-the-only-oauth-flow.md)                                                           | 2            |
-|  23 | [The same token and assertion checks in all three, beyond the frameworks' defaults](0023-the-same-token-and-assertion-checks-in-all-three-beyond-the-frameworks-defaults.md) | 2, 5         |
-|  24 | [Sign-out is local and works whatever the provider supports](0024-sign-out-is-local-and-works-whatever-the-provider-supports.md)                                             | 2, 21        |
+|     | Record                                                                                                                                                                       | Derives from  |
+| --: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+|  21 | [One session cookie identifies the member, and it never crosses sites](0021-one-session-cookie-identifies-the-member-and-it-never-crosses-sites.md)                          | 2             |
+|  22 | [Authorisation code with PKCE is the only OAuth flow](0022-authorisation-code-with-pkce-is-the-only-oauth-flow.md)                                                           | 2             |
+|  23 | [The same token and assertion checks in all three, beyond the frameworks' defaults](0023-the-same-token-and-assertion-checks-in-all-three-beyond-the-frameworks-defaults.md) | 2, 5          |
+|  24 | [Sign-out is local and works whatever the provider supports](0024-sign-out-is-local-and-works-whatever-the-provider-supports.md)                                             | 2, 21         |
+|  42 | [Single logout needs a signing key](0042-single-logout-needs-a-signing-key.md)                                                                                               | 2, 21, 24, 26 |
 
 ## The API
 

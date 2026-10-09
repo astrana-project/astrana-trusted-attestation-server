@@ -21,7 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
  * rest of the API stays exempt (bootstrap/app.php says why).
  *
  * With no member signed in, the session expired or never started, neither asks for the token. The
- * sign-out has nothing to end and answers its redirect to /signed-out (decision record 24 in docs/adr), and the
+ * sign-out has nothing to end and answers its redirect to /signed-out (decision record 42 in docs/adr), and the
  * revoke answers 401, as on the other two implementations.
  *
  * A missing or wrong token answers HTTP 403 - Forbidden, which the exception handler sends with no body
