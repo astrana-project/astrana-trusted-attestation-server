@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\PreventRequestForgeryUnlessSignedOut;
 use App\Services\MemberIdentityResolver;
+use App\Services\Saml\SamlClient;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
@@ -103,7 +104,7 @@ final class SamlSignOutRouteTest extends TestCase
         // through every middleware in the web group. Only the signature lets it end the session.
         [$idpCert, $idpKey] = self::selfSignedCertificate();
         config(['trusted_attestation.iam.saml.idp_metadata_url' => self::IDP_METADATA_URL]);
-        Cache::put('trusted_attestation.saml.idp-metadata.'.hash('sha256', self::IDP_METADATA_URL), [
+        Cache::put(SamlClient::metadataCacheKey(self::IDP_METADATA_URL), [
             'idp' => [
                 'entityId' => self::IDP_ENTITY_ID,
                 'singleSignOnService' => ['url' => 'https://idp.example/sso'],

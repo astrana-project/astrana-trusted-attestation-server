@@ -50,10 +50,14 @@ final class SamlController extends Controller
 
     public function __construct(private readonly SamlClient $saml) {}
 
-    /** Starts the flow by sending the member to the IdP with a signed AuthnRequest. */
+    /**
+     * Starts the flow by sending the member to the IdP with an AuthnRequest, signed when this service provider
+     * holds a key. When the IdP wants signed requests and there is no key, SamlClient::signInAuth() refuses and
+     * the member gets HTTP 500 - Internal Server Error, as on the other two implementations.
+     */
     public function login(Request $request): RedirectResponse
     {
-        $auth = $this->saml->auth();
+        $auth = $this->saml->signInAuth();
 
         $returnTo = url(self::safeLocalPath($request->query('next')));
 
