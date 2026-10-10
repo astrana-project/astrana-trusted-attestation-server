@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.4] - 2026-10-10
+
+### Fixed
+
+- PHP's own warnings and errors now go to the log and are never shown in an answer, in the container image and on a
+  hosting account alike.
+- No answer from the container image, or from a hosting account under Apache or IIS, names PHP's version any more.
+
 ## [1.0.3] - 2026-10-10
 
 ### Fixed
