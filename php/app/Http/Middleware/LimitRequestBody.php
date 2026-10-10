@@ -17,7 +17,8 @@ use Symfony\Component\HttpFoundation\Response;
  * body many times that is not a key, and reading and decoding it would spend memory and time on the
  * anonymous attestation endpoint for nobody's benefit. The declared Content-Length is checked first, so an
  * oversize body is refused before it is read, and the body's real length second, for a request that
- * declares none.
+ * declares none. The request carries no more of the body than one byte past the cap
+ * (App\Support\RequestCapture), so a body sent in chunks costs no more than that to measure, however large.
  *
  * Only on the two operations that read a body, setting a key and the attestation lookup (routes/web.php).
  * The other two implementations read no body anywhere else, so a large one changes nothing there. On a

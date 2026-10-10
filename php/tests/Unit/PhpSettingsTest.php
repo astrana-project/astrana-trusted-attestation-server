@@ -10,15 +10,18 @@ use Tests\Support\BuiltInServer;
 
 /**
  * The PHP settings the server runs with, from public/.user.ini and, in the container image, container.ini: an
- * error goes to the log and is never shown to whoever sent the request, and no answer names PHP's version.
+ * error goes to the log and is never shown to whoever sent the request, no answer names PHP's version, and PHP
+ * leaves every request body for the server to read.
  *
  * PHP with no php.ini of its own, as in the official images the container is built on, shows errors in the
  * page and adds an X-Powered-By header naming its version. Laravel turns both off once it starts, but a
  * warning PHP raises while it reads the request comes before any script runs, so only PHP's own settings
- * keep it out of the answer. The container image reads both files as part of its php.ini. PHP under FastCGI
- * (IIS, PHP-FPM) reads public/.user.ini from the public folder, and Apache's PHP module reads the same
- * settings from public/.htaccess. Only php.ini can stop PHP adding the header, so on a hosting account
- * public/.htaccess removes it under Apache and public/web.config empties it under IIS.
+ * keep it out of the answer. PHP also reads a multipart body itself before any script runs, and keeps none
+ * of it for the script. A request body over 64 kilobytes then reached the server as an empty one, and was
+ * judged a key not on record rather than refused. The container image reads both files as part of its
+ * php.ini. PHP under FastCGI (IIS, PHP-FPM) reads public/.user.ini from the public folder, and Apache's PHP
+ * module reads the same settings from public/.htaccess. Only php.ini can stop PHP adding the header, so on a
+ * hosting account public/.htaccess removes it under Apache and public/web.config empties it under IIS.
  */
 final class PhpSettingsTest extends TestCase
 {
@@ -30,6 +33,9 @@ final class PhpSettingsTest extends TestCase
 
     /** A page that answers how many query variables PHP kept, and nothing else. */
     private const QUERY_COUNT_PAGE = '<?php header("Content-Type: text/plain"); echo count($_GET);';
+
+    /** A page that answers how many bytes of the request body it could read, and nothing else. */
+    private const BODY_LENGTH_PAGE = '<?php header("Content-Type: text/plain"); echo strlen((string) file_get_contents("php://input"));';
 
     #[Test]
     public function a_warning_php_raises_while_reading_the_request_is_logged_and_not_shown(): void
@@ -47,6 +53,23 @@ final class PhpSettingsTest extends TestCase
         [$head] = $this->answerToTooManyQueryVariables();
 
         self::assertDoesNotMatchRegularExpression('#^X-Powered-By:#mi', $head);
+    }
+
+    #[Test]
+    public function a_multipart_body_is_left_for_the_server_to_read_whatever_its_framing(): void
+    {
+        $body = '{"public_key":"x"'.str_repeat(' ', 70_000).'}';
+        $server = BuiltInServer::start(self::BODY_LENGTH_PAGE, self::USER_INI);
+
+        try {
+            $declared = $server->post('multipart/form-data; boundary=x', $body);
+            $chunked = $server->post('multipart/form-data; boundary=x', $body, chunked: true);
+        } finally {
+            $server->stop();
+        }
+
+        self::assertStringEndsWith("\r\n\r\n".strlen($body), $declared);
+        self::assertStringEndsWith("\r\n\r\n".strlen($body), $chunked);
     }
 
     #[Test]
