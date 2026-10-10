@@ -26,3 +26,11 @@ vulnerabilities:
       Pebble, Canonical's service manager, comes with the Java implementation's base image, eclipse-temurin:25-jre, but
       the container never runs it. The flaw is in Go's HTTP server code, which only a running pebble would use. No fixed
       base image exists yet.
+  - id: CVE-2026-78669
+    paths:
+      - usr/bin/pebble
+    expired_at: 2026-10-23
+    statement:
+      Pebble, Canonical's service manager, comes with the Java implementation's base image, eclipse-temurin:25-jre, but
+      the container never runs it. The flaw is in Go's HTTP/2 code, which only a running pebble would use. No fixed base
+      image exists yet.
