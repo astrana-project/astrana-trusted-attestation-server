@@ -206,8 +206,7 @@ jobs:
           IMAGE: astrana/ata-${{ matrix.implementation }}@${{ steps.image.outputs.digest }}
           SBOM: ${{ matrix.implementation }}/sbom.json
         run: |
-          cosign verify --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" \
-            --certificate-oidc-issuer "$SIGNER_ISSUER" "$IMAGE"
+          bash .github/scripts/verify-image.sh "$IMAGE"
           cosign verify-blob --bundle sbom.json.sigstore.json --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" \
             --certificate-oidc-issuer "$SIGNER_ISSUER" "$SBOM"
 
@@ -306,6 +305,4 @@ jobs:
       - name: Verify the signature
         env:
           IMAGE: ${{ env.IMAGE_NAME }}@${{ steps.image.outputs.digest }}
-        run: |
-          cosign verify --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" \
-            --certificate-oidc-issuer "$SIGNER_ISSUER" "$IMAGE"
+        run: bash .github/scripts/verify-image.sh "$IMAGE"
