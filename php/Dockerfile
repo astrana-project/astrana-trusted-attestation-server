@@ -86,9 +86,9 @@ RUN dpkg-query -W -f '${Package}\n' | sort > /tmp/packages-before \
 
 WORKDIR /app
 
-# PHP's own settings. The base image has no php.ini, and PHP's built-in defaults show errors in the page
-# and name PHP's version in a header. public/.user.ini holds the settings PHP also reads on a hosting
-# account, and container.ini the ones only php.ini can hold.
+# PHP's own settings. The base image has no php.ini, and PHP's built-in defaults show errors in the page,
+# name PHP's version in a header and read a request body before the server can. public/.user.ini holds the
+# settings PHP also reads on a hosting account, and container.ini the ones only php.ini can hold.
 COPY php/public/.user.ini $PHP_INI_DIR/conf.d/trusted-attestation.ini
 COPY php/container.ini $PHP_INI_DIR/conf.d/trusted-attestation-container.ini
 

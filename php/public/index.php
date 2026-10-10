@@ -1,7 +1,7 @@
 <?php
 
+use App\Support\RequestCapture;
 use Illuminate\Foundation\Application;
-use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
@@ -17,4 +17,6 @@ require __DIR__.'/../vendor/autoload.php';
 /** @var Application $app */
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
-$app->handleRequest(Request::capture());
+// The request is captured with its body read once, never more than one byte past the API's 64 kilobyte
+// cap, and with the fields of a posted form parsed by PHP. See App\Support\RequestCapture.
+$app->handleRequest(RequestCapture::capture());

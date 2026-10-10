@@ -515,9 +515,10 @@ On Windows hosting, IIS serves the site and reads `public/web.config`, which com
 cannot read the file and answers every request with HTTP 500 - Internal Server Error before the server runs, so nothing
 appears in `storage/logs/laravel.log`. If that happens, ask your host to enable URL Rewrite.
 
-PHP's own warnings and errors go to PHP's error log and are never shown to visitors. `public/.user.ini`, which comes
-with the server, sets this where PHP runs through FastCGI, under IIS and with PHP-FPM, and `public/.htaccess` sets it
-under Apache's PHP module.
+PHP's own warnings and errors go to PHP's error log and are never shown to visitors, and PHP leaves every request body
+for the server to read, so that the server refuses any body over 64 kilobytes, whatever its type. `public/.user.ini`,
+which comes with the server, sets both where PHP runs through FastCGI, under IIS and with PHP-FPM, and
+`public/.htaccess` sets them under Apache's PHP module.
 
 To update, run the same `composer install` on a fresh copy, put your edited `public/theme-overrides.css` and
 `public/favicon.svg` back, and upload again, keeping your `.env`. After pulling changes into an existing clone,

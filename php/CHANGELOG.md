@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.5] - 2026-10-10
+
+### Fixed
+
+- A request body over 64 kilobytes sent in chunks as multipart form data is now answered with HTTP 413 - Content Too
+  Large, as any other body over the limit is, instead of being read as an empty body.
+- A request body large enough to use up PHP's memory is now answered with HTTP 413 - Content Too Large, as any other
+  body over 64 kilobytes is, instead of with HTTP 500 - Internal Server Error.
+
 ## [1.0.4] - 2026-10-10
 
 ### Fixed

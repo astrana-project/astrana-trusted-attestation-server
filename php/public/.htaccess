@@ -55,9 +55,10 @@
 
 # PHP's own settings under Apache's PHP module, which does not read public/.user.ini. They are the values that
 # file sets wherever PHP runs through FastCGI, so that an error goes to the log and is never shown to whoever
-# sent the request.
+# sent the request, and PHP leaves every request body for the server to read.
 <IfModule mod_php.c>
     php_flag display_errors Off
     php_flag display_startup_errors Off
     php_flag log_errors On
+    php_flag enable_post_data_reading Off
 </IfModule>
