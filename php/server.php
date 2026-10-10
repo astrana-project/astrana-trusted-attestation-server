@@ -30,8 +30,9 @@ require_once __DIR__.'/vendor/autoload.php';
 
 $publicPath = __DIR__.'/public';
 
-// The built-in server sends PHP's version when expose_php is on. The other two implementations name no
-// runtime, and the application removes the header from its own responses too.
+// The built-in server sends PHP's version when expose_php is on. The image's php.ini turns it off, and this
+// covers the router run without that file. The other two implementations name no runtime, the application
+// removes the header from its own responses too, and .htaccess and web.config remove it on a hosting account.
 header_remove('X-Powered-By');
 
 $uri = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '');

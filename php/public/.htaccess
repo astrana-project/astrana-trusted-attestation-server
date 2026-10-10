@@ -40,11 +40,24 @@
 # application's Cache-Control (which Symfony formats its own way) is not overwritten here. HSTS is absent,
 # because it belongs to the TLS-terminating layer, as the PHP installation page (docs/installation/php.md)
 # says. Under IIS, web.config sets the same headers. An Nginx or panel-managed host has neither file and
-# sets them at that layer instead, as that page shows.
+# sets them at that layer instead, as that page shows. PHP names its version in an X-Powered-By header
+# unless php.ini turns it off, which a hosting account often cannot, so the header is removed from every
+# answer. Under IIS, web.config empties it, and in the image the container's php.ini stops PHP adding it.
 <IfModule mod_headers.c>
+    Header always unset X-Powered-By
+    Header unset X-Powered-By
     Header setifempty X-Content-Type-Options "nosniff"
     Header setifempty X-Frame-Options "DENY"
     Header setifempty Referrer-Policy "no-referrer"
     Header setifempty X-XSS-Protection "0"
     Header setifempty Cache-Control "no-cache, no-store, max-age=0, must-revalidate"
+</IfModule>
+
+# PHP's own settings under Apache's PHP module, which does not read public/.user.ini. They are the values that
+# file sets wherever PHP runs through FastCGI, so that an error goes to the log and is never shown to whoever
+# sent the request.
+<IfModule mod_php.c>
+    php_flag display_errors Off
+    php_flag display_startup_errors Off
+    php_flag log_errors On
 </IfModule>

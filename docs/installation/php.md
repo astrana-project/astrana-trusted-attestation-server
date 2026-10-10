@@ -515,6 +515,10 @@ On Windows hosting, IIS serves the site and reads `public/web.config`, which com
 cannot read the file and answers every request with HTTP 500 - Internal Server Error before the server runs, so nothing
 appears in `storage/logs/laravel.log`. If that happens, ask your host to enable URL Rewrite.
 
+PHP's own warnings and errors go to PHP's error log and are never shown to visitors. `public/.user.ini`, which comes
+with the server, sets this where PHP runs through FastCGI, under IIS and with PHP-FPM, and `public/.htaccess` sets it
+under Apache's PHP module.
+
 To update, run the same `composer install` on a fresh copy, put your edited `public/theme-overrides.css` and
 `public/favicon.svg` back, and upload again, keeping your `.env`. After pulling changes into an existing clone,
 `composer sync-shared --working-dir php` copies the shared files again, so put the two branding files back after it too.
@@ -523,7 +527,8 @@ To update, run the same `composer install` on a fresh copy, put your edited `pub
 
 Run the same `composer install` and `key:generate` on the server. Make `php/storage` and `php/bootstrap/cache` writable
 by the web server's user. Point Apache, or Nginx with PHP-FPM (FastCGI Process Manager), at `php/public`. The web server
-holds the certificate.
+holds the certificate. Under Nginx, add `fastcgi_hide_header X-Powered-By;` where it passes requests to PHP-FPM, or set
+`expose_php = Off` in PHP's own configuration, so that no answer names PHP's version.
 
 On Windows, install PHP for IIS through FastCGI, and install the URL Rewrite module. Point an IIS site at `php\public`,
 bind it to your host name over HTTPS with your certificate, and give the site's application pool identity modify rights
