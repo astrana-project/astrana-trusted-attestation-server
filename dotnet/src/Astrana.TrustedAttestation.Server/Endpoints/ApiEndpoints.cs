@@ -46,7 +46,8 @@ public static class ApiEndpoints
     private static void MapVersion(RouteGroupBuilder group)
     {
         // Every API body is capped at 64 kilobytes, with HTTP 413 and no body above it, in all three
-        // implementations. The metadata is what Kestrel reads; PublicKeyBody enforces the same cap as it reads.
+        // implementations. PublicKeyBody applies the cap as it reads. The metadata bounds how much of an
+        // unread body Kestrel throws away after the answer.
         group.WithMetadata(ApiBodyLimit.Instance);
 
         group.MapGet("/me", GetMe).RequireAuthorization(PolicyName);

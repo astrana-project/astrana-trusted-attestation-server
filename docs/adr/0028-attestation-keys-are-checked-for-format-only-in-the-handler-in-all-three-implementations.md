@@ -27,8 +27,8 @@ key. Any other whitespace character makes the key malformed.
 - Left to themselves, the frameworks' binding layers refuse different inputs with different statuses, so .NET and Java
   read the request body by hand rather than binding it, and PHP turns off Laravel's trimming of strings and its
   conversion of empty strings to null on the API, so that the handler decides the result.
-- A valid body is under a hundred bytes, so the 64-kilobyte limit caps what an anonymous caller can make the server
-  read, with ample room for every real request.
+- A valid body is under a hundred bytes, so the 64-kilobyte limit caps what an anonymous caller can make the server keep
+  in memory, with ample room for every real request.
 - Over-length keys are refused before they reach the schema, which matters because PostgreSQL's key column is unbounded
   where the other two cap it at 32 bytes.
 - The self-service page trims surrounding whitespace of every kind before it sends a key, so only direct callers of the

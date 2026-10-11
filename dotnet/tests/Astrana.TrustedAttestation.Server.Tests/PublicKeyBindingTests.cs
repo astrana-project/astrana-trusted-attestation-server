@@ -119,10 +119,34 @@ public class PublicKeyBindingTests
     }
 
     [Fact]
+    public async Task A_declared_length_over_the_cap_is_refused_with_413_before_a_byte_is_read()
+    {
+        var context = RequestWith([]);
+        context.Request.Body = new UnreadableStream();
+        context.Request.ContentLength = PublicKeyBody.MaxBytes + 1;
+
+        var refusal = await Assert.ThrowsAsync<BadHttpRequestException>(
+            async () => await AttestRequest.BindAsync(context));
+
+        Assert.Equal(StatusCodes.Status413PayloadTooLarge, refusal.StatusCode);
+    }
+
+    [Fact]
     public void The_cap_is_64_kilobytes_in_all_three_implementations()
     {
         Assert.Equal(65_536, PublicKeyBody.MaxBytes);
-        Assert.Equal(65_536, ApiBodyLimit.Instance.MaxRequestBodySize);
+    }
+
+    [Fact]
+    public void The_server_discards_up_to_2_megabytes_of_a_body_it_does_not_read_as_tomcat_does()
+    {
+        Assert.Equal(2_097_152, ApiBodyLimit.Instance.MaxRequestBodySize);
+    }
+
+    private sealed class UnreadableStream : MemoryStream
+    {
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The body was read.");
     }
 
     [Fact]

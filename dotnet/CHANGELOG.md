@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.3] - 2026-10-11
+
+### Fixed
+
+- A request body sent in chunks now counts only its own bytes towards the 64-kilobyte limit on the API, so it gets the
+  same answer as the same body sent whole.
+- Behind a reverse proxy, a large request body refused with HTTP 413 - Content Too Large, or with HTTP 401 -
+  Unauthorized for a caller who isn't signed in, is now always answered with that status, instead of sometimes with the
+  proxy's HTTP 502 - Bad Gateway.
+
 ## [1.0.2] - 2026-10-10
 
 ### Fixed

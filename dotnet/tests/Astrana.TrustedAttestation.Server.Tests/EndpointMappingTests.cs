@@ -17,7 +17,7 @@ namespace Astrana.TrustedAttestation.Server.Tests;
 
 /// <summary>
 /// What the route table says about the endpoints, read off the mapped endpoints themselves: the manifest
-/// answers HEAD as well as GET, every API endpoint carries the request-size cap the server enforces, and the
+/// answers HEAD as well as GET, every API endpoint carries the request-size limit the server applies, and the
 /// language switch answers with the redirect its handler returns.
 /// </summary>
 public class EndpointMappingTests
@@ -75,7 +75,7 @@ public class EndpointMappingTests
     }
 
     [Fact]
-    public void Every_api_endpoint_is_capped_at_64_kilobytes()
+    public void Every_api_endpoint_gives_the_server_the_bound_it_discards_an_unread_body_up_to()
     {
         var routes = new RouteTable();
         routes.MapTrustedAttestationApi();
@@ -83,7 +83,7 @@ public class EndpointMappingTests
         var endpoints = routes.Endpoints;
         Assert.Equal(10, endpoints.Count); // five operations under /api/v1 and again under /api
         Assert.All(endpoints, endpoint =>
-            Assert.Equal(PublicKeyBody.MaxBytes, endpoint.Metadata.GetMetadata<IRequestSizeLimitMetadata>()?.MaxRequestBodySize));
+            Assert.Equal(ApiBodyLimit.DiscardBytes, endpoint.Metadata.GetMetadata<IRequestSizeLimitMetadata>()?.MaxRequestBodySize));
     }
 
     [Fact]

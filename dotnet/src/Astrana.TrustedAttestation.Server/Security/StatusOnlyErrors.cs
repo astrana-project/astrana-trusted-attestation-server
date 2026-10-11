@@ -11,7 +11,8 @@ namespace Astrana.TrustedAttestation.Server.Security;
 /// stack trace into the body, and in every other environment an unhandled exception produces a bare 500
 /// that has lost the security headers the response had already been given. This middleware is registered
 /// first, so it wraps everything, and answers the same way in every environment: the status, the security
-/// headers, and an empty body.</para>
+/// headers, and an empty body. Being outermost, it also finishes a refusal that leaves the request body unread
+/// (<see cref="RefusedBody"/>).</para>
 ///
 /// <para>A <see cref="BadHttpRequestException"/> keeps its own status, because it is the server saying the
 /// request itself was unacceptable (a body over the limit is 413, a malformed one is 400) and that is the
@@ -58,6 +59,8 @@ public static class StatusOnlyErrors
 
                 Answer(context.Response, status);
             }
+
+            await RefusedBody.FinishAsync(context);
         });
     }
 
