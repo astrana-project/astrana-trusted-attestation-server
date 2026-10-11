@@ -21,6 +21,9 @@
  *   PDO_SQLSRV_VERSION and MSODBCSQL18_VERSION arguments, so the two cannot drift. A Dockerfile that turns
  *   SQL Server on by default is refused, because these entries would then misdescribe the image.
  *
+ * The image is built for amd64 and arm64, and Debian and Microsoft publish the same package versions for
+ * both, so the package URLs name no processor.
+ *
  * Running it again replaces its own entries, so it is safe to run after every regeneration. A refused
  * Dockerfile leaves the file as it was. The paths default to this folder's Dockerfile and sbom.json.
  */
@@ -76,7 +79,7 @@ $debianPackages = array_map(static fn (array $package): array => [
     'version' => $package[1],
     'description' => "$package[3], installed from Debian in the container image",
     'licenses' => [['expression' => $package[2]]],
-    'purl' => "pkg:deb/debian/$package[0]@$package[1]?arch=amd64&$distro",
+    'purl' => "pkg:deb/debian/$package[0]@$package[1]?$distro",
 ], $debian['packages']);
 
 $extension = static fn (string $name, string $version): array => [
@@ -105,7 +108,7 @@ $sqlServer = [
         'description' => "Microsoft ODBC Driver 18 for SQL Server from Microsoft's package repository. $notPublished",
         'scope' => 'optional',
         'licenses' => [['license' => ['name' => 'Microsoft Software License Terms for Microsoft ODBC Driver 18 for SQL Server', 'url' => 'https://aka.ms/odbc18eula']]],
-        'purl' => 'pkg:deb/microsoft/msodbcsql18@'.$pins['MSODBCSQL18_VERSION']."?arch=amd64&$distro",
+        'purl' => 'pkg:deb/microsoft/msodbcsql18@'.$pins['MSODBCSQL18_VERSION']."?$distro",
         'externalReferences' => [['type' => 'distribution', 'url' => "https://packages.microsoft.com/debian/{$debian['version']}/prod"]],
     ],
 ];

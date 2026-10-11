@@ -33,11 +33,12 @@ subscription.
 | [Installing the Java implementation](installation/java.md)   | Spring Boot on Java 25, as a standalone jar                                                      | `astrana/ata-java`   |
 | [Installing the PHP implementation](installation/php.md)     | Laravel on PHP 8.4.1 or later, on Linux or Windows shared hosting, or under Apache, Nginx or IIS | `astrana/ata-php`    |
 
-Each release is published on Docker Hub under the name in the table, for 64-bit Intel and AMD processors (amd64) only.
-Every image carries three tags, its full version such as `1.0.0`, its major and minor version such as `1.0`, and
-`latest`. Pull the full version, so that the image changes only when you choose to update. On any other processor, or to
-build it yourself, build the image from this repository under the same name. Each page shows both. The published PHP
-image supports MySQL and PostgreSQL only. For SQL Server, build the PHP image yourself, as its page describes.
+Each release is published on Docker Hub under the name in the table, for 64-bit Intel and AMD processors (amd64) and
+64-bit ARM processors (arm64), and Docker pulls the one for the computer it runs on. Every image carries three tags, its
+full version such as `1.0.0`, its major and minor version such as `1.0`, and `latest`. Pull the full version, so that
+the image changes only when you choose to update. On any other processor, or to build it yourself, build the image from
+this repository under the same name. Each page shows both. The published PHP image supports MySQL and PostgreSQL only.
+For SQL Server, build the PHP image yourself, as its page describes.
 
 ## What you need
 

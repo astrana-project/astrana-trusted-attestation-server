@@ -101,17 +101,17 @@ implementations.
 ## Container image
 
 Each release is published on Docker Hub as `astrana/ata-dotnet`, tagged with its full version, its major and minor
-version and `latest`, for 64-bit Intel and AMD processors (amd64) only. To build the image yourself, run this from the
-repository root, so that `shared/` is in the build context:
+version and `latest`, for 64-bit Intel and AMD processors (amd64) and 64-bit ARM processors (arm64). To build the image
+yourself, run this from the repository root, so that `shared/` is in the build context:
 
 ```bash
 docker build -f dotnet/Dockerfile -t astrana/ata-dotnet .
 ```
 
-The image holds the application only. It is built for Linux on the processor the image is for, which is amd64 for the
-published image, so the native files the packages carry for other systems and processors stay out of it. It runs as a
-non-root user and listens on port 8080. Configuration comes from environment variables or a mounted `appsettings.json`,
-as the installation page describes.
+The image holds the application only. It is built for Linux on the processor the image is for, which is amd64 or arm64
+for the published image, so the native files the packages carry for other systems and processors stay out of it. It runs
+as a non-root user and listens on port 8080. Configuration comes from environment variables or a mounted
+`appsettings.json`, as the installation page describes.
 
 The SQL Server driver brings in Microsoft's Windows sign-in broker package, `Microsoft.Identity.Client.NativeInterop`,
 whose licence does not allow it to be distributed. The server signs in to SQL Server with a username and password and

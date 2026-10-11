@@ -1,9 +1,11 @@
 # Built from the repository root as context (so shared/ is in scope):
 #   docker build -f dotnet/Dockerfile -t astrana/ata-dotnet .
 #
-# Build
+# Build, on the processor of the computer doing the build, so that an image for another processor is
+# compiled natively for it rather than under emulation. The runtime identifier below picks the processor
+# the output is for.
 # The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS build
 WORKDIR /src
 
 # The contract, schema and interface inputs are embedded or copied from ../../../shared at build time,
@@ -15,7 +17,7 @@ COPY dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Ser
 
 # Built for Linux on the processor the image is for alone, so the native files the packages carry for Windows,
 # macOS and other processors stay out of the image. The published image is for 64-bit Intel and AMD processors,
-# linux-x64. Docker sets TARGETARCH, and a build for 64-bit ARM processors gets linux-arm64.
+# linux-x64, and 64-bit ARM processors, linux-arm64. Docker sets TARGETARCH to the processor the image is for.
 ARG TARGETARCH
 RUN echo "linux-$([ "$TARGETARCH" = arm64 ] && echo arm64 || echo x64)" > /src/runtime-identifier \
     && dotnet restore dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Server.csproj --locked-mode

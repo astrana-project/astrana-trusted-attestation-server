@@ -16,7 +16,8 @@ use PHPUnit\Framework\TestCase;
  * which only an image built with WITH_SQLSRV=true installs, are listed with the optional scope and nothing
  * the application ships depends on them. scripts/add-native-sbom-components.php adds all of these after
  * every regeneration, with the versions the Dockerfile pins and the Debian release its runtime image names,
- * so the two cannot drift. Run here on copies in a temporary folder.
+ * so the two cannot drift. The image is published for amd64 and arm64, with the same package versions on both,
+ * so the package URLs name no processor. Run here on copies in a temporary folder.
  */
 final class NativeSbomComponentsTest extends TestCase
 {
@@ -103,7 +104,7 @@ final class NativeSbomComponentsTest extends TestCase
         self::assertSame(0, $exitCode);
         self::assertSame('pkg:generic/sqlsrv@5.13.3?download_url=https://pecl.php.net/get/sqlsrv-5.13.3.tgz', $components['pecl/sqlsrv-5.13.3']['purl']);
         self::assertSame('pkg:generic/pdo_sqlsrv@5.13.2?download_url=https://pecl.php.net/get/pdo_sqlsrv-5.13.2.tgz', $components['pecl/pdo_sqlsrv-5.13.2']['purl']);
-        self::assertSame('pkg:deb/microsoft/msodbcsql18@18.7.1.1-1?arch=amd64&distro=debian-13', $components['deb/msodbcsql18-18.7.1.1-1']['purl']);
+        self::assertSame('pkg:deb/microsoft/msodbcsql18@18.7.1.1-1?distro=debian-13', $components['deb/msodbcsql18-18.7.1.1-1']['purl']);
         foreach (['pecl/sqlsrv-5.13.3', 'pecl/pdo_sqlsrv-5.13.2', 'deb/msodbcsql18-18.7.1.1-1'] as $ref) {
             self::assertSame('optional', $components[$ref]['scope']);
             self::assertStringContainsString('WITH_SQLSRV=true', $components[$ref]['description']);
@@ -120,7 +121,7 @@ final class NativeSbomComponentsTest extends TestCase
             self::assertArrayNotHasKey('scope', $package);
             self::assertSame('Debian', $package['supplier']['name']);
             self::assertNotEmpty($package['licenses']);
-            self::assertSame("pkg:deb/debian/$name@{$package['version']}?arch=amd64&distro=debian-13", $package['purl']);
+            self::assertSame("pkg:deb/debian/$name@{$package['version']}?distro=debian-13", $package['purl']);
         }
         self::assertSame('PostgreSQL', $packages['libpq5']['licenses'][0]['expression']);
     }
