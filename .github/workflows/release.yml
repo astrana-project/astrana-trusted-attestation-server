@@ -1,8 +1,8 @@
 # Releases every implementation whose changelog carries a version that is not released yet, on each push to master
-# (decision record 44). For each one it pushes the image astrana/ata-<implementation> by its digest alone, signs and
-# verifies it, and only then gives it three tags (the full version, MAJOR.MINOR and latest). It then tags the commit
-# <implementation>-v<version> and creates a GitHub release with that version's changelog section and the software bill
-# of materials.
+# (decision record 44). For each one it pushes the image astrana/ata-<implementation>, built for amd64 and arm64, by
+# its digest alone, signs and verifies it, and only then gives it three tags (the full version, MAJOR.MINOR and
+# latest). It then tags the commit <implementation>-v<version> and creates a GitHub release with that version's
+# changelog section and the software bill of materials.
 #
 # The workflow skips any version that already has a tag, so a merge releases only the implementations whose version
 # changed. Nothing is tagged until both signatures verify, so a failed run never leaves a tag on an unsigned image, and
@@ -113,6 +113,14 @@ jobs:
             exit 1
           fi
 
+      # The runner is amd64. The Dockerfiles compile on the runner's own processor, and only the steps of the arm64
+      # image that must run on arm64 run under emulation. The emulator image is pinned by digest, like the actions.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        if: steps.tag.outputs.released == 'false'
+        with:
+          image: tonistiigi/binfmt:qemu-v10.2.3@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
+          platforms: arm64
+
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
         if: steps.tag.outputs.released == 'false'
 
@@ -167,6 +175,7 @@ jobs:
         with:
           context: .
           file: ${{ matrix.implementation }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
           outputs:
             type=image,name=astrana/ata-${{ matrix.implementation }},push-by-digest=true,name-canonical=true,push=true
           labels: ${{ steps.meta.outputs.labels }}

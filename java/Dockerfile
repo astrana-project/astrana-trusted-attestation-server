@@ -1,9 +1,10 @@
 # Built from the repository root as context (so shared/ is in scope):
 #   docker build -f java/Dockerfile -t astrana/ata-java .
 #
-# Build
+# Build, on the processor of the computer doing the build, so that an image for another processor is
+# not compiled under emulation. The jar runs on any processor.
 # The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
-FROM maven:3.9-eclipse-temurin-25@sha256:93b8a14ea2f412782e4e842651273b4d903e35cc496284f178fbbe2d67d00976 AS build
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-25@sha256:93b8a14ea2f412782e4e842651273b4d903e35cc496284f178fbbe2d67d00976 AS build
 WORKDIR /src
 
 COPY java/pom.xml java/

@@ -545,7 +545,8 @@ headers.
 
 Pull the published image, naming the full version of the release you want. Each release has three tags. One is the full
 version, such as `1.0.0`. One is the major and minor version, such as `1.0`. The third is `latest`. The image is built
-for 64-bit Intel and AMD processors (amd64) only.
+for 64-bit Intel and AMD processors (amd64) and 64-bit ARM processors (arm64), and Docker pulls the one for the computer
+it runs on.
 
 ```bash
 docker pull astrana/ata-php:1.0.0

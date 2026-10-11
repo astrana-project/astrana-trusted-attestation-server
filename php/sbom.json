@@ -4327,7 +4327,7 @@
                     "expression": "MIT"
                 }
             ],
-            "purl": "pkg:deb/debian/libicu76@76.1-4?arch=amd64&distro=debian-13"
+            "purl": "pkg:deb/debian/libicu76@76.1-4?distro=debian-13"
         },
         {
             "bom-ref": "deb/libpq5-17.11-0+deb13u1",
@@ -4343,7 +4343,7 @@
                     "expression": "PostgreSQL"
                 }
             ],
-            "purl": "pkg:deb/debian/libpq5@17.11-0+deb13u1?arch=amd64&distro=debian-13"
+            "purl": "pkg:deb/debian/libpq5@17.11-0+deb13u1?distro=debian-13"
         },
         {
             "bom-ref": "pecl/sqlsrv-5.13.3",
@@ -4413,7 +4413,7 @@
                     }
                 }
             ],
-            "purl": "pkg:deb/microsoft/msodbcsql18@18.7.1.1-1?arch=amd64&distro=debian-13",
+            "purl": "pkg:deb/microsoft/msodbcsql18@18.7.1.1-1?distro=debian-13",
             "externalReferences": [
                 {
                     "type": "distribution",

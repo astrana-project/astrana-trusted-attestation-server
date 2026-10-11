@@ -123,8 +123,8 @@ the compiled `shared/ui/dist/trusted-attestation.css`. Edit its source in `share
 ## Container image
 
 Each release is published on Docker Hub as `astrana/ata-java`, tagged with its full version, its major and minor version
-and `latest`, for 64-bit Intel and AMD processors (amd64) only. To build the image yourself, run this from the
-repository root, so that `shared/` is in the build context:
+and `latest`, for 64-bit Intel and AMD processors (amd64) and 64-bit ARM processors (arm64). To build the image
+yourself, run this from the repository root, so that `shared/` is in the build context:
 
 ```bash
 docker build -f java/Dockerfile -t astrana/ata-java .

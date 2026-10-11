@@ -96,6 +96,7 @@ Never edit a record into a different decision. The old record is the history of 
 |  38 | [Shared feature versions, independent patches, release on merge](0038-shared-feature-versions-independent-patches-release-on-merge.md)                   | 5, 7, 36         |
 |  39 | [Security fixes ship in the latest release only](0039-security-fixes-ship-in-the-latest-release-only.md)                                                 | 12, 38           |
 |  40 | [Published images are application-only, demonstrations are bundled](0040-published-images-are-application-only-demonstrations-are-bundled.md)            | 2, 5, 9          |
+|  43 | [The published container images run on amd64 and 64-bit ARM](0043-the-published-container-images-run-on-amd64-and-64-bit-arm.md)                         | 2, 5, 9, 40      |
 |  44 | [Version numbers say what an update means](0044-version-numbers-say-what-an-update-means.md)                                                             | 5, 7, 12, 36, 38 |
 |  45 | [Anyone can check where a published image came from](0045-anyone-can-check-where-a-published-image-came-from.md)                                         | 44               |
 
