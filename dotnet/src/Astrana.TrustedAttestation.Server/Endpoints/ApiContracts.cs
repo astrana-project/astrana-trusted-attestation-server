@@ -100,6 +100,11 @@ internal static class PublicKeyBody
 
     public static async ValueTask<string?> ReadAsync(HttpContext context)
     {
+        if (context.Request.ContentLength > MaxBytes)
+        {
+            throw TooLarge();
+        }
+
         var body = await ReadCappedAsync(context.Request.Body, context.RequestAborted);
 
         // The stream parser would skip a byte order mark silently. JSON text (RFC 8259, section 8.1) must
@@ -133,8 +138,8 @@ internal static class PublicKeyBody
     }
 
     /// <summary>
-    /// The whole body, or a refusal once it passes the cap. Kestrel enforces the same limit through the
-    /// endpoints' request-size metadata, so the refusal below is reached only on a server that does not.
+    /// The whole body, or a refusal once it passes the cap. The cap counts the body's own bytes as they are
+    /// read, so a chunked body is measured without its chunk framing, as on the other two implementations.
     /// </summary>
     private static async Task<byte[]> ReadCappedAsync(Stream stream, CancellationToken cancellationToken)
     {
@@ -146,8 +151,7 @@ internal static class PublicKeyBody
         {
             if (buffer.Length + read > MaxBytes)
             {
-                throw new BadHttpRequestException(
-                    $"The request body exceeds {MaxBytes} bytes.", StatusCodes.Status413PayloadTooLarge);
+                throw TooLarge();
             }
 
             await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
@@ -155,17 +159,26 @@ internal static class PublicKeyBody
 
         return buffer.ToArray();
     }
+
+    private static BadHttpRequestException TooLarge() =>
+        new($"The request body exceeds {MaxBytes} bytes.", StatusCodes.Status413PayloadTooLarge);
 }
 
 /// <summary>
-/// The request-size metadata on every API endpoint. Routing hands it to Kestrel when the endpoint is
-/// matched, so a body over the cap is cut off at the server rather than buffered first.
+/// The request-size limit Kestrel applies to every API endpoint, handed to it by routing when the endpoint
+/// is matched. It is not the 64-kilobyte cap, which <see cref="PublicKeyBody"/> applies, because Kestrel
+/// counts the framing of a chunked body towards its limit. It bounds how much of an unread body
+/// <see cref="Security.RefusedBody"/> reads and throws away after refusing it, so a reverse proxy still
+/// sending the body relays the answer, where a connection closed under it would make the proxy answer
+/// HTTP 502 - Bad Gateway. It is the 2 megabytes Tomcat throws away on the Java implementation.
 /// </summary>
 internal sealed class ApiBodyLimit : Microsoft.AspNetCore.Http.Metadata.IRequestSizeLimitMetadata
 {
+    public const long DiscardBytes = 2 * 1024 * 1024;
+
     public static readonly ApiBodyLimit Instance = new();
 
-    public long? MaxRequestBodySize => PublicKeyBody.MaxBytes;
+    public long? MaxRequestBodySize => DiscardBytes;
 }
 
 public sealed record SetKeyResponse
