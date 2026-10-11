@@ -27,7 +27,12 @@ RUN dotnet publish dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedA
         -c Release -r "$(cat /src/runtime-identifier)" --self-contained false -o /app --no-restore
 
 # Run
-FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4
+# Microsoft's chiseled Ubuntu image holds the ASP.NET Core runtime and the few system libraries it loads, with no shell,
+# no package manager and a non-root user. The extra variant adds ICU, which the server needs to render pages in every
+# locale it supports, and the time zone data, which it needs to run the audit log clean-up at Audit:RunAt in server
+# time.
+# The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:00e0ad6a7ef8c0c1391b87f05c7ac757a15740455688f2bfcd146a3f4b987efd
 WORKDIR /app
 COPY --from=build /app .
 # The third-party notices, served from the web root, also at a fixed path beside the application.

@@ -108,10 +108,17 @@ yourself, run this from the repository root, so that `shared/` is in the build c
 docker build -f dotnet/Dockerfile -t astrana/ata-dotnet .
 ```
 
-The image holds the application only. It is built for Linux on the processor the image is for, which is amd64 or arm64
-for the published image, so the native files the packages carry for other systems and processors stay out of it. It runs
-as a non-root user and listens on port 8080. Configuration comes from environment variables or a mounted
-`appsettings.json`, as the installation page describes.
+The image is built on Microsoft's chiseled Ubuntu image for ASP.NET Core, in the variant that keeps ICU (International
+Components for Unicode), which the server needs to render pages in every language it supports, and the time zone data,
+which it needs to run the audit log clean-up at the time `Audit:RunAt` sets. Besides the application and the .NET
+runtime, it holds only the few system libraries the runtime loads. It has no shell and no package manager. The
+application is built for Linux on the processor the image is for, which is amd64 or arm64 for the published image, so
+the native files the packages carry for other systems and processors stay out of it. The image runs as a non-root user
+and listens on port 8080. Configuration comes from environment variables or a mounted `appsettings.json`, as the
+installation page describes.
+
+The image has no shell, so `docker exec` cannot open one in it. To look inside, run a copy of the image with
+`--entrypoint dotnet` and the arguments you need, such as `--info`, or inspect its files with `docker cp`.
 
 The SQL Server driver brings in Microsoft's Windows sign-in broker package, `Microsoft.Identity.Client.NativeInterop`,
 whose licence does not allow it to be distributed. The server signs in to SQL Server with a username and password and
@@ -122,7 +129,8 @@ and the native runtime libmsalruntime alike.
 
 Every build writes `THIRD-PARTY-NOTICES.txt` into `wwwroot`, from the packages the build restored. The server serves it
 at `/THIRD-PARTY-NOTICES.txt`, and the licence page links to it. The image also holds a copy at
-`/app/THIRD-PARTY-NOTICES.txt`.
+`/app/THIRD-PARTY-NOTICES.txt`. The rest of the image carries its own notices. The .NET runtime's licence and
+third-party notices are in `/usr/share/dotnet`, and the copyright file of each Ubuntu package is in `/usr/share/doc`.
 
 For each package whose files ship, the file gives the version, the licence, the copyright notice and where to get the
 source. Then comes every licence and notice text the package ships. Where a package names a licence without shipping its
