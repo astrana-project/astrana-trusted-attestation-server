@@ -124,6 +124,10 @@ from `shared/schema`. It creates two tables, their indexes and five stored proce
 therefore needs the right to create tables and procedures in that database. Keep the database for the server's own
 tables only. The commands below create the database and the login, with `...` in place of a password you choose.
 
+Each connection string below encrypts the connection and checks the database's certificate. If that certificate comes
+from a private authority, trust the authority in the operating system's certificate store. For the container,
+[As a container](#as-a-container) describes how.
+
 ### SQL Server
 
 ```sql
@@ -281,7 +285,8 @@ reach it.
 Use `https://` addresses for the identity system. `Iam:RequireHttpsMetadata` exists for development against a local
 identity provider and stays `true` in a deployment. Under SAML the server does not refuse a plain HTTP metadata address,
 so check it yourself. If your identity system uses a certificate from a private authority, trust that authority in the
-operating system's certificate store. The server has no setting to skip certificate validation.
+operating system's certificate store. For the container, [As a container](#as-a-container) describes how. The server has
+no setting to skip certificate validation.
 
 ### TLS
 
@@ -442,8 +447,29 @@ On any other processor, or to build it yourself, build the image from the reposi
 docker build -f dotnet/Dockerfile -t astrana/ata-dotnet:1.0.0 .
 ```
 
-The licences and copyright notices for the third-party software in the image are in `/app/THIRD-PARTY-NOTICES.txt`. The
-server also serves that file at `/THIRD-PARTY-NOTICES.txt`, and the licence page links to it.
+The image is built on Microsoft's chiseled Ubuntu image for ASP.NET Core, in the variant that keeps ICU (International
+Components for Unicode) and the time zone data. It holds the .NET runtime, ICU, the time zone data and the few system
+libraries the runtime loads. It has no shell and no package manager, and it runs as a non-root user.
+
+The licences and copyright notices for the third-party packages the server is built from are in
+`/app/THIRD-PARTY-NOTICES.txt`. The server also serves that file at `/THIRD-PARTY-NOTICES.txt`, and the licence page
+links to it. The .NET runtime's licence and third-party notices are in `/usr/share/dotnet`, and the copyright file of
+each Ubuntu package is in `/usr/share/doc`.
+
+The image trusts the public certificate authorities in its bundle, `/etc/ssl/certs/ca-certificates.crt`, and has no
+shell to update it. If your identity system or your database uses a certificate from a private authority, copy that
+bundle out of the image and add your authority's certificate, in PEM form, to the end of the copy.
+
+```bash
+docker create --name ata-certificates astrana/ata-dotnet:1.0.0
+docker cp ata-certificates:/etc/ssl/certs/ca-certificates.crt /etc/ata/ca-certificates.crt
+docker rm ata-certificates
+cat my-authority.crt >> /etc/ata/ca-certificates.crt
+```
+
+Then add `-v /etc/ata/ca-certificates.crt:/etc/ata/ca-certificates.crt:ro -e SSL_CERT_FILE=/etc/ata/ca-certificates.crt`
+to the `docker run` command below. The copy takes the place of the image's own bundle, so repeat these steps after each
+update to keep the image's current list.
 
 Put the settings in an environment file. The container holds no certificate, so the file includes
 `TrustedAttestation__Tls__TerminatedByProxy=true`. Run the container on a port only your proxy can reach. You can mount
