@@ -205,6 +205,9 @@ follows.
   leave the changelogs alone. Development configuration means `appsettings.Development.json`, `launchSettings.json`,
   `application-dev.yml` and `application-dev-saml.yml`. The version tracks the software, and none of these are part of
   it.
+- The same goes for the contract's specifications, `shared/contract/openapi.yaml` and
+  `shared/contract/manifest.schema.json`. No implementation is built from them or runs them, so a change to them alone
+  leaves the changelogs alone. A change they describe is released through the code that makes it.
 - Build files that never ship need no changelog entry either. These are the Dockerfiles, the stylesheet's npm files and
   Sass source, the PHP build scripts, the `sbom.json` bills of materials, the .NET restore settings and lock files, and
   the configuration of the JaCoCo and Spotless plugins in `java/pom.xml`.

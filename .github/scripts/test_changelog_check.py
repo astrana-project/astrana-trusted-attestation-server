@@ -119,6 +119,7 @@ class ReleasedCode(unittest.TestCase):
             "php/scripts/a-script-nobody-has-classified.php",
             "dotnet/build/ThirdPartyNotices.targets",
             "shared/contract/attribution.json",
+            "shared/contract/relationship-types.json",
             "shared/schema/schema-mysql.sql",
             "shared/ui/dist/trusted-attestation.css",
             "shared/ui/favicon.svg",
@@ -142,6 +143,8 @@ class ReleasedCode(unittest.TestCase):
             "php/scripts/generate-third-party-notices.php",
             "php/scripts/sync-shared-assets.php",
             "shared/ui/README.md",
+            "shared/contract/openapi.yaml",
+            "shared/contract/manifest.schema.json",
             "php/tests/Unit/NativeSbomComponentsTest.php",
             "dotnet/demo/compose.yml",
             "java/src/main/resources/application-dev.yml",
@@ -502,6 +505,13 @@ class WholeCheck(unittest.TestCase):
             self.write(f"{impl}/Dockerfile", "FROM scratch@sha256:0\n")
         self.commit()
         self.assertEqual(self.run_check()[0], 0)
+
+    def test_a_change_to_the_specification_alone_needs_no_version(self):
+        self.write("shared/contract/openapi.yaml", "openapi: 3.1.0\n")
+        self.write("shared/contract/manifest.schema.json", "{}\n")
+        self.commit()
+        code, output = self.run_check()
+        self.assertEqual(code, 0, output)
 
     def release(self, **versions):
         """Adds a dated version above each named implementation's current one, which stays as the base below it."""
