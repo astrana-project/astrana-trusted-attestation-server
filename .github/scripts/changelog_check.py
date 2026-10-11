@@ -16,8 +16,9 @@ Rules:
 - A change to one implementation's code needs a new PATCH version in that changelog only.
 - A change to all three implementations' code may instead step all three changelogs to the same new MINOR or
   MAJOR, which is how an observable change that touches no shared file is released.
-- A change to nothing released (documentation, demo stacks, an implementation's tests, the test harness,
-  repository tooling, build files that never ship) needs no changelog change, and a version bump without a
+- A change to nothing released (documentation, the contract's OpenAPI document and manifest schema, which no
+  implementation is built from, demo stacks, an implementation's tests, the test harness, repository tooling, build
+  files that never ship) needs no changelog change, and a version bump without a
   corresponding change is an error. Build files that never ship are the Dockerfiles, the stylesheet's npm files and
   Sass source, the PHP build scripts, the bills of materials, .NET restore settings and lock files that change no
   package version, and changes to java/pom.xml made only of comments, layout, the project's own version and
@@ -76,6 +77,10 @@ BUILD_FILES = tuple(f"{impl}/{name}" for impl in IMPLS for name in ("Dockerfile"
     "php/scripts/sync-shared-assets.php",
 )
 BUILD_DIRS = ("shared/ui/src/",)
+# The contract's specifications, which no implementation is built from or runs. Each implementation reads the contract
+# files it needs by name, and a change to the specification that calls for different behaviour is released through
+# the code that changes.
+SPECIFICATION_FILES = ("shared/contract/openapi.yaml", "shared/contract/manifest.schema.json")
 # Project file settings that only steer the NuGet restore, which the lock file then records.
 RESTORE_SETTINGS = re.compile(
     r"<(RestorePackagesWithLockFile|RestoreLockedMode|RuntimeIdentifiers)\b[^>]*>[^<]*</\1>"
@@ -93,12 +98,12 @@ NUGET_LOCK = "/packages.lock.json"
 
 
 def released_code(path: str) -> bool:
-    """True for files that end up in a released artefact. Tests, test and development configuration and the build
-    files that never ship are not."""
+    """True for files that end up in a released artefact. Tests, test and development configuration, the build
+    files that never ship and the contract's specifications are not."""
     unreleased = TEST_FILES + DEV_FILES
     if path.endswith(".md") or path.endswith(unreleased) or any(d in path for d in TEST_DIRS):
         return False
-    if path in BUILD_FILES or path.startswith(BUILD_DIRS):
+    if path in BUILD_FILES or path in SPECIFICATION_FILES or path.startswith(BUILD_DIRS):
         return False
     for impl in IMPLS:
         if path.startswith(f"{impl}/"):
