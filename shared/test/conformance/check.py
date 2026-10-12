@@ -109,7 +109,7 @@ def _page_says_naming_the_organisation(body: bytes, manifest: dict | None, key: 
 
 def _without_scripts(body: bytes) -> bytes:
     """The page with every <script> element, its content included, removed."""
-    return re.sub(rb"<script\b[^>]*>.*?</script\s*>", b"", body, flags=re.DOTALL | re.IGNORECASE)
+    return re.sub(rb"<script\b[^>]*>.*?</script(?:[\s/][^>]*)?>", b"", body, flags=re.DOTALL | re.IGNORECASE)
 
 
 def _html_attribute(body: bytes, name: str) -> str | None:
