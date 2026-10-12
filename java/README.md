@@ -134,6 +134,30 @@ The image holds the application only, runs as a non-root user and listens on por
 mounted at `/app/config/application.yaml` or from environment variables, as the installation page describes. The jar
 leaves out Spring Boot's jar tools, which extract its layers, because the image runs the jar as it is.
 
+The image is Google's distroless base image for Debian 13, `gcr.io/distroless/base-nossl-debian13`, with a Java runtime
+of its own in `/opt/java/openjdk`. The base image holds the C library, time zone data and certificate authorities, with
+no shell and no package manager. The image adds Debian's `C.UTF-8` locale, so Java reads environment variables and file
+names as UTF-8. It runs as user and group 10001, which have no entry in `/etc/passwd`.
+
+The `Dockerfile` links the Java runtime with `jlink` from the Eclipse Temurin 25 development kit, and it holds only the
+Java modules the server uses. The `Dockerfile` names them, and they are the modules `jdeps` finds in the jar's classes
+and libraries. The pages take their words in every language from the server's own strings file, not from Java's locale
+data, so the runtime leaves out `jdk.localedata`. To check the list after a dependency changes, unpack the jar and run
+this from the folder you unpacked it into.
+
+```bash
+jdeps --ignore-missing-deps --print-module-deps --multi-release 25 --recursive \
+  --class-path 'BOOT-INF/lib/*' BOOT-INF/classes
+```
+
+The runtime trusts the certificate authorities in its own trust store, `/opt/java/openjdk/lib/security/cacerts`, which
+Eclipse Temurin ships. Its licence, the GNU General Public License version 2 with the Classpath Exception, and the
+notices of each module are in `/opt/java/openjdk/legal`, with Eclipse Temurin's notice in `/opt/java/openjdk/NOTICE`.
+The licences of the Debian packages are in `/usr/share/doc`.
+
+The image has no shell, so `docker exec` cannot open one in it. To look inside, run a copy of the image with
+`--entrypoint java` and the arguments you need, or inspect its files with `docker cp`.
+
 ## Third-party notices
 
 Every build writes `THIRD-PARTY-NOTICES.txt` into the jar's static resources, from the dependencies the build resolved.
