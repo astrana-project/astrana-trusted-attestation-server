@@ -77,6 +77,37 @@ class MeRenderingTest {
     }
 
     @Test
+    void anExpiredRelationshipNamesTheOrganisationEscaped() {
+        // The organisation's name is its own text, so it is escaped wherever it lands: as HTML in the
+        // expired message, and for the inline script in the strings the confirmation dialogs read.
+        String hostile = "Acme </script><b>&\"'";
+        String page = TemplateRendering.render(
+                "me",
+                "/me",
+                ENGLISH,
+                "en",
+                Map.of(
+                        "orgName",
+                        hostile,
+                        "relationships",
+                        List.of(new RelationshipView("employee", "Employee", null, "expired", "a-key", null))));
+
+        assertThat(page)
+                .contains("Only Acme &lt;/script&gt;&lt;b&gt;&amp;&quot;&#39; can extend it.")
+                .doesNotContain(hostile)
+                .doesNotContain("<b>");
+
+        String script = page.substring(page.indexOf("const T = "), page.indexOf("function show("));
+        assertThat(script)
+                .contains("Only Acme ")
+                .doesNotContain("{org}")
+                .doesNotContain("</")
+                .doesNotContain("<b>")
+                .doesNotContain("&")
+                .doesNotContain("'");
+    }
+
+    @Test
     void theExpiryIsTheSameStringTheApiSerialises() {
         assertThat(renderWith(employee(null, "2026-06-30T23:59:59.5Z")))
                 .contains("<span>2026-06-30T23:59:59.5Z</span>");

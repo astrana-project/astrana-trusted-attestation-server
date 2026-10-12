@@ -417,6 +417,24 @@ final class PageControllerTest extends TestCase
     }
 
     #[Test]
+    public function me_hands_the_script_strings_that_name_the_organisation_in_the_members_language(): void
+    {
+        // The confirmation dialogs and the not-granted error are shown by the page's script, so the name is
+        // put into the {org} marker on the server, in the member's language, before the script sees it.
+        config(['trusted_attestation.manifest.name' => ['en' => 'Acme Bank', 'fr' => 'Banque Acme']]);
+        config(['trusted_attestation.manifest.supported_locales' => ['en', 'fr']]);
+        $this->store->all = [];
+
+        $data = $this->controller()->me($this->request(['sub' => 'alice'], acceptLanguage: 'fr'))->getData();
+        $french = $this->app->make(UiStrings::class)->all('fr');
+
+        foreach (['expired_help', 'revoke_confirm', 'remove_confirm', 'error_not_granted'] as $key) {
+            self::assertSame(str_replace('{org}', 'Banque Acme', $french[$key]), $data['scriptStrings'][$key]);
+            self::assertStringContainsString('Banque Acme', $data['scriptStrings'][$key]);
+        }
+    }
+
+    #[Test]
     public function me_renders_for_a_member_who_holds_nothing(): void
     {
         // An empty list is an ordinary state, not an error: the page still renders, it is not a redirect.

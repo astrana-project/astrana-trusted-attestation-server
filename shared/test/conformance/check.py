@@ -92,6 +92,26 @@ def _page_says(body: bytes, locale: str, key: str) -> tuple[bool, str]:
     return text in _unescaped(body), f"{text!r} is not on the page"
 
 
+def _page_says_naming_the_organisation(body: bytes, manifest: dict | None, key: str) -> tuple[bool, str]:
+    """Whether the page carries the shared string ``key`` in the page's own language with the organisation's
+    name in its {org} marker, plus the reason if not. Any of the manifest's names counts, so the check does
+    not repeat the locale fallback the page applies to the name. Script elements are left out of the search,
+    because the page's inline script carries the same sentence in its string map, and the check is about the
+    text the member reads."""
+    text = _ui_string(_html_attribute(body, "lang") or "en", key)
+    if text is None:
+        return False, f"{UI_STRINGS} could not be read, so the expected text is unknown"
+    names = (manifest or {}).get("name")
+    page = _unescaped(_without_scripts(body))
+    said = isinstance(names, dict) and any(text.replace("{org}", str(name)) in page for name in names.values())
+    return said, f"{text!r} with the organisation's name is not on the page"
+
+
+def _without_scripts(body: bytes) -> bytes:
+    """The page with every <script> element, its content included, removed."""
+    return re.sub(rb"<script\b[^>]*>.*?</script(?:[\s/][^>]*)?>", b"", body, flags=re.DOTALL | re.IGNORECASE)
+
+
 def _html_attribute(body: bytes, name: str) -> str | None:
     """The value of one attribute on the page's <html> element, or None."""
     match = re.search(rb'<html[^>]*\b' + name.encode() + rb'="([^"]*)"', body)
@@ -1851,6 +1871,9 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     status, payload = attest(bob_rotated)
     results.check("a relationship whose standing has lapsed reports expired",
                   payload and payload.get("status"), "expired")
+    _, bob_page, _ = bob.get(f"{base_url}/me")
+    results.check_that("bob's page says the relationship has expired, naming the organisation",
+                       *_page_says_naming_the_organisation(bob_page, manifest, "expired_help"))
 
     results.check_that("expiry can be cleared", db.org_extend("bob", "client", None))
     status, payload = attest(bob_rotated)

@@ -1,6 +1,5 @@
 @page "/me"
 @model MeModel
-@using System.Text.Json
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     var s = Model.Strings;
@@ -134,7 +133,7 @@
                 }
                 else if (relationship.Status == "expired")
                 {
-                    <p class="form-text mt-2 mb-0">@s["expired_help"]</p>
+                    <p class="form-text mt-2 mb-0">@(s["expired_help"].Replace("{org}", Model.OrgName))</p>
                 }
 
                 @if (relationship.ExpiresAt is not null)
@@ -231,7 +230,7 @@
     // the organisation granted, and wiring handlers per card would mean the page's behaviour depended on
     // how many there happened to be.
     (function () {
-        const T = @Html.Raw(JsonSerializer.Serialize(Model.LocalizedStrings));
+        const T = @Html.Raw(Model.ScriptStrings);
 
         function show(section, message, kind) {
             const output = section.querySelector("[data-message]");

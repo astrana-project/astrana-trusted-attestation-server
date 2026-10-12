@@ -140,16 +140,53 @@ class UiStringsTest {
      * "translates to the same word" -- French for status_active really is "Active".
      */
     @SuppressWarnings("unchecked")
-    private static Map<String, Set<String>> shippedLocales() throws IOException {
+    private static Map<String, Map<String, Object>> shippedStrings() throws IOException {
         try (InputStream stream = new ClassPathResource("ui-strings.json").getInputStream()) {
             Map<String, Object> raw = JsonParserFactory.getJsonParser()
                     .parseMap(new String(stream.readAllBytes(), StandardCharsets.UTF_8));
 
             return raw.entrySet().stream()
                     .filter(entry -> !entry.getKey().startsWith("_") && entry.getValue() instanceof Map)
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey, entry -> ((Map<String, Object>) entry.getValue()).keySet()));
+                    .collect(Collectors.toMap(Map.Entry::getKey, entry -> (Map<String, Object>) entry.getValue()));
         }
+    }
+
+    /** The keys of each locale block, exactly as the shipped file declares them. */
+    private static Map<String, Set<String>> shippedLocales() throws IOException {
+        return shippedStrings().entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey, entry -> entry.getValue().keySet()));
+    }
+
+    @Test
+    void everyShippedLocaleNamesTheOrganisationAsOftenAsEnglishDoes() throws IOException {
+        // The page puts the organisation's name into each {org} marker. A translation with fewer markers
+        // would leave the name out of the member's own language while English still carried it, and one
+        // with more would name the organisation where English does not.
+        Map<String, Map<String, Object>> shipped = shippedStrings();
+        Map<String, Long> named = shipped.get("en").entrySet().stream()
+                .filter(entry -> orgMarkers(entry.getValue()) > 0)
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> orgMarkers(entry.getValue())));
+
+        assertThat(named).isNotEmpty();
+        shipped.forEach((locale, strings) -> {
+            // A missing key is the key-set check's to report, so it is left out here.
+            List<String> differing = named.entrySet().stream()
+                    .filter(entry -> strings.containsKey(entry.getKey())
+                            && orgMarkers(strings.get(entry.getKey())) != entry.getValue())
+                    .map(Map.Entry::getKey)
+                    .sorted()
+                    .toList();
+
+            assertThat(differing)
+                    .as("strings in %s that do not name the organisation as often as English", locale)
+                    .isEmpty();
+        });
+    }
+
+    private static long orgMarkers(Object text) {
+        String value = String.valueOf(text);
+        return (value.length() - value.replace("{org}", "").length()) / "{org}".length();
     }
 
     @Test

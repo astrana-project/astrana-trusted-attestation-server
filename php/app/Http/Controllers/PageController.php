@@ -309,11 +309,28 @@ final class PageController extends Controller
             ->values()
             ->all();
 
-        return view('me', $this->chrome($request, $locale) + [
-            't' => $this->strings->all($locale),
+        $chrome = $this->chrome($request, $locale);
+        $strings = $this->strings->all($locale);
+
+        return view('me', $chrome + [
+            't' => $strings,
+            'scriptStrings' => self::withOrgName($strings, $chrome['orgName']),
             'memberName' => $member->name,
             'relationships' => $relationships,
         ]);
+    }
+
+    /**
+     * Every string with the organisation's name in each {org} marker, for the page's script. The script
+     * shows the confirmation dialogs and the not-granted error, and has no name of its own to put there.
+     * Blade's @json escapes the result for the script it lands in.
+     *
+     * @param  array<string, string>  $strings
+     * @return array<string, string>
+     */
+    private static function withOrgName(array $strings, string $orgName): array
+    {
+        return array_map(static fn (string $text): string => str_replace('{org}', $orgName, $text), $strings);
     }
 
     /**

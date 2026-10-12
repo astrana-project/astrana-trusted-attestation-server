@@ -138,8 +138,41 @@ public class UiStringsTests
         }
     }
 
+    [Fact]
+    public void Every_shipped_locale_names_the_organisation_as_often_as_english_does()
+    {
+        // The page puts the organisation's name into each {org} marker. A translation with fewer markers
+        // would leave the name out of the member's own language while English still carried it, and one
+        // with more would name the organisation where English does not.
+        var shipped = ShippedStrings();
+        var named = shipped["en"]
+            .Where(entry => OrgMarkers(entry.Value) > 0)
+            .ToDictionary(entry => entry.Key, entry => OrgMarkers(entry.Value));
+
+        Assert.NotEmpty(named);
+
+        foreach (var (locale, strings) in shipped.Where(entry => entry.Key != "en"))
+        {
+            var differing = named
+                .Where(entry => strings.TryGetValue(entry.Key, out var value) && OrgMarkers(value) != entry.Value)
+                .Select(entry => entry.Key)
+                .OrderBy(k => k)
+                .ToList();
+
+            Assert.True(differing.Count == 0,
+                $"{locale} does not name the organisation as often as English in: {string.Join(", ", differing)}");
+        }
+    }
+
+    private static int OrgMarkers(string text) => text.Split("{org}").Length - 1;
+
+    /// <summary>The locale blocks' keys exactly as the shipped file declares them, with no fallback
+    /// applied.</summary>
+    private static Dictionary<string, HashSet<string>> ShippedLocales() =>
+        ShippedStrings().ToDictionary(entry => entry.Key, entry => entry.Value.Keys.ToHashSet());
+
     /// <summary>The locale blocks exactly as the shipped file declares them, with no fallback applied.</summary>
-    private static Dictionary<string, HashSet<string>> ShippedLocales()
+    private static Dictionary<string, Dictionary<string, string>> ShippedStrings()
     {
         using var stream = typeof(UiStrings).Assembly
             .GetManifestResourceStream("Astrana.TrustedAttestation.Server.Resources.ui-strings.json");
@@ -154,6 +187,7 @@ public class UiStringsTests
                                && property.Value.ValueKind == System.Text.Json.JsonValueKind.Object)
             .ToDictionary(
                 property => property.Name,
-                property => property.Value.EnumerateObject().Select(k => k.Name).ToHashSet());
+                property => property.Value.EnumerateObject()
+                    .ToDictionary(k => k.Name, k => k.Value.GetString() ?? string.Empty));
     }
 }
