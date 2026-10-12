@@ -135,7 +135,8 @@ Set `trusted-attestation.database.provider` to `POSTGRESQL` and `spring.datasour
 `jdbc:postgresql://db.example.org:5432/trusted_attestation?sslmode=verify-full`, with the login in
 `spring.datasource.username` and `spring.datasource.password`. `sslmode=verify-full` encrypts the connection and checks
 the certificate and the host name. It checks them against the certificate authority in `~/.postgresql/root.crt` for the
-service's account, or in the file named by an `sslrootcert` parameter.
+service's account, or in the file named by an `sslrootcert` parameter. The container needs the parameter, as
+[As a container](#as-a-container) describes.
 
 ### SQL Server
 
@@ -453,8 +454,32 @@ On any other processor, or to build it yourself, build the image from the reposi
 docker build -f java/Dockerfile -t astrana/ata-java:1.0.0 .
 ```
 
-The licences and copyright notices for the third-party software in the image are in `/app/THIRD-PARTY-NOTICES.txt`. The
-server also serves that file at `/THIRD-PARTY-NOTICES.txt`, and the licence page links to it.
+The image is Google's distroless base image for Debian 13 with a Java 25 runtime from Eclipse Temurin, cut down to the
+Java modules the server uses. It has no shell and no package manager. The licences and copyright notices for the
+libraries in the server are in `/app/THIRD-PARTY-NOTICES.txt`. The server also serves that file at
+`/THIRD-PARTY-NOTICES.txt`, and the licence page links to it. The Java runtime's licence and notices are in
+`/opt/java/openjdk/legal` and `/opt/java/openjdk/NOTICE`, and those of the Debian packages are in `/usr/share/doc`.
+
+The Java runtime trusts the public certificate authorities in its own trust store,
+`/opt/java/openjdk/lib/security/cacerts`. If your identity system, or a SQL Server or MySQL database, uses a certificate
+from a private authority, copy that trust store out of the image and add your authority to the copy with the `keytool`
+of any Java installation.
+
+```bash
+docker create --name ata-cacerts astrana/ata-java:1.0.0
+docker cp ata-cacerts:/opt/java/openjdk/lib/security/cacerts /etc/ata/cacerts
+docker rm ata-cacerts
+keytool -importcert -noprompt -alias my-authority -file my-authority.crt -keystore /etc/ata/cacerts -storepass changeit
+```
+
+Then add `-v /etc/ata/cacerts:/etc/ata/cacerts:ro -e JAVA_TOOL_OPTIONS=-Djavax.net.ssl.trustStore=/etc/ata/cacerts` to
+the `docker run` command below. Repeat these steps after each update, because the copy otherwise keeps the list of
+authorities from the runtime it was copied from.
+
+A PostgreSQL database's authority is not read from the trust store, and the container's user has no home folder to hold
+`~/.postgresql/root.crt`. Mount the authority's certificate instead, with
+`-v /etc/ata/my-authority.crt:/etc/ata/my-authority.crt:ro`, and name it in the database address with
+`&sslrootcert=/etc/ata/my-authority.crt`.
 
 The container holds no certificate, so the configuration file includes `terminated-by-proxy: true`. Run the container on
 a port only your proxy can reach, with the configuration file mounted.
