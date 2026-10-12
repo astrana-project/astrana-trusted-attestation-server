@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Astrana.TrustedAttestation.Server.Contract;
 using Astrana.TrustedAttestation.Server.Data;
 using Astrana.TrustedAttestation.Server.Manifest;
@@ -97,8 +98,20 @@ public sealed class MeModel(
 
     public UiStrings Strings => strings;
 
+    /// <summary>
+    /// Every string in the member's language, for the page's script, with the organisation's name already
+    /// in each {org} marker. The script shows the confirmation dialogs and the not-granted error, and has
+    /// no name of its own to put there.
+    /// </summary>
     public IReadOnlyDictionary<string, string> LocalizedStrings { get; private set; } =
         new Dictionary<string, string>();
+
+    /// <summary>
+    /// <see cref="LocalizedStrings"/> as a JavaScript object literal for the inline script. The serializer's
+    /// default encoder escapes &lt;, &gt;, &amp;, quotes and apostrophes, so the organisation's name cannot
+    /// close the script element or the string it sits in.
+    /// </summary>
+    public string ScriptStrings => JsonSerializer.Serialize(LocalizedStrings);
 
     /// <summary>
     /// Picks a locale-keyed manifest value, falling back the way decision record 34 in docs/adr says a consumer
@@ -124,8 +137,9 @@ public sealed class MeModel(
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
         var locale = CultureInfo.CurrentUICulture.Name;
-        LocalizedStrings = strings.All(locale);
         OrgName = LocalizedFromManifest(manifest.Name, locale, manifest.DefaultLocale);
+        LocalizedStrings = strings.All(locale)
+            .ToDictionary(entry => entry.Key, entry => entry.Value.Replace("{org}", OrgName), StringComparer.Ordinal);
 
         var support = manifest.SupportUrl is null
             ? string.Empty

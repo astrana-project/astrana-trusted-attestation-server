@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.6] - 2026-10-13
+
+### Fixed
+
+- In every language other than English, the revoke and remove buttons, the paste button, the error for an invalid key
+  and the warning above the buttons now mean what the English means. The product name Astrana Trusted Attestation is now
+  written as it is in English, and each language uses one word for each thing and one form of address throughout, the
+  one usual in that language.
+- The note on an expired relationship, the questions before revoking and before removing a relationship, and the error
+  for a relationship that was never granted now name the organisation instead of saying "the organisation", and mean
+  what the English means in every language.
+- The question before removing a relationship now says in every language, not only in English, that only the
+  organisation can grant the relationship again.
+
 ## [1.0.5] - 2026-10-10
 
 ### Fixed

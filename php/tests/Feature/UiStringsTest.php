@@ -152,21 +152,61 @@ final class UiStringsTest extends TestCase
     // The shipped file itself
     // ---------------------------------------------------------------------------------------------
 
-    #[Test]
-    public function every_shipped_locale_carries_every_key(): void
+    /**
+     * The locale blocks exactly as the shipped file declares them, read directly rather than through the
+     * lookup, because the lookup backfills from English and cannot tell "not translated" from "translates
+     * to the same word".
+     *
+     * @return array<string, array<string, string>>
+     */
+    private static function shippedLocales(): array
     {
-        // Read from the file directly rather than through the lookup, because the lookup backfills from
-        // English and cannot tell "not translated" from "translates to the same word". This is the
-        // check that catches a string added in one language and forgotten in the others; only the
-        // member ever sees that.
         $decoded = json_decode((string) file_get_contents(resource_path('ui-strings.json')), true);
         self::assertIsArray($decoded);
 
-        $locales = array_filter(
+        return array_filter(
             $decoded,
             fn ($v, $k) => is_array($v) && ! str_starts_with((string) $k, '_'),
             ARRAY_FILTER_USE_BOTH
         );
+    }
+
+    #[Test]
+    public function every_shipped_locale_names_the_organisation_as_often_as_english_does(): void
+    {
+        // The page puts the organisation's name into each {org} marker. A translation with fewer markers
+        // would leave the name out of the member's own language while English still carried it, and one
+        // with more would name the organisation where English does not.
+        $locales = self::shippedLocales();
+        $named = array_filter(
+            array_map(static fn (string $text): int => substr_count($text, '{org}'), $locales['en'])
+        );
+
+        self::assertNotEmpty($named);
+
+        foreach ($locales as $locale => $strings) {
+            // A missing key is the key-set check's to report, so it is left out here.
+            $differing = array_keys(array_filter(
+                $named,
+                static fn (int $count, string $key): bool => isset($strings[$key])
+                    && substr_count($strings[$key], '{org}') !== $count,
+                ARRAY_FILTER_USE_BOTH
+            ));
+
+            self::assertSame(
+                [],
+                $differing,
+                "{$locale} does not name the organisation as often as English in these strings"
+            );
+        }
+    }
+
+    #[Test]
+    public function every_shipped_locale_carries_every_key(): void
+    {
+        // This is the check that catches a string added in one language and forgotten in the others.
+        // Only the member ever sees that.
+        $locales = self::shippedLocales();
 
         $english = array_keys($locales['en']);
         sort($english);

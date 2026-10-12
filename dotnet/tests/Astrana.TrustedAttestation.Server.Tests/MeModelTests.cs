@@ -34,11 +34,11 @@ public class MeModelTests
 
     private readonly FakeRelationshipStore _store = new();
 
-    private static ManifestDocument Manifest() => new()
+    private static ManifestDocument Manifest(string name = "Acme Inc") => new()
     {
         ManifestVersion = 1,
         DefaultLocale = "en",
-        Name = new Dictionary<string, string> { ["en"] = "Acme Inc" },
+        Name = new Dictionary<string, string> { ["en"] = name },
         RelationshipTypes = [],
         EnrollmentUrl = "https://org.example/enrol",
         AttestationUrl = "https://org.example/attest",
@@ -182,6 +182,46 @@ public class MeModelTests
         Assert.Equal("Acme SA", await OrgNameFor("fr"));      // exact match
         Assert.Equal("Acme Inc", await OrgNameFor("en-GB"));  // language fallback
         Assert.Equal("Acme Inc", await OrgNameFor("de"));     // default-locale fallback
+    }
+
+    [Theory]
+    [InlineData("expired_help")]
+    [InlineData("revoke_confirm")]
+    [InlineData("remove_confirm")]
+    [InlineData("error_not_granted")]
+    public async Task The_strings_handed_to_the_script_name_the_organisation(string key)
+    {
+        // The confirmation dialogs and the not-granted error are shown by the page's script, so the name is
+        // put into its {org} marker on the server, in the member's language, before the script sees it.
+        _store.Held = [];
+
+        var model = Model(SignedIn());
+        await model.OnGetAsync(default);
+
+        Assert.Contains("Acme Inc", model.LocalizedStrings[key]);
+        Assert.DoesNotContain(model.LocalizedStrings.Values, value => value.Contains("{org}"));
+    }
+
+    [Fact]
+    public async Task The_organisations_name_cannot_break_out_of_the_script()
+    {
+        // The name is the organisation's own text, so it is escaped for the inline script it lands in.
+        // Nothing in it can close the script element or the string it sits in.
+        _store.Held = [];
+        const string hostile = "Acme </script><b>&\"'";
+
+        var model = Model(SignedIn(), Manifest(hostile));
+        await model.OnGetAsync(default);
+
+        Assert.DoesNotContain("<", model.ScriptStrings);
+        Assert.DoesNotContain(">", model.ScriptStrings);
+        Assert.DoesNotContain("&", model.ScriptStrings);
+        Assert.DoesNotContain("'", model.ScriptStrings);
+        Assert.DoesNotContain("\\\"", model.ScriptStrings);
+
+        var parsed = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(model.ScriptStrings);
+        Assert.NotNull(parsed);
+        Assert.Contains(hostile, parsed["revoke_confirm"]);
     }
 
     public static TheoryData<string?, string?, string?> ContactAddresses => new()

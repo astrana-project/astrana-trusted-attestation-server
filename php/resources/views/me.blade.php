@@ -89,7 +89,7 @@
                 @if ($r['status'] === 'revoked')
                     <p class="form-text mt-2 mb-0">{{ str_replace('{org}', $orgName, $t['revoked_help']) }}</p>
                 @elseif ($r['status'] === 'expired')
-                    <p class="form-text mt-2 mb-0">{{ $t['expired_help'] }}</p>
+                    <p class="form-text mt-2 mb-0">{{ str_replace('{org}', $orgName, $t['expired_help']) }}</p>
                 @endif
 
                 @if ($r['expiresAt'])
@@ -165,7 +165,7 @@
     // the organisation granted, and wiring handlers per card would mean the page's behaviour depended on
     // how many there happened to be.
     (function () {
-        const T = @json($t);
+        const T = @json($scriptStrings);
         const csrfToken = document.querySelector("meta[name=csrf-token]").content;
 
         function show(section, message, kind) {

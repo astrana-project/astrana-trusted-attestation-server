@@ -129,4 +129,28 @@ final class MemberPageTest extends TestCase
 
         self::assertStringContainsString('2030-06-01T12:00:00.25Z', $this->page());
     }
+
+    #[Test]
+    public function an_expired_relationship_names_the_organisation_escaped(): void
+    {
+        // The organisation's name is its own text, so it is escaped wherever it lands: as HTML in the
+        // expired message, and for the inline script in the strings the confirmation dialogs read.
+        $hostile = 'Acme </script><b>&"\'';
+        config(['trusted_attestation.manifest.name' => ['en' => $hostile]]);
+        $this->store->all = [$this->relationship('employee', null, '2020-01-01 00:00:00')];
+
+        $page = $this->page();
+
+        self::assertStringContainsString('Only Acme &lt;/script&gt;&lt;b&gt;&amp;&quot;&#039; can extend it.', $page);
+        self::assertStringNotContainsString($hostile, $page);
+        self::assertStringNotContainsString('<b>', $page);
+
+        $script = substr($page, (int) strpos($page, 'const T = '));
+        $script = substr($script, 0, (int) strpos($script, 'function show('));
+        self::assertStringContainsString('Only Acme ', $script);
+        self::assertStringNotContainsString('{org}', $script);
+        self::assertStringNotContainsString('</', $script);
+        self::assertStringNotContainsString('&', $script);
+        self::assertStringNotContainsString("'", $script);
+    }
 }

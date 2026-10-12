@@ -74,6 +74,11 @@ final class TemplateRendering {
         model.put("returnTo", LanguageSwitcher.returnTo(request));
         model.put("_csrf", new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", CSRF_TOKEN));
         model.putAll(overrides);
+        // Built from the strings and the name in play the way the controller builds it, so a test that
+        // overrides the name sees it reach the script too.
+        @SuppressWarnings("unchecked")
+        Map<String, String> strings = (Map<String, String>) model.get("t");
+        model.putIfAbsent("scriptStrings", MeController.scriptStrings(strings, (String) model.get("orgName")));
 
         WebContext context = new WebContext(
                 application.buildExchange(request, new MockHttpServletResponse()),

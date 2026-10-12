@@ -94,7 +94,7 @@
         <p class="form-text mt-2 mb-0" th:if="${r.status == 'revoked'}"
            th:text="${#strings.replace(t['revoked_help'], '{org}', orgName)}"></p>
         <p class="form-text mt-2 mb-0" th:if="${r.status == 'expired'}"
-           th:text="${t['expired_help']}"></p>
+           th:text="${#strings.replace(t['expired_help'], '{org}', orgName)}"></p>
 
         <!-- The same string the API serialises for expires_at, see WireTimestamps. -->
         <p class="form-text mt-1 mb-0" th:if="${!#strings.isEmpty(r.expiresAt)}">
@@ -168,7 +168,8 @@
     // the organisation granted, and wiring handlers per card would mean the page's behaviour depended on
     // how many there happened to be.
     (function () {
-        const T = /*[[${t}]]*/ {};
+        // Inlined as it is: the controller has already written it as an escaped literal for this script.
+        const T = /*[(${scriptStrings})]*/ {};
 
         function show(section, message, kind) {
             const output = section.querySelector("[data-message]");

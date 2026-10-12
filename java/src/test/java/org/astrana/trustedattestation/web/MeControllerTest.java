@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -199,6 +200,28 @@ class MeControllerTest {
         assertThat(model.getAttribute("htmlLang")).isEqualTo("fr");
         assertThat(model.getAttribute("orgName")).isEqualTo("Banque Acme");
         assertThat(model.getAttribute("t")).isEqualTo(Map.of("sign_out", "Se déconnecter"));
+    }
+
+    @Test
+    void theStringsHandedToTheScriptNameTheOrganisationInTheMembersLanguage() {
+        // The confirmation dialogs and the not-granted error are shown by the page's script, so the name is
+        // put into the {org} marker on the server, in the member's language, before the script sees it.
+        when(resolver.resolve(null)).thenReturn(Optional.empty());
+        when(strings.resolve("fr")).thenReturn("fr");
+        when(strings.all("fr"))
+                .thenReturn(Map.of(
+                        "revoke_confirm", "Seule l'organisation {org} peut la rétablir.",
+                        "error_not_granted", "{org} ne vous a pas accordé cette relation.",
+                        "sign_out", "Se déconnecter"));
+
+        Model model = new ExtendedModelMap();
+        controller.me(null, Locale.FRENCH, request(), model);
+
+        assertThat(JsonParserFactory.getJsonParser().parseMap((String) model.getAttribute("scriptStrings")))
+                .isEqualTo(Map.of(
+                        "revoke_confirm", "Seule l'organisation Banque Acme peut la rétablir.",
+                        "error_not_granted", "Banque Acme ne vous a pas accordé cette relation.",
+                        "sign_out", "Se déconnecter"));
     }
 
     @Test

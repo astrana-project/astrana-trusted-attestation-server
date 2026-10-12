@@ -1,10 +1,14 @@
 package org.astrana.trustedattestation.web;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.astrana.trustedattestation.contract.Attribution;
 import org.astrana.trustedattestation.contract.RelationshipTypeCatalog;
@@ -36,6 +40,8 @@ import org.springframework.web.bind.annotation.GetMapping;
  */
 @Controller
 public class MeController {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final MemberIdentityResolver resolver;
     private final RelationshipService relationships;
@@ -83,7 +89,7 @@ public class MeController {
      * Picks a locale-keyed manifest value, falling back the way decision record 34 in docs/adr says a consumer
      * should: the requested locale, then its language, then the manifest's own declared default.
      */
-    private static String localized(java.util.Map<String, String> values, String locale, String defaultLocale) {
+    private static String localized(Map<String, String> values, String locale, String defaultLocale) {
         if (values == null) {
             return "";
         }
@@ -96,6 +102,33 @@ public class MeController {
         }
 
         return values.getOrDefault(defaultLocale, "");
+    }
+
+    /**
+     * Every string with the organisation's name in each {org} marker, as a JavaScript object literal for
+     * the page's script. The script shows the confirmation dialogs and the not-granted error, and has no
+     * name of its own to put there.
+     *
+     * <p>The characters that matter to HTML are escaped as JSON unicode escapes, as the other two
+     * implementations escape them, so the name cannot close or confuse the script element it lands in.
+     * Thymeleaf's own JavaScript inlining leaves angle brackets as they are. None of these characters is
+     * JSON syntax, so each one replaced sits inside a string.
+     */
+    static String scriptStrings(Map<String, String> strings, String orgName) {
+        Map<String, String> named = new LinkedHashMap<>();
+        strings.forEach((key, value) -> named.put(key, value.replace("{org}", orgName)));
+
+        String json;
+        try {
+            json = JSON.writeValueAsString(named);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("A map of strings could not be written as JSON", e);
+        }
+
+        return json.replace("<", "\\u003C")
+                .replace(">", "\\u003E")
+                .replace("&", "\\u0026")
+                .replace("'", "\\u0027");
     }
 
     /** The support URL when set, otherwise the website when set, otherwise null. */
@@ -115,7 +148,8 @@ public class MeController {
         String tag = locale == null ? localization.defaultLocale() : locale.toLanguageTag();
         String rendered = strings.resolve(tag);
 
-        model.addAttribute("t", strings.all(tag));
+        Map<String, String> localizedStrings = strings.all(tag);
+        model.addAttribute("t", localizedStrings);
         // See LandingController: the page's advertised language and direction follow the locale it is
         // rendered in, not the raw Accept-Language of the request.
         model.addAttribute("htmlLang", rendered);
@@ -124,7 +158,9 @@ public class MeController {
         // The organisation's own name and logo, so the member can see whose page this is. Both come from
         // the manifest, the same content the organisation already maintains for discovery, rather than
         // from a separate branding setting.
-        model.addAttribute("orgName", localized(manifest.name(), tag, manifest.defaultLocale()));
+        String orgName = localized(manifest.name(), tag, manifest.defaultLocale());
+        model.addAttribute("orgName", orgName);
+        model.addAttribute("scriptStrings", scriptStrings(localizedStrings, orgName));
         model.addAttribute("orgLogo", manifest.logoData());
         model.addAttribute("orgLogoDark", manifest.logoDataDark());
 
