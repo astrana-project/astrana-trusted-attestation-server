@@ -32,6 +32,8 @@ public class MeModelTests
 
     private static readonly byte[] Key = Enumerable.Range(1, PublicKey.Length).Select(i => (byte)i).ToArray();
 
+    private static readonly RunningRelease Release = new("1.2.3");
+
     private readonly FakeRelationshipStore _store = new();
 
     private static ManifestDocument Manifest(string name = "Acme Inc") => new()
@@ -58,7 +60,8 @@ public class MeModelTests
             new FixedTimeProvider(Now),
             UiStrings.Load(),
             manifest ?? Manifest(),
-            Attribution.Load());
+            Attribution.Load(),
+            Release);
 
         model.PageContext = new PageContext { HttpContext = new DefaultHttpContext { User = user } };
 
@@ -277,5 +280,14 @@ public class MeModelTests
         Assert.Null(_store.ListedSubject);
         Assert.Equal(string.Empty, model.MemberName);
         Assert.Equal("Acme Inc", model.OrgName);
+    }
+
+    [Fact]
+    public void The_page_carries_the_running_release_for_its_footer()
+    {
+        // The self-service page is the one page that shows the running version (decision record 47 in docs/adr).
+        var model = Model(SignedIn());
+
+        Assert.Same(Release, model.Release);
     }
 }

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.7] - 2026-10-13
+
+### Fixed
+
+- The self-service page now shows the running version in its footer, linked to the Astrana releases page, so that the
+  people who operate and support the server can confirm which version is running. No other page shows it.
+
 ## [1.0.6] - 2026-10-13
 
 ### Fixed

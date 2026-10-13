@@ -20,6 +20,7 @@ import org.astrana.trustedattestation.manifest.ManifestDocument;
 import org.astrana.trustedattestation.security.MemberIdentity;
 import org.astrana.trustedattestation.security.MemberIdentityResolver;
 import org.astrana.trustedattestation.service.LocalizationSettings;
+import org.astrana.trustedattestation.service.RunningRelease;
 import org.astrana.trustedattestation.web.MeController.RelationshipView;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -85,6 +86,8 @@ class MeControllerTest {
 
     private final Attribution attribution = new Attribution();
 
+    private final RunningRelease release = new RunningRelease("1.2.3");
+
     private MeController controller;
 
     @BeforeEach
@@ -101,7 +104,8 @@ class MeControllerTest {
                 LOCALIZATION,
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 manifest,
-                attribution);
+                attribution,
+                release);
     }
 
     private static MockHttpServletRequest request() {
@@ -140,6 +144,8 @@ class MeControllerTest {
         // target and the org name renders as plain text.
         assertThat(model.getAttribute("contactUrl")).isNull();
         assertThat(model.getAttribute("attribution")).isSameAs(attribution);
+        // The running version, which only this page shows (decision record 47 in docs/adr).
+        assertThat(model.getAttribute("release")).isSameAs(release);
         assertThat(model.getAttribute("t")).isEqualTo(Map.of("title", "Your relationships"));
         verifyNoInteractions(relationships);
     }

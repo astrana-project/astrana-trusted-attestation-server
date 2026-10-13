@@ -4,8 +4,11 @@ import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.astrana.trustedattestation.service.LocalizationSettings;
+import org.astrana.trustedattestation.service.RunningRelease;
 import org.astrana.trustedattestation.service.UiStrings;
 import org.astrana.trustedattestation.web.MemberLocaleResolver;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.LocaleResolver;
@@ -18,6 +21,16 @@ public class TrustedAttestationConfig implements WebMvcConfigurer {
     @Bean
     public Clock clock() {
         return Clock.systemUTC();
+    }
+
+    /**
+     * The running release, from the version the build records (see {@link RunningRelease}). Asked for as optional,
+     * so that a server started without the Maven build stops with a message that says so, rather than with Spring's
+     * report of a missing bean.
+     */
+    @Bean
+    public RunningRelease runningRelease(ObjectProvider<BuildProperties> build) {
+        return RunningRelease.of(build.getIfAvailable());
     }
 
     /**

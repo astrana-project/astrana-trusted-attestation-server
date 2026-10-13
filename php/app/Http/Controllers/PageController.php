@@ -14,6 +14,7 @@ use App\Services\MemberIdentityResolver;
 use App\Services\RelationshipService;
 use App\Services\UiStrings;
 use App\Support\PublicKeys;
+use App\Support\RunningRelease;
 use App\Support\TextDirection;
 use App\Support\Timestamps;
 use Illuminate\Http\JsonResponse;
@@ -248,7 +249,9 @@ final class PageController extends Controller
             // The shipped spelling, not the posted one, as the other two implementations store it. One
             // year, HttpOnly, Secure, SameSite=Lax, on the whole site. Not encrypted (see
             // bootstrap/app.php), because the bare tag is what every implementation reads.
-            $response->withCookie(cookie(self::LOCALE_COOKIE, $offered, 60 * 24 * 365, '/', null, true, true, false, 'lax'));
+            $response->withCookie(
+                cookie(self::LOCALE_COOKIE, $offered, 60 * 24 * 365, '/', null, true, true, false, 'lax')
+            );
         }
 
         return $response;
@@ -267,8 +270,11 @@ final class PageController extends Controller
      * Each relationship is listed separately rather than merged into one summary, because they really
      * are separate: independent keys, independent standing, independently removable. A page that showed
      * a single combined state would be describing something the data model does not have.
+     *
+     * The running release is asked for here rather than in the constructor, so that a changelog that cannot be
+     * read affects this page alone and every public route still answers.
      */
-    public function me(Request $request): View|RedirectResponse
+    public function me(Request $request, RunningRelease $release): View|RedirectResponse
     {
         $member = $this->resolver->resolve($request);
 
@@ -317,6 +323,9 @@ final class PageController extends Controller
             'scriptStrings' => self::withOrgName($strings, $chrome['orgName']),
             'memberName' => $member->name,
             'relationships' => $relationships,
+            // The running version, for the people who operate and support the server to confirm which version is
+            // running. Only this page shows it.
+            'release' => $release,
         ]);
     }
 

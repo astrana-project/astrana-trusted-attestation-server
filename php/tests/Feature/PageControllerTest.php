@@ -17,6 +17,7 @@ use App\Services\RelationshipStore;
 use App\Services\TransactionRunner;
 use App\Services\UiStrings;
 use App\Support\PublicKeys;
+use App\Support\RunningRelease;
 use Closure;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -84,6 +85,18 @@ final class PageControllerTest extends TestCase
             $this->app->make(Attribution::class),
             $localization,
         );
+    }
+
+    /** The self-service page, handed the running release the container holds, as the router hands it. */
+    private function me(Request $request): View|RedirectResponse
+    {
+        return $this->controller()->me($request, $this->app->make(RunningRelease::class));
+    }
+
+    /** The landing page for a browser that sends this Accept-Language and nothing else. */
+    private function landingIn(string $acceptLanguage): View
+    {
+        return $this->controller()->landing($this->request(acceptLanguage: $acceptLanguage));
     }
 
     /**
@@ -158,7 +171,7 @@ final class PageControllerTest extends TestCase
     {
         config(['trusted_attestation.manifest.name' => ['en' => 'Acme Bank', 'fr' => 'Banque Acme']]);
 
-        self::assertSame('Banque Acme', $this->controller()->landing($this->request(acceptLanguage: 'fr'))->getData()['orgName']);
+        self::assertSame('Banque Acme', $this->landingIn('fr')->getData()['orgName']);
     }
 
     #[Test]
@@ -168,7 +181,7 @@ final class PageControllerTest extends TestCase
         // default_locale is where the name resolution lands rather than coming back empty.
         config(['trusted_attestation.manifest.name' => ['en' => 'Acme Bank', 'fr' => 'Banque Acme']]);
 
-        self::assertSame('Acme Bank', $this->controller()->landing($this->request(acceptLanguage: 'de'))->getData()['orgName']);
+        self::assertSame('Acme Bank', $this->landingIn('de')->getData()['orgName']);
     }
 
     #[Test]
@@ -244,9 +257,9 @@ final class PageControllerTest extends TestCase
     #[Test]
     public function a_chinese_region_in_accept_language_resolves_to_its_script(): void
     {
-        self::assertSame('zh-Hans', $this->controller()->landing($this->request(acceptLanguage: 'zh-CN'))->getData()['htmlLang']);
-        self::assertSame('zh-Hant', $this->controller()->landing($this->request(acceptLanguage: 'zh-HK'))->getData()['htmlLang']);
-        self::assertSame('zh-Hans', $this->controller()->landing($this->request(acceptLanguage: 'zh-Hans-TW'))->getData()['htmlLang']);
+        self::assertSame('zh-Hans', $this->landingIn('zh-CN')->getData()['htmlLang']);
+        self::assertSame('zh-Hant', $this->landingIn('zh-HK')->getData()['htmlLang']);
+        self::assertSame('zh-Hans', $this->landingIn('zh-Hans-TW')->getData()['htmlLang']);
     }
 
     #[Test]
@@ -262,7 +275,7 @@ final class PageControllerTest extends TestCase
     #[Test]
     public function a_regional_accept_language_still_falls_back_to_its_language(): void
     {
-        self::assertSame('fr', $this->controller()->landing($this->request(acceptLanguage: 'fr-CA'))->getData()['htmlLang']);
+        self::assertSame('fr', $this->landingIn('fr-CA')->getData()['htmlLang']);
     }
 
     // -- the locale cookie -----------------------------------------------------------------------------
@@ -271,7 +284,7 @@ final class PageControllerTest extends TestCase
     public function the_locale_cookie_wins_over_the_iam_claim_and_accept_language(): void
     {
         // A member who picked a language with the switcher has said what they want.
-        $view = $this->controller()->me($this->request(
+        $view = $this->me($this->request(
             ['sub' => 'alice', 'locale' => 'fr'],
             acceptLanguage: 'de',
             cookies: ['ata_locale' => 'es'],
@@ -293,7 +306,9 @@ final class PageControllerTest extends TestCase
     {
         // The claim outranks Accept-Language on / as it does on /me, so a member does not see the landing
         // page in one language and their own page in another.
-        $view = $this->controller()->landing($this->request(['sub' => 'alice', 'locale' => 'fr'], acceptLanguage: 'de'));
+        $view = $this->controller()->landing(
+            $this->request(['sub' => 'alice', 'locale' => 'fr'], acceptLanguage: 'de')
+        );
 
         self::assertSame('fr', $view->getData()['htmlLang']);
     }
@@ -302,7 +317,7 @@ final class PageControllerTest extends TestCase
     public function a_cookie_naming_an_unshipped_locale_is_ignored(): void
     {
         // Forged or stale: resolution falls through to the claim as if the cookie were absent.
-        $view = $this->controller()->me($this->request(
+        $view = $this->me($this->request(
             ['sub' => 'alice', 'locale' => 'fr'],
             acceptLanguage: 'de',
             cookies: ['ata_locale' => 'cy'],
@@ -356,7 +371,7 @@ final class PageControllerTest extends TestCase
     #[Test]
     public function me_redirects_an_unauthenticated_caller_to_login(): void
     {
-        $response = $this->controller()->me($this->request(null));
+        $response = $this->me($this->request(null));
 
         self::assertInstanceOf(RedirectResponse::class, $response);
         // next=/me so the member lands back where they were trying to go.
@@ -370,7 +385,7 @@ final class PageControllerTest extends TestCase
         // end, so the session is ended and the landing page shown, from which a fresh sign-in starts.
         $request = $this->request(['name' => 'Nobody']);
 
-        $response = $this->controller()->me($request);
+        $response = $this->me($request);
 
         self::assertInstanceOf(View::class, $response);
         self::assertSame('landing', $response->name());
@@ -382,7 +397,7 @@ final class PageControllerTest extends TestCase
     {
         $this->store->all = [$this->keyedRelationship('employee')];
 
-        $view = $this->controller()->me($this->request(['sub' => 'alice', 'name' => 'Alice Anderson']));
+        $view = $this->me($this->request(['sub' => 'alice', 'name' => 'Alice Anderson']));
         $data = $view->getData();
 
         self::assertInstanceOf(View::class, $view);
@@ -398,6 +413,18 @@ final class PageControllerTest extends TestCase
     }
 
     #[Test]
+    public function only_the_self_service_page_is_handed_the_running_release(): void
+    {
+        // The self-service page shows the running version in its footer and no other page does (decision record 47
+        // in docs/adr).
+        $me = $this->me($this->request(['sub' => 'alice', 'name' => 'Alice']));
+        $landing = $this->controller()->landing($this->request());
+
+        self::assertSame($this->app->make(RunningRelease::class), $me->getData()['release']);
+        self::assertArrayNotHasKey('release', $landing->getData());
+    }
+
+    #[Test]
     public function me_shows_the_expiry_as_the_api_returns_it(): void
     {
         // The page and the API write the same string for the same row, in the one format all three
@@ -410,7 +437,7 @@ final class PageControllerTest extends TestCase
         $whole->setRawAttributes(['expires_at' => '2030-06-01 12:00:00'] + $whole->getAttributes());
         $this->store->all = [$fractional, $whole];
 
-        $relationships = $this->controller()->me($this->request(['sub' => 'alice']))->getData()['relationships'];
+        $relationships = $this->me($this->request(['sub' => 'alice']))->getData()['relationships'];
 
         self::assertSame('2030-06-01T12:00:00.25Z', $relationships[0]['expiresAt']);
         self::assertSame('2030-06-01T12:00:00Z', $relationships[1]['expiresAt']);
@@ -425,7 +452,7 @@ final class PageControllerTest extends TestCase
         config(['trusted_attestation.manifest.supported_locales' => ['en', 'fr']]);
         $this->store->all = [];
 
-        $data = $this->controller()->me($this->request(['sub' => 'alice'], acceptLanguage: 'fr'))->getData();
+        $data = $this->me($this->request(['sub' => 'alice'], acceptLanguage: 'fr'))->getData();
         $french = $this->app->make(UiStrings::class)->all('fr');
 
         foreach (['expired_help', 'revoke_confirm', 'remove_confirm', 'error_not_granted'] as $key) {
@@ -440,7 +467,7 @@ final class PageControllerTest extends TestCase
         // An empty list is an ordinary state, not an error: the page still renders, it is not a redirect.
         $this->store->all = [];
 
-        $view = $this->controller()->me($this->request(['sub' => 'dave']));
+        $view = $this->me($this->request(['sub' => 'dave']));
 
         self::assertInstanceOf(View::class, $view);
         self::assertSame([], $view->getData()['relationships']);
@@ -451,7 +478,7 @@ final class PageControllerTest extends TestCase
     {
         // The organisation knows which language it holds this member's record in, so its claim wins over
         // whatever the browser happens to advertise.
-        $view = $this->controller()->me($this->request(['sub' => 'alice', 'locale' => 'fr'], acceptLanguage: 'de'));
+        $view = $this->me($this->request(['sub' => 'alice', 'locale' => 'fr'], acceptLanguage: 'de'));
 
         self::assertSame('fr', $view->getData()['htmlLang']);
     }
@@ -459,7 +486,7 @@ final class PageControllerTest extends TestCase
     #[Test]
     public function me_falls_back_to_accept_language_when_no_locale_claim_is_present(): void
     {
-        $view = $this->controller()->me($this->request(['sub' => 'alice'], acceptLanguage: 'de'));
+        $view = $this->me($this->request(['sub' => 'alice'], acceptLanguage: 'de'));
 
         self::assertSame('de', $view->getData()['htmlLang']);
     }
@@ -469,7 +496,7 @@ final class PageControllerTest extends TestCase
     {
         // The claim is constrained to the offered set exactly as the cookie is, so an IdP that holds the
         // record in a language this instance has no strings for does not pre-empt the browser's choice.
-        $view = $this->controller()->me($this->request(['sub' => 'alice', 'locale' => 'cy'], acceptLanguage: 'de'));
+        $view = $this->me($this->request(['sub' => 'alice', 'locale' => 'cy'], acceptLanguage: 'de'));
 
         self::assertSame('de', $view->getData()['htmlLang']);
     }
@@ -477,7 +504,7 @@ final class PageControllerTest extends TestCase
     #[Test]
     public function me_falls_a_regional_claim_back_to_its_language(): void
     {
-        $view = $this->controller()->me($this->request(['sub' => 'alice', 'locale' => 'fr-CA'], acceptLanguage: 'de'));
+        $view = $this->me($this->request(['sub' => 'alice', 'locale' => 'fr-CA'], acceptLanguage: 'de'));
 
         self::assertSame('fr', $view->getData()['htmlLang']);
     }

@@ -61,6 +61,11 @@ from engines import Engine, NAMES, run_sql  # noqa: E402
 UI_STRINGS = pathlib.Path(__file__).resolve().parents[2] / "ui" / "ui-strings.json"
 _ui_strings: dict | None = None
 
+# Where the version in the self-service page's footer links to, the same fixed address in all three.
+RELEASES_URL = "https://www.astrana.org/releases"
+# A version as the footer writes it, v followed by the full version.
+RELEASE_VERSION = re.compile(r"v\d+\.\d+\.\d+")
+
 
 def _ui_string(locale: str, key: str) -> str | None:
     """One UI string, English-backfilled the way the pages backfill it. None when the file is unreadable,
@@ -139,6 +144,14 @@ def _start_tags(body: bytes, name: str) -> list[dict]:
     finder = _TagFinder(name)
     finder.feed(body.decode("utf-8", errors="replace"))
     return finder.found
+
+
+def _release_links(body: bytes) -> list[str]:
+    """The text of every link in the page's footer that points at the Astrana releases page, where the
+    self-service page shows the running version (decision record 47)."""
+    footer = re.search(r"<footer\b.*?</footer>", body.decode("utf-8", "replace"), re.S)
+    anchors = re.findall(r'<a\b[^>]*\bhref="([^"]*)"[^>]*>(.*?)</a>', footer.group(0) if footer else "", re.S)
+    return [html.unescape(text).strip() for href, text in anchors if html.unescape(href) == RELEASES_URL]
 
 
 def _header_named(headers: dict, name: str) -> str | None:
@@ -1177,8 +1190,10 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # region (Taiwan, Hong Kong and Macao traditional, anything else simplified), a script subtag wins over
     # the region, and a bare "zh" is simplified. One rule in all three, pinned in decision record 34.
     results.check("Chinese for Taiwan is the traditional script (zh-TW -> zh-Hant)", landing_lang("zh-TW"), "zh-Hant")
-    results.check("Chinese for Hong Kong is the traditional script (zh-HK -> zh-Hant)", landing_lang("zh-HK"), "zh-Hant")
-    results.check("Chinese for the mainland is the simplified script (zh-CN -> zh-Hans)", landing_lang("zh-CN"), "zh-Hans")
+    results.check("Chinese for Hong Kong is the traditional script (zh-HK -> zh-Hant)",
+                  landing_lang("zh-HK"), "zh-Hant")
+    results.check("Chinese for the mainland is the simplified script (zh-CN -> zh-Hans)",
+                  landing_lang("zh-CN"), "zh-Hans")
     results.check("bare Chinese is the simplified script (zh -> zh-Hans)", landing_lang("zh"), "zh-Hans")
     results.check("a script subtag wins over the region (zh-Hant-SG -> zh-Hant)", landing_lang("zh-Hant-SG"), "zh-Hant")
     results.check("...and in the other direction (zh-Hans-TW -> zh-Hans)", landing_lang("zh-Hans-TW"), "zh-Hans")
@@ -1440,6 +1455,28 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # so its absence is named here rather than left to read as several unrelated failures.
     results.check_that("the signed-in page carries the anti-forgery token its script sends "
                        '(<meta name="csrf-token">)', bool(csrf_token(me_html)), "no csrf-token meta on /me")
+
+    # The running version, for the people who operate and support the server to confirm which version is
+    # running, is on the self-service page alone (decision record 47). An exact version anywhere a stranger can read it tells them which servers run a
+    # release with a known vulnerability, so no public page, document or response header states it.
+    release_links = _release_links(me_html)
+    results.check(f"the self-service page footer links the running version to {RELEASES_URL}",
+                  len(release_links), 1)
+    version = release_links[0] if release_links else ""
+    results.check_that("...written v and the full version, with nothing else",
+                       bool(RELEASE_VERSION.fullmatch(version)), f"the link reads {version!r}")
+    for description, path in (("the landing page", "/"), ("the signed-out page", "/signed-out"),
+                              ("the licence page", "/license"),
+                              ("the manifest", "/.well-known/ata-manifest.json"),
+                              ("a path nothing serves", "/no-such-page")):
+        _, public_body, public_headers = anonymous.request("GET", f"{base_url}{path}")
+        exposed = public_body + json.dumps(public_headers).encode()
+        # The bare version as well as the v form, which contains it, so that 1.0.1 on its own is caught too.
+        bare = version[1:].encode() if RELEASE_VERSION.fullmatch(version) else b""
+        states_version = bool(bare) and re.search(rb"(?<![\d.])" + re.escape(bare) + rb"(?![\d.])", exposed)
+        results.check_that(f"{description} does not show the running version",
+                           RELEASES_URL.encode() not in exposed and not states_version,
+                           f"{path} carries the releases link or {version[1:]!r}")
 
     # Also the check that finds a mismatch between the identifier the organisation granted against and
     # the one the session presents. If an implementation keys members by username or email rather than
@@ -1954,7 +1991,8 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
 
     # The body is read as JSON whatever the Content-Type header says, so a form-encoded body is a
     # malformed body, and a JSON body under a form Content-Type is read all the same.
-    status, put_body, _ = alice.request("PUT", key_url("client"), urllib.parse.urlencode({"public_key": fresh_key}).encode(),
+    status, put_body, _ = alice.request("PUT", key_url("client"),
+                                        urllib.parse.urlencode({"public_key": fresh_key}).encode(),
                                         {"Content-Type": "application/x-www-form-urlencoded"})
     results.check("PUT on a relationship key with a form-encoded body is 400: the body is JSON or nothing", status, 400)
     status, payload = attest(client_key)

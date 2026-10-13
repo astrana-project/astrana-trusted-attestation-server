@@ -9,9 +9,10 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f
 WORKDIR /src
 
 # The contract, schema and interface inputs are embedded or copied from ../../../shared at build time,
-# so they must be present before the build. The project imports the notices target from dotnet/build.
+# so they must be present before the build. The project imports the notices target from dotnet/build, and takes its
+# version from the top heading of dotnet/CHANGELOG.md.
 COPY shared/ shared/
-COPY dotnet/global.json dotnet/
+COPY dotnet/global.json dotnet/CHANGELOG.md dotnet/
 COPY dotnet/build/ dotnet/build/
 COPY dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedAttestation.Server.csproj dotnet/src/Astrana.TrustedAttestation.Server/
 

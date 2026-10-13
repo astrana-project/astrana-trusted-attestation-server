@@ -19,6 +19,7 @@ import org.astrana.trustedattestation.security.MemberIdentityResolver;
 import org.astrana.trustedattestation.security.PublicKeys;
 import org.astrana.trustedattestation.service.LocalizationSettings;
 import org.astrana.trustedattestation.service.RelationshipService;
+import org.astrana.trustedattestation.service.RunningRelease;
 import org.astrana.trustedattestation.service.UiStrings;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -52,6 +53,7 @@ public class MeController {
 
     private final ManifestDocument manifest;
     private final Attribution attribution;
+    private final RunningRelease release;
 
     public MeController(
             MemberIdentityResolver resolver,
@@ -61,7 +63,8 @@ public class MeController {
             LocalizationSettings localization,
             Clock clock,
             ManifestDocument manifest,
-            Attribution attribution) {
+            Attribution attribution,
+            RunningRelease release) {
         this.resolver = resolver;
         this.relationships = relationships;
         this.catalog = catalog;
@@ -70,6 +73,7 @@ public class MeController {
         this.clock = clock;
         this.manifest = manifest;
         this.attribution = attribution;
+        this.release = release;
     }
 
     /**
@@ -173,6 +177,9 @@ public class MeController {
 
         // The software's own attribution, which the server has no setting to remove.
         model.addAttribute("attribution", attribution);
+        // The running version, for the people who operate and support the server to confirm which version is
+        // running. Only this page shows it.
+        model.addAttribute("release", release);
 
         // The language switcher: which locales it offers, and where its POST should bring the member back to.
         model.addAttribute("localization", localization);

@@ -19,6 +19,7 @@ use App\Services\RelationshipStore;
 use App\Services\SchemaInitializer;
 use App\Services\TransactionRunner;
 use App\Services\UiStrings;
+use App\Support\RunningRelease;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -57,6 +58,9 @@ final class TrustedAttestationServiceProvider extends ServiceProvider
         // The fixed footer. Not in configuration at all: decision record 33 in docs/adr requires it on every
         // deployment and puts it beyond the organisation's reach, so nothing here could remove it.
         $this->app->singleton(Attribution::class, fn (): Attribution => new Attribution);
+
+        // The running version, which the self-service page shows in its footer (decision record 47 in docs/adr).
+        $this->app->singleton(RunningRelease::class, fn (): RunningRelease => new RunningRelease);
 
         // The write path: its decisions live in RelationshipService, over a store and a transaction runner
         // that these implementations satisfy at run time and hand-written fakes satisfy under test.
