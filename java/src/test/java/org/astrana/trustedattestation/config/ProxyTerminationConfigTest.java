@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.mock.web.MockFilterChain;
@@ -221,7 +224,55 @@ class ProxyTerminationConfigTest {
                         name.toLowerCase(Locale.ROOT).startsWith("x-forwarded") || name.equalsIgnoreCase("Forwarded"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"*/*", "*", "text/*", "application/*+json", "*/*; q=0.5"})
+    void aRequestWhoseContentTypeIsAWildcardIsServedAsOneWithNoContentType(String contentType) throws Exception {
+        // Spring cannot hold a wildcard Content-Type once a character encoding is set, which Spring Boot
+        // does to every request ahead of this filter, and its filter refused such a request with HTTP 400.
+        // The other two implementations read the body whatever the Content-Type says.
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/attest");
+        request.addHeader("X-Forwarded-Proto", "https");
+        request.addHeader("Content-Type", contentType);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        new ProxyTerminationConfig.XForwardedHeaderFilter().doFilter(utf8(request), response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        HttpServletRequest seen = (HttpServletRequest) chain.getRequest();
+        assertThat(seen.getContentType()).isNull();
+        assertThat(seen.getHeader("Content-Type")).isNull();
+        assertThat(Collections.list(seen.getHeaders("Content-Type"))).isEmpty();
+        assertThat(Collections.list(seen.getHeaderNames())).noneMatch("Content-Type"::equalsIgnoreCase);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"application/json", "text/plain; charset=utf-8", "application/x-www-form-urlencoded"})
+    void aRequestWhoseContentTypeNamesOneMediaTypeKeepsIt(String contentType) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/v1/attest");
+        request.addHeader("Content-Type", contentType);
+
+        HttpServletRequest seen = forwardedThroughTheFilter(request);
+
+        assertThat(seen.getHeader("Content-Type")).isEqualTo(contentType);
+        assertThat(seen.getContentType()).isEqualTo(contentType);
+    }
+
     // -- Helpers ----------------------------------------------------------------------------------------
+
+    /**
+     * The request with its character encoding set to UTF-8 as Spring Boot's encoding filter sets it on
+     * Tomcat's request, which leaves the Content-Type header as it arrived. The mock request would write
+     * the charset into the header instead.
+     */
+    private static HttpServletRequest utf8(MockHttpServletRequest request) {
+        return new HttpServletRequestWrapper(request) {
+            @Override
+            public String getCharacterEncoding() {
+                return "UTF-8";
+            }
+        };
+    }
 
     /** The request the rest of the chain sees once the forwarded filter has run. */
     private static HttpServletRequest forwardedThroughTheFilter(MockHttpServletRequest request)

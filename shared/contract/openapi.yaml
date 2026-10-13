@@ -7,7 +7,12 @@ info:
     of answer can come from any operation and are not listed under each one. One is HTTP 500 - Internal Server Error.
     The other is the answer to a method the path does not take, which is whatever the framework gives by default, often
     HTTP 405 - Method Not Allowed (see decision record 37). Each is a status code only, with no body and no Content-Type
-    (see decision record 26).
+    (see decision record 26). A request body is read as JSON text (RFC 8259) whatever its Content-Type says, and is
+    malformed when it is not valid UTF-8, starts with a byte order mark or has anything after its one JSON value. It is
+    also malformed when, anywhere in it, arrays and objects are nested more than 64 deep, counting the outermost, a
+    number has more than 1,000 digits, counting those of its fraction and exponent, or a string or a name contains a \u
+    escape of a surrogate that is not half of a pair (see decision record 48). A malformed body carries no key. When a
+    name appears more than once in an object, its last value counts.
 servers:
   - url: https://{ata-host}/api/v1
     variables:
@@ -89,9 +94,9 @@ paths:
           description: >
             Invalid key format or malformed body. Covers a public_key that is not blank and does not parse to a
             canonical 32-byte key, the all-zero key, a public_key containing any whitespace character other than spaces,
-            tabs, carriage returns and line feeds, an absent, null or non-string public_key, and a body that is not
-            JSON. Status code only, with no body and no Content-Type. A public_key that is empty or contains only
-            spaces, tabs, carriage returns and line feeds is NOT a 400, because it clears the key.
+            tabs, carriage returns and line feeds, an absent, null or non-string public_key, and a malformed body (see
+            the description at the top). Status code only, with no body and no Content-Type. A public_key that is empty
+            or contains only spaces, tabs, carriage returns and line feeds is NOT a 400, because it clears the key.
         "401":
           description: Not authenticated. Status code only, with no body and no Content-Type.
         "404":
@@ -109,9 +114,9 @@ paths:
             someone who saw a key during a connection could register it against their own relationship.
         "413":
           description: >
-            Content Too Large. The request body is over 64 kilobytes (65,536 bytes), and is refused before it is read.
-            Status code only, with no body and no Content-Type. A request that is also not authenticated gets 401, not
-            413.
+            Content Too Large. The request body is over 64 kilobytes (65,536 bytes), and is refused before any key in it
+            is read. Status code only, with no body and no Content-Type. A request that is also not authenticated gets
+            401, not 413.
         "421":
           $ref: "#/components/responses/MisdirectedRequest"
     delete:
@@ -205,19 +210,19 @@ paths:
         "200":
           description: >
             Always 200 for a request body within the 64 kilobyte limit and over TLS, whatever the key, including a
-            malformed one. valid means the key is on record at all. Keys never registered, and malformed keys, all get a
-            flat { "valid": false }, with no reason given, which protects against key guessing (see decision record 4).
-            But a key that IS on record returns its real relationship_type, relationship_subtype and status, including
-            "revoked" or "expired", because anyone holding a real key must have been given it by the member, so they are
-            not probing anonymously.
+            malformed one. valid means the key is on record at all. Keys never registered, malformed keys and malformed
+            bodies (see the description at the top) all get a flat { "valid": false }, with no reason given, which
+            protects against key guessing (see decision record 4). But a key that IS on record returns its real
+            relationship_type, relationship_subtype and status, including "revoked" or "expired", because anyone holding
+            a real key must have been given it by the member, so they are not probing anonymously.
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttestResponse"
         "413":
           description: >
-            Content Too Large. The request body is over 64 kilobytes (65,536 bytes), and is refused before it is read,
-            so no key is looked up. Status code only, with no body and no Content-Type.
+            Content Too Large. The request body is over 64 kilobytes (65,536 bytes), and is refused before any key in it
+            is read, so no key is looked up. Status code only, with no body and no Content-Type.
         "421":
           $ref: "#/components/responses/MisdirectedRequest"
 

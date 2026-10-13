@@ -69,6 +69,22 @@ final class ManifestBuildTest extends TestCase
     }
 
     #[Test]
+    public function the_served_manifest_writes_addresses_and_names_as_the_other_implementations_write_them(): void
+    {
+        // Slashes and letters outside ASCII as they are, not \/ and \u escapes, byte for byte what the .NET
+        // and Java implementations send.
+        config([
+            'trusted_attestation.manifest.name' => ['en' => 'Société Générale / Paris'],
+            'trusted_attestation.manifest.support_url' => ['en' => 'https://acmebank.example/support'],
+        ]);
+
+        $content = (string) $this->get('/.well-known/ata-manifest.json')->assertOk()->getContent();
+
+        self::assertStringContainsString('"Société Générale / Paris"', $content);
+        self::assertStringContainsString('"https://acmebank.example/support"', $content);
+    }
+
+    #[Test]
     public function an_unconfigured_support_url_is_omitted_rather_than_empty(): void
     {
         // The same empty-to-absent rule the other optional fields follow: a support_url that was never

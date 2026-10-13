@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.6] - 2026-10-13
+
+### Fixed
+
+- Behind a reverse proxy, a request whose Content-Type has a wildcard in it, such as `*/*`, is now answered like any
+  other request, as on the .NET and PHP implementations, instead of being refused with HTTP 400 - Bad Request.
+- A request body nested more than 64 levels deep, or that contains an escaped half of a two-part character with the
+  other half missing, is now read as containing no key, as the contract sets out, so the three implementations give it
+  the same answer.
+
 ## [1.0.5] - 2026-10-13
 
 ### Fixed

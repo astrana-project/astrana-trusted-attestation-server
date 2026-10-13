@@ -72,17 +72,111 @@ public class PublicKeyBindingTests
     [Fact]
     public async Task Invalid_utf8_inside_the_string_is_malformed_not_a_server_fault()
     {
-        // The reader validates a string's bytes only when it decodes them, and reports a bad sequence
-        // with a different exception from a parse error. Either way it is a malformed body.
         byte[] body = [.. Encoding.UTF8.GetBytes("{\"public_key\":\""), 0xC3, 0x28, .. Encoding.UTF8.GetBytes("\"}")];
 
         Assert.Null(await ReadPublicKey(body));
     }
 
     [Fact]
+    public async Task A_key_holding_an_escaped_lone_surrogate_is_malformed_not_a_server_fault()
+    {
+        // The reader reports a string that does not decode to text with a different exception from a
+        // parse error. Either way it is a malformed body.
+        Assert.Null(await ReadPublicKey("""{"public_key":"\ud800"}"""));
+    }
+
+    [Fact]
     public async Task Invalid_utf8_outside_the_string_is_malformed()
     {
         byte[] body = [.. Encoding.UTF8.GetBytes("{\"public_key\":\"abc\""), 0xFF, .. Encoding.UTF8.GetBytes("}")];
+
+        Assert.Null(await ReadPublicKey(body));
+    }
+
+    private static string KeyBeside(string member) => $$"""{"public_key":"abc","n":{{member}}}""";
+
+    /// <summary>Arrays nested inside the body's object, so the body is one deeper than this.</summary>
+    private static string Arrays(int depth) => new string('[', depth) + new string(']', depth);
+
+    private static string Digits(int count) => new('9', count);
+
+    [Theory]
+    [InlineData(64)]
+    [InlineData(1000)]
+    public async Task A_body_nested_more_than_64_deep_is_malformed(int arrays)
+    {
+        Assert.Null(await ReadPublicKey(KeyBeside(Arrays(arrays))));
+    }
+
+    [Fact]
+    public async Task A_body_nested_64_deep_counting_its_own_object_is_read()
+    {
+        Assert.Equal("abc", await ReadPublicKey(KeyBeside(Arrays(63))));
+    }
+
+    public static TheoryData<string> NumbersOfMoreThan1000Digits => new()
+    {
+        Digits(1001),
+        "-" + Digits(1001),
+        Digits(1000) + "e5",   // the exponent's digits count
+        "1." + Digits(1000),   // and the fraction's
+    };
+
+    public static TheoryData<string> NumbersOf1000Digits => new()
+    {
+        Digits(1000),
+        "-" + Digits(1000),    // a sign is not a digit
+        Digits(998) + "e+2",
+        "1." + Digits(998) + "E-1",
+    };
+
+    [Theory]
+    [MemberData(nameof(NumbersOfMoreThan1000Digits))]
+    public async Task A_body_with_a_number_of_more_than_1000_digits_is_malformed(string number)
+    {
+        Assert.Null(await ReadPublicKey(KeyBeside(number)));
+    }
+
+    [Theory]
+    [MemberData(nameof(NumbersOf1000Digits))]
+    public async Task A_body_with_a_number_of_1000_digits_is_read(string number)
+    {
+        Assert.Equal("abc", await ReadPublicKey(KeyBeside(number)));
+    }
+
+    [Theory]
+    [InlineData(""" "\ud800" """)]                 // a high surrogate alone
+    [InlineData(""" "\udc00" """)]                 // a low surrogate alone
+    [InlineData(""" "\udc00\ud800" """)]           // a pair the wrong way round
+    [InlineData(""" "\ud800A" """)]           // a high surrogate before something else
+    [InlineData(""" ["x", {"y": "\ud800"}] """)]   // nested
+    [InlineData(""" {"\ud800": 1} """)]            // in a name
+    public async Task A_body_with_an_escaped_lone_surrogate_anywhere_is_malformed(string member)
+    {
+        Assert.Null(await ReadPublicKey(KeyBeside(member)));
+    }
+
+    [Fact]
+    public async Task An_escaped_lone_surrogate_under_a_name_used_twice_is_malformed()
+    {
+        Assert.Null(await ReadPublicKey("""{"n":"\ud800","n":"x","public_key":"abc"}"""));
+    }
+
+    [Fact]
+    public async Task A_body_with_an_escaped_surrogate_pair_is_read()
+    {
+        Assert.Equal("abc", await ReadPublicKey(KeyBeside(""" "\ud83d\ude00" """)));
+    }
+
+    [Theory]
+    [InlineData("{\"other\":\"", "\",\"public_key\":\"abc\"}")] // in another member's value
+    [InlineData("{\"", "\":1,\"public_key\":\"abc\"}")]          // in another member's name
+    [InlineData("{\"public_key\":\"abc\",\"other\":[\"", "\"]}")] // in a string nested in an array
+    public async Task Invalid_utf8_in_a_string_the_key_is_not_read_from_is_malformed(string before, string after)
+    {
+        // The other two implementations check the whole body is UTF-8 before they parse it, so a body
+        // that is not text holds no key, wherever the bad byte is.
+        byte[] body = [.. Encoding.UTF8.GetBytes(before), 0xFF, .. Encoding.UTF8.GetBytes(after)];
 
         Assert.Null(await ReadPublicKey(body));
     }

@@ -2,19 +2,19 @@
 
 The suites in this folder define conformance and parity for the three implementations of the Astrana Trusted Attestation
 Server. They are written in Python, which none of the implementations uses, and need only the standard library, plus
-Playwright and axe-core. They run against real identity providers, not mocks, and cannot tell which implementation they
-are talking to. [Decision record 36](../../docs/adr/0036-parity-is-defined-by-one-implementation-blind-suite.md) says
-why.
+Playwright, axe-core and Hypothesis. They run against real identity providers, not mocks, and cannot tell which
+implementation they are talking to.
+[Decision record 36](../../docs/adr/0036-parity-is-defined-by-one-implementation-blind-suite.md) says why.
 
 ## One suite in three parts
 
 The suite has three parts, the conformance, differential and accessibility suites, and each can be run on its own.
 
-| Part          | File                   | What it checks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Conformance   | `conformance/check.py` | What the contract and the decision records require of one running implementation, over HTTP, in named sections. The manifest and its allowlist, the landing page and the language switcher, sign-in, the self-service page, registering and clearing a key, revoking and removing a relationship, each with its audit entry, attestation, errors, headers, sign-out.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| Differential  | `differential.py`      | The same requests sent to all three. It compares API answers on status, content type and body. It compares pages on the language and text direction they render in, not their markup, and redirects on where they send the browser and the cookie they set. The file lists the accepted differences, on inputs the contract does not define, each with its reason. Any other difference fails. It also sends requests straight to each application, past the proxy, with `X-Forwarded-Proto` headers the proxy would never pass on. Each application must answer HTTP 421 - Misdirected Request with no body unless that header holds the single value `https`, and must serve a request that has no such header. It also checks that the applications' own answers to these requests carry no `Server` or `X-Powered-By` header. |
-| Accessibility | `accessibility.py`     | The landing page and the self-service page driven in a real browser. It checks them against the Web Content Accessibility Guidelines (WCAG) 2.1 AA rules a machine can detect, checks that every control can be reached by keyboard, and checks that the page fits a 320 pixel wide screen and 200 percent text size with no horizontal scrolling.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Part          | File                                | What it checks                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Conformance   | `conformance/check.py`              | What the contract and the decision records require of one running implementation, over HTTP, in named sections. The manifest and its allowlist, the landing page and the language switcher, sign-in, the self-service page, registering and clearing a key, revoking and removing a relationship, each with its audit entry, attestation, errors, headers, sign-out.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Differential  | `differential.py`, `fuzz_attest.py` | The same requests sent to all three. It compares API answers on status, content type and body. It compares pages on the language and text direction they render in, not their markup, and redirects on where they send the browser and the cookie they set. The file lists the accepted differences, on inputs the contract does not define, each with its reason. Any other difference fails. It also sends requests straight to each application, past the proxy, with `X-Forwarded-Proto` headers the proxy would never pass on. Each application must answer HTTP 421 - Misdirected Request with no body unless that header holds the single value `https`, and must serve a request that has no such header. It also checks that the applications' own answers to these requests carry no `Server` or `X-Powered-By` header. `fuzz_attest.py` generates hundreds of requests to the attestation endpoint, or many thousands in a long run, and sends each one to all three, as described under [Fuzzing the attestation endpoint](#fuzzing-the-attestation-endpoint). |
+| Accessibility | `accessibility.py`                  | The landing page and the self-service page driven in a real browser. It checks them against the Web Content Accessibility Guidelines (WCAG) 2.1 AA rules a machine can detect, checks that every control can be reached by keyboard, and checks that the page fits a 320 pixel wide screen and 200 percent text size with no horizontal scrolling.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 The conformance suite grants relationships directly in the database before anyone signs in, so it does not test purely
 from the outside. It signs in through the identity provider's own pages. Every check is named in plain English, and the
@@ -44,6 +44,50 @@ A suite can also be pointed at a single running instance. The conformance suite 
 also needs a command that runs SQL against that instance's database, for example
 `python shared/test/conformance/check.py --base-url https://localhost:15443 --database mssql --sql-command "<command that reads SQL on standard input>"`.
 It grants and clears its own test relationships in that database. Each file's `--help` lists its options.
+
+## Fuzzing the attestation endpoint
+
+`fuzz_attest.py` uses Hypothesis to generate requests to `POST /api/v1/attest` that a parser might mishandle. They
+include random bytes, malformed and deeply nested JSON, keys of the wrong type, base64 edge cases, duplicate names, huge
+numbers, invalid UTF-8, byte order marks, sizes either side of the 64 kilobyte limit, chunked bodies and unusual
+`Content-Type` headers. It sends each request to every implementation and checks that:
+
+- no answer is HTTP 500 - Internal Server Error
+- a body over the limit gets HTTP 413 - Content Too Large, with no body and no `Content-Type`
+- a body within the limit that is not an on-record key gets HTTP 200 - OK, as `application/json`, with exactly
+  `{"valid":false}`
+- an on-record key in a well-formed JSON object gets its relationship, whatever the `Content-Type`
+- no response header carries part of the request
+- all three give the same answer, byte for byte
+
+It does not measure how long an answer takes. A body is read as JSON whatever its `Content-Type` says, and where
+`public_key` appears twice its last value is the one read. A body is malformed, and so holds no key, when it is not JSON
+by RFC 8259 or breaks one of the limits decision record 48 sets. Those are arrays and objects nested more than 64 deep,
+counting the outermost, a number with more than 1,000 digits, and a lone surrogate escape in any string or name. An
+on-record key in a malformed body gets `{"valid":false}`. The suite plants three on-record keys, one active, one revoked
+and one expired, in each implementation's database for the run, and removes them when it finishes. It reports a
+violation with the smallest request Hypothesis could shrink it to, written as a Python expression that rebuilds the
+body.
+
+The run in `ci/run-suites.sh` is short and repeatable. It sends the same 300 requests from a fixed seed every time,
+which takes about two minutes, and when a request breaks a property it shrinks that request to the smallest that still
+does. For a long run, start the stack with `scripts/integration.sh --keep` and run the suite with `--long`. It sends
+100,000 requests from a new seed, which takes several hours, and prints the seed so that a failure can be replayed with
+`--seed`. `--examples` sets another number. A long run goes through every request rather than stopping at the first
+violation, and reports each violation with the smallest request it met.
+
+```bash
+docker compose -f shared/test/ci/docker-compose.ci.yml run --rm --no-deps suite python3 fuzz_attest.py --long \
+  --app dotnet https://localhost:15443 postgres "psql -q -v ON_ERROR_STOP=1 -h postgres -U trusted_attestation -d trusted_attestation_dotnet" \
+  --app java https://localhost:16443 postgres "psql -q -v ON_ERROR_STOP=1 -h postgres -U trusted_attestation -d trusted_attestation_java" \
+  --app php https://localhost:17443 postgres "psql -q -v ON_ERROR_STOP=1 -h postgres -U trusted_attestation -d trusted_attestation_php"
+```
+
+With `--engine atheris` instead, Atheris, the Python front end to libFuzzer, drives the generation. It runs until it
+finds a violation or reaches a limit given in libFuzzer's own form, such as `-max_total_time=3600`, and keeps the
+requests that take new paths through the suite's own checks. The repository is read-only in the suite container, so give
+`-artifact_prefix=/reports/` for libFuzzer to write the input that broke a property to `ci/reports`. The suite image
+installs Atheris on x86-64 machines only, because Atheris publishes no other build.
 
 ## The identity provider matrix
 

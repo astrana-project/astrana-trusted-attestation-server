@@ -134,6 +134,64 @@ final class ApiRequestBodyTest extends TestCase
         self::assertSame(['valid' => false], $response->json());
     }
 
+    // -- the limits the contract sets on what a body may hold ---------------------------------------
+
+    /** A body holding a valid key and, beside it, the given JSON value. */
+    private static function besideAKey(string $member): string
+    {
+        return '{"public_key":"'.base64_encode(str_repeat('k', PublicKeys::LENGTH)).'","n":'.$member.'}';
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function membersBeyondTheLimits(): iterable
+    {
+        yield 'arrays nested 65 deep, counting the body itself' => [str_repeat('[', 64).str_repeat(']', 64)];
+        yield 'a number of 1,001 digits' => [str_repeat('9', 1001)];
+        yield 'a negative number of 1,001 digits' => ['-'.str_repeat('9', 1001)];
+        yield 'a number its exponent takes over 1,000 digits' => [str_repeat('9', 1000).'e5'];
+        yield 'a number its fraction takes over 1,000 digits' => ['1.'.str_repeat('9', 1000)];
+        yield 'an escaped high surrogate alone' => ['"\ud800"'];
+        yield 'an escaped low surrogate alone' => ['"\udc00"'];
+        yield 'an escaped pair the wrong way round' => ['"\udc00\ud800"'];
+        yield 'an escaped lone surrogate in a name' => ['{"\ud800":1}'];
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function membersWithinTheLimits(): iterable
+    {
+        yield 'arrays nested 64 deep, counting the body itself' => [str_repeat('[', 63).str_repeat(']', 63)];
+        yield 'a number of 1,000 digits' => [str_repeat('9', 1000)];
+        yield 'a negative number of 1,000 digits' => ['-'.str_repeat('9', 1000)];
+        yield 'a number of 1,000 digits with an exponent' => [str_repeat('9', 998).'e+2'];
+        yield 'a number of 1,000 digits with a fraction and an exponent' => ['1.'.str_repeat('9', 998).'E-1'];
+        yield 'an escaped surrogate pair' => ['"\ud83d\ude00"'];
+        yield 'a string of 2,000 digits' => ['"'.str_repeat('9', 2000).'"'];
+        yield 'a string of digits after an escaped quote' => ['"\\"'.str_repeat('9', 2000).'"'];
+        yield 'numbers side by side' => ['['.implode(',', array_fill(0, 3, str_repeat('9', 1000))).']'];
+    }
+
+    #[Test]
+    #[DataProvider('membersBeyondTheLimits')]
+    public function a_body_holding_something_beyond_the_limits_is_malformed(string $member): void
+    {
+        $this->store->own = $this->grantedRelationship();
+        $this->store->byPublicKey = $this->grantedRelationship();
+
+        $this->putKey(self::besideAKey($member))->assertStatus(400);
+        self::assertSame(['valid' => false], $this->attest(self::besideAKey($member))->json());
+    }
+
+    #[Test]
+    #[DataProvider('membersWithinTheLimits')]
+    public function a_body_holding_nothing_beyond_the_limits_is_read(string $member): void
+    {
+        $this->store->own = $this->grantedRelationship();
+        $this->store->byPublicKey = $this->grantedRelationship();
+
+        $this->putKey(self::besideAKey($member))->assertOk();
+        self::assertTrue($this->attest(self::besideAKey($member))->json('valid'));
+    }
+
     // -- the cap --------------------------------------------------------------------------------------
 
     #[Test]
