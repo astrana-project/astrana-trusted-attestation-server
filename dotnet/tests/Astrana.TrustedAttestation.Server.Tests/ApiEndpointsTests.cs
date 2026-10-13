@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using Astrana.TrustedAttestation.Server.Configuration;
 using Astrana.TrustedAttestation.Server.Contract;
 using Astrana.TrustedAttestation.Server.Data;
@@ -59,12 +61,19 @@ public class ApiEndpointsTests
 
     private static readonly TimeProvider Clock = new FixedTimeProvider(Now);
 
-    private static DefaultHttpContext SignedIn(string subject = "alice", string name = "Alice Anderson") =>
-        new DefaultHttpContext
+    // The self-service page sends its anti-forgery token in this header with every request that changes
+    // something. Whether the token is good is the anti-forgery service's verdict, which each test fixes.
+    private static DefaultHttpContext SignedIn(string subject = "alice", string name = "Alice Anderson")
+    {
+        var context = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(
                 [new Claim("sub", subject), new Claim("name", name)], "test")),
         };
+        context.Request.Headers[ApiEndpoints.AntiforgeryHeader] = "the-page-token";
+
+        return context;
+    }
 
     // No usable subject at all: the anonymous default principal a DefaultHttpContext carries.
     private static DefaultHttpContext Anonymous() => new DefaultHttpContext();
@@ -86,6 +95,26 @@ public class ApiEndpointsTests
 
     private static MemberRelationship Granted(string type = "employee", byte[]? key = null) =>
         new() { Id = 1, IamSubjectId = "alice", RelationshipType = type, PublicKey = key };
+
+    private static FakeAntiforgery ValidToken() => new(valid: true);
+
+    /// <summary>
+    /// A key PUT whose body carries <paramref name="publicKey"/> as its public_key, or no public_key at
+    /// all when it is null, with a token the anti-forgery service accepts unless another is given.
+    /// </summary>
+    private Task<IResult> SetKey(DefaultHttpContext http, string type, string? publicKey, FakeAntiforgery? antiforgery = null)
+    {
+        var body = publicKey is null ? "{}" : JsonSerializer.Serialize(new Dictionary<string, string> { ["public_key"] = publicKey });
+        http.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+
+        return ApiEndpoints.SetKey(http, type, Resolver, antiforgery ?? ValidToken(), Service(), Clock, default);
+    }
+
+    private Task<IResult> Delete(DefaultHttpContext http, string type, FakeAntiforgery? antiforgery = null) =>
+        ApiEndpoints.DeleteRelationship(http, type, Resolver, antiforgery ?? ValidToken(), Service(), default);
+
+    private Task<IResult> SelfRevoke(DefaultHttpContext http, string type, FakeAntiforgery? antiforgery = null) =>
+        ApiEndpoints.SelfRevoke(http, type, Resolver, antiforgery ?? ValidToken(), Service(), default);
 
     // -- GetMe ---------------------------------------------------------------------------------------
 
@@ -128,15 +157,6 @@ public class ApiEndpointsTests
 
     // -- SetKey --------------------------------------------------------------------------------------
 
-    [Fact]
-    public async Task SetKey_without_a_usable_identity_is_401()
-    {
-        var request = new SetKeyRequest { PublicKey = KeyBase64 };
-
-        Assert.Equal(401, Status(await ApiEndpoints.SetKey(
-            Anonymous(), "employee", request, Resolver, Service(), Clock, default)));
-    }
-
     [Theory]
     [InlineData("not-base64!!")]
     [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")] // 32 zero bytes: refused, not stored
@@ -147,8 +167,7 @@ public class ApiEndpointsTests
         // it means "clear the key", covered below.
         _store.Own = Granted();
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = badKey }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", badKey);
 
         Assert.Equal(400, Status(result));
         Assert.False(_store.Saved);
@@ -162,8 +181,7 @@ public class ApiEndpointsTests
         // the row, so a garbled body can never wipe a member's key by accident.
         _store.Own = Granted(key: KeyBytes);
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = null }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", null);
 
         Assert.Equal(400, Status(result));
         Assert.False(_store.Saved);
@@ -179,8 +197,7 @@ public class ApiEndpointsTests
         // three implementations. Any other whitespace is a malformed key, so it must not wipe the key.
         _store.Own = Granted(key: KeyBytes);
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = badKey }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", badKey);
 
         Assert.Equal(400, Status(result));
         Assert.False(_store.Saved);
@@ -197,8 +214,7 @@ public class ApiEndpointsTests
         // key, and the clearing is recorded.
         _store.Own = Granted(key: KeyBytes);
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = emptyKey }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", emptyKey);
 
         Assert.Equal(200, Status(result));
         var body = Body<SetKeyResponse>(result);
@@ -213,8 +229,7 @@ public class ApiEndpointsTests
     {
         _store.Own = null;
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = "" }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", "");
 
         Assert.Equal(404, Status(result));
     }
@@ -233,8 +248,7 @@ public class ApiEndpointsTests
             RevokedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
         };
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = "" }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", "");
 
         Assert.Equal(200, Status(result));
         var body = Body<SetKeyResponse>(result);
@@ -248,8 +262,7 @@ public class ApiEndpointsTests
         // Not an upsert: NotGranted becomes a 404, never a create.
         _store.Own = null;
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = KeyBase64 }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", KeyBase64);
 
         Assert.Equal(404, Status(result));
     }
@@ -263,10 +276,9 @@ public class ApiEndpointsTests
         // the vocabulary altogether. Both are 404, and neither writes anything.
         _store.Own = Granted("employee", KeyBytes);
 
-        Assert.Equal(404, Status(await ApiEndpoints.SetKey(
-            SignedIn(), pathType, new SetKeyRequest { PublicKey = KeyBase64 }, Resolver, Service(), Clock, default)));
-        Assert.Equal(404, Status(await ApiEndpoints.DeleteRelationship(SignedIn(), pathType, Resolver, Service(), default)));
-        Assert.Equal(404, Status(await ApiEndpoints.SelfRevoke(SignedIn(), pathType, Resolver, ValidToken(), Service(), default)));
+        Assert.Equal(404, Status(await SetKey(SignedIn(), pathType, KeyBase64)));
+        Assert.Equal(404, Status(await Delete(SignedIn(), pathType)));
+        Assert.Equal(404, Status(await SelfRevoke(SignedIn(), pathType)));
         Assert.False(_store.Saved);
         Assert.Empty(_audit.Events);
     }
@@ -277,8 +289,7 @@ public class ApiEndpointsTests
         _store.Own = Granted();
         _store.SaveFindsTheRowGone = true;
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = KeyBase64 }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", KeyBase64);
 
         Assert.Equal(404, Status(result));
     }
@@ -289,8 +300,7 @@ public class ApiEndpointsTests
         _store.Own = Granted();
         _store.KeyHeldElsewhere = true;
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = KeyBase64 }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", KeyBase64);
 
         Assert.Equal(409, Status(result));
     }
@@ -300,8 +310,7 @@ public class ApiEndpointsTests
     {
         _store.Own = Granted();
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = KeyBase64 }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", KeyBase64);
 
         Assert.Equal(200, Status(result));
         var body = Body<SetKeyResponse>(result);
@@ -324,8 +333,7 @@ public class ApiEndpointsTests
             RevokedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
         };
 
-        var result = await ApiEndpoints.SetKey(
-            SignedIn(), "employee", new SetKeyRequest { PublicKey = KeyBase64 }, Resolver, Service(), Clock, default);
+        var result = await SetKey(SignedIn(), "employee", KeyBase64);
 
         Assert.Equal(200, Status(result));
         Assert.Equal("revoked", Body<SetKeyResponse>(result).Status);
@@ -336,8 +344,7 @@ public class ApiEndpointsTests
     [Fact]
     public async Task Delete_without_a_usable_identity_is_401()
     {
-        Assert.Equal(401, Status(await ApiEndpoints.DeleteRelationship(
-            AmbiguousIdentity(), "employee", Resolver, Service(), default)));
+        Assert.Equal(401, Status(await Delete(AmbiguousIdentity(), "employee")));
     }
 
     [Fact]
@@ -345,8 +352,7 @@ public class ApiEndpointsTests
     {
         _store.Own = Granted();
 
-        Assert.Equal(204, Status(await ApiEndpoints.DeleteRelationship(
-            SignedIn(), "employee", Resolver, Service(), default)));
+        Assert.Equal(204, Status(await Delete(SignedIn(), "employee")));
     }
 
     [Fact]
@@ -354,28 +360,17 @@ public class ApiEndpointsTests
     {
         _store.Own = null;
 
-        Assert.Equal(404, Status(await ApiEndpoints.DeleteRelationship(
-            SignedIn(), "employee", Resolver, Service(), default)));
+        Assert.Equal(404, Status(await Delete(SignedIn(), "employee")));
     }
 
     // -- SelfRevoke ----------------------------------------------------------------------------------
-
-    private static FakeAntiforgery ValidToken() => new(valid: true);
-
-    [Fact]
-    public async Task SelfRevoke_without_a_usable_identity_is_401()
-    {
-        Assert.Equal(401, Status(await ApiEndpoints.SelfRevoke(
-            Anonymous(), "employee", Resolver, ValidToken(), Service(), default)));
-    }
 
     [Fact]
     public async Task SelfRevoke_of_a_held_relationship_is_204()
     {
         _store.Own = Granted();
 
-        Assert.Equal(204, Status(await ApiEndpoints.SelfRevoke(
-            SignedIn(), "employee", Resolver, ValidToken(), Service(), default)));
+        Assert.Equal(204, Status(await SelfRevoke(SignedIn(), "employee")));
     }
 
     [Fact]
@@ -385,27 +380,90 @@ public class ApiEndpointsTests
         // revoked" -- right for the procedure, wrong as an HTTP answer.
         _store.Own = null;
 
-        Assert.Equal(404, Status(await ApiEndpoints.SelfRevoke(
-            SignedIn(), "employee", Resolver, ValidToken(), Service(), default)));
+        Assert.Equal(404, Status(await SelfRevoke(SignedIn(), "employee")));
     }
 
-    [Fact]
-    public async Task SelfRevoke_with_a_missing_or_wrong_token_is_403_with_no_body_and_revokes_nothing()
+    // -- The anti-forgery token on every request that changes something ------------------------------
+
+    public static TheoryData<string> StateChangingRequests => ["set key", "delete", "revoke"];
+
+    private Task<IResult> Change(string request, DefaultHttpContext http, FakeAntiforgery antiforgery) => request switch
     {
-        // A plain POST is not preflighted, so a form on a sibling subdomain could send one with the member's
-        // cookie. Without the token the relationship is not even looked up.
-        _store.Own = Granted();
+        "set key" => SetKey(http, "employee", KeyBase64, antiforgery),
+        "delete" => Delete(http, "employee", antiforgery),
+        _ => SelfRevoke(http, "employee", antiforgery),
+    };
+
+    [Theory]
+    [MemberData(nameof(StateChangingRequests))]
+    public async Task A_missing_or_wrong_token_is_403_with_no_body_and_changes_nothing(string request)
+    {
+        // A form on a sibling subdomain counts as the same site for the session cookie, so the cookie alone
+        // does not show the member asked for the change. Without the token the relationship is not even
+        // looked up.
+        _store.Own = Granted(key: KeyBytes);
         var antiforgery = new FakeAntiforgery(valid: false);
 
-        var response = await ExecutedResult.Of(await ApiEndpoints.SelfRevoke(
-            SignedIn(), "employee", Resolver, antiforgery, Service(), default));
+        var response = await ExecutedResult.Of(await Change(request, SignedIn(), antiforgery));
 
         Assert.True(antiforgery.Checked);
         Assert.Equal(StatusCodes.Status403Forbidden, response.StatusCode);
         Assert.Equal(0, response.Body.Length);
         Assert.Null(response.ContentType);
         Assert.Equal(0, _store.Lookups);
+        Assert.False(_store.Saved);
+        Assert.False(_store.Removed);
         Assert.Equal(0, _selfRevoke.Invocations);
+        Assert.Empty(_audit.Events);
+    }
+
+    [Theory]
+    [MemberData(nameof(StateChangingRequests))]
+    public async Task Without_the_header_it_is_403_and_the_token_is_looked_for_nowhere_else(string request)
+    {
+        // The token travels in the X-CSRF-TOKEN header only, so the answer is reached before anything reads
+        // the body, and a form body is never parsed for a token field of the framework's own.
+        var http = SignedIn();
+        http.Request.Headers.Remove(ApiEndpoints.AntiforgeryHeader);
+        var antiforgery = ValidToken();
+
+        Assert.Equal(StatusCodes.Status403Forbidden, Status(await Change(request, http, antiforgery)));
+        Assert.False(antiforgery.Checked);
+    }
+
+    [Theory]
+    [MemberData(nameof(StateChangingRequests))]
+    public async Task Without_a_session_it_is_401_whatever_the_token(string request)
+    {
+        // A caller with no session could never have held a token, so the missing session is the answer.
+        Assert.Equal(StatusCodes.Status401Unauthorized, Status(await Change(request, Anonymous(), new FakeAntiforgery(valid: false))));
+        Assert.Equal(StatusCodes.Status401Unauthorized, Status(await Change(request, Anonymous(), ValidToken())));
+    }
+
+    private static DefaultHttpContext SignedInWithAnOversizedBody()
+    {
+        var http = SignedIn();
+        http.Request.Body = new MemoryStream(new byte[PublicKeyBody.MaxBytes + 1]);
+
+        return http;
+    }
+
+    [Fact]
+    public async Task A_refused_token_is_answered_403_before_an_oversized_body_is_read()
+    {
+        var result = await ApiEndpoints.SetKey(
+            SignedInWithAnOversizedBody(), "employee", Resolver, new FakeAntiforgery(valid: false), Service(), Clock, default);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, Status(result));
+    }
+
+    [Fact]
+    public async Task With_an_accepted_token_an_oversized_body_is_refused_with_413()
+    {
+        var refusal = await Assert.ThrowsAsync<BadHttpRequestException>(() => ApiEndpoints.SetKey(
+            SignedInWithAnOversizedBody(), "employee", Resolver, ValidToken(), Service(), Clock, default));
+
+        Assert.Equal(StatusCodes.Status413PayloadTooLarge, refusal.StatusCode);
     }
 
     /// <summary>

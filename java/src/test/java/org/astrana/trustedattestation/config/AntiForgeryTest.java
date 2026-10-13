@@ -44,16 +44,19 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
  * Which requests the real security filter chain asks an anti-forgery token of, and how it refuses one
  * without it.
  *
- * <p>A browser preflights a cross-origin PUT or DELETE with a JSON body, but not a plain POST, so a member's
- * revoke and sign-out need the token and the key operations do not. A refusal is HTTP 403 with no body and
- * no Content-Type, as on the other two implementations. The endpoints behind the chain are stand-ins that
- * answer 204, because what is under test is the chain in front of them.
+ * <p>Every request a signed-in member makes that changes something needs the token: setting or clearing a
+ * key, removing a relationship, revoking one, and signing out. The API reads it from the {@code X-CSRF-TOKEN}
+ * header only. A refusal is HTTP 403 with no body and no Content-Type, as on the other two implementations.
+ * The endpoints behind the chain are stand-ins that answer 204, because what is under test is the chain in
+ * front of them.
  */
 @SpringJUnitWebConfig(AntiForgeryTest.Context.class)
 class AntiForgeryTest {
 
     private static final String REVOKE = "/api/v1/me/relationships/employee/revoke";
     private static final String KEY = "/api/v1/me/relationships/employee/key";
+    private static final String UNVERSIONED_KEY = "/api/me/relationships/employee/key";
+    private static final String ATTEST = "/api/v1/attest";
 
     private MockMvc mvc;
 
@@ -109,9 +112,60 @@ class AntiForgeryTest {
     // -- The key operations -------------------------------------------------------------------------------
 
     @Test
-    void settingAndRemovingAKeyNeedNoToken() throws Exception {
-        mvc.perform(put(KEY).with(oidcLogin())).andExpect(status().isNoContent());
-        mvc.perform(delete(KEY).with(oidcLogin())).andExpect(status().isNoContent());
+    void aSignedInKeyWriteOrRemovalWithoutTheTokenIs403WithNoBodyAndNoContentType() throws Exception {
+        refused(mvc.perform(put(KEY).with(oidcLogin())));
+        refused(mvc.perform(delete(KEY).with(oidcLogin())));
+    }
+
+    @Test
+    void aSignedInKeyWriteOrRemovalWithAWrongTokenIs403WithNoBodyAndNoContentType() throws Exception {
+        refused(mvc.perform(put(KEY).with(oidcLogin()).header("X-CSRF-TOKEN", "not-the-token")));
+        refused(mvc.perform(delete(KEY).with(oidcLogin()).header("X-CSRF-TOKEN", "not-the-token")));
+    }
+
+    @Test
+    void aSignedInKeyWriteOrRemovalCarryingTheTokenInTheXCsrfTokenHeaderIsServed() throws Exception {
+        mvc.perform(put(KEY).with(oidcLogin()).with(csrf().asHeader())).andExpect(status().isNoContent());
+        mvc.perform(delete(KEY).with(oidcLogin()).with(csrf().asHeader())).andExpect(status().isNoContent());
+    }
+
+    @Test
+    void theApiReadsTheTokenFromTheHeaderOnlyNeverFromARequestParameter() throws Exception {
+        // The contract names the header, and the other two implementations look nowhere else on the API.
+        refused(mvc.perform(put(KEY).with(oidcLogin()).with(csrf())));
+        refused(mvc.perform(delete(KEY).with(oidcLogin()).with(csrf())));
+        refused(mvc.perform(post(REVOKE).with(oidcLogin()).with(csrf())));
+    }
+
+    @Test
+    void aMethodTheKeyDoesNotTakeIsStill405WithASessionAndNoToken() throws Exception {
+        // Only the methods the contract defines need the token, so an undefined one gets the dispatcher's
+        // answer, as it does on the other two implementations, rather than a refusal of a token it never needed.
+        mvc.perform(post(KEY).with(oidcLogin())).andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void anUnversionedKeyWriteOrRemovalNeedsTheTokenToo() throws Exception {
+        refused(mvc.perform(put(UNVERSIONED_KEY).with(oidcLogin())));
+        refused(mvc.perform(delete(UNVERSIONED_KEY).with(oidcLogin())));
+    }
+
+    @Test
+    void aKeyWriteOrRemovalWithNoSessionIs401WhateverTheToken() throws Exception {
+        mvc.perform(put(KEY)).andExpect(status().isUnauthorized());
+        mvc.perform(delete(KEY)).andExpect(status().isUnauthorized());
+        mvc.perform(put(KEY).header("X-CSRF-TOKEN", "not-the-token")).andExpect(status().isUnauthorized());
+        mvc.perform(delete(KEY).header("X-CSRF-TOKEN", "not-the-token")).andExpect(status().isUnauthorized());
+    }
+
+    // -- The attestation lookup -------------------------------------------------------------------------
+
+    @Test
+    void theAnonymousAttestationLookupNeedsNoTokenSignedInOrNot() throws Exception {
+        // A verifying Astrana instance holds no session and so no token, and a member's session changes
+        // nothing about the lookup.
+        mvc.perform(post(ATTEST)).andExpect(status().isNoContent());
+        mvc.perform(post(ATTEST).with(oidcLogin())).andExpect(status().isNoContent());
     }
 
     // -- Sign-out -----------------------------------------------------------------------------------------
@@ -195,13 +249,18 @@ class AntiForgeryTest {
             return ResponseEntity.noContent().build();
         }
 
-        @PutMapping(KEY)
+        @PutMapping({KEY, UNVERSIONED_KEY})
         ResponseEntity<Void> setKey() {
             return ResponseEntity.noContent().build();
         }
 
-        @DeleteMapping(KEY)
+        @DeleteMapping({KEY, UNVERSIONED_KEY})
         ResponseEntity<Void> removeKey() {
+            return ResponseEntity.noContent().build();
+        }
+
+        @PostMapping(ATTEST)
+        ResponseEntity<Void> attest() {
             return ResponseEntity.noContent().build();
         }
     }

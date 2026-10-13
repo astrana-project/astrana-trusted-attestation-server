@@ -33,7 +33,8 @@ The three template engines render the same document.
 - The organisation's name as the page heading and in the page's `<title>`. The landing page carries no `robots` tag. The
   self-service page carries `<meta name="robots" content="noindex, nofollow">`.
 - On the self-service page, `<meta name="csrf-token" content="…">`, the framework's anti-forgery token, which the page's
-  script sends in the `X-CSRF-TOKEN` header when the member revokes a relationship.
+  script sends in the `X-CSRF-TOKEN` header with every request that changes something, which is saving or clearing a
+  key, revoking a relationship and removing one.
 - The organisation's logo from the manifest with empty `alt` text, since the heading already names the organisation.
   When the manifest sets a dark variant, the logo is a `<picture>` whose `<source media="(prefers-color-scheme: dark)">`
   carries the dark image and whose `<img>` carries the light one as the fallback, so the browser chooses with no script.

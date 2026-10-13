@@ -207,6 +207,15 @@ def cases():
                    "/api/v1/me", json_type, OVERSIZED, expect=(401,)))
     out.append(api("POST revoke with an oversized body (no auth) is 401, not 413", "POST",
                    "/api/v1/me/relationships/employee/revoke", json_type, OVERSIZED, expect=(401,)))
+    # Without a session, a member call is 401 whatever anti-forgery token it carries, never 403.
+    wrong_token = {"X-CSRF-TOKEN": "not-a-token"}
+    out.append(api("PUT on me key with a wrong anti-forgery token (no auth) is 401, not 403", "PUT",
+                   "/api/v1/me/relationships/employee/key", {**json_type, **wrong_token},
+                   j({"public_key": VALID_UNREG}), expect=(401,)))
+    out.append(api("DELETE on me key with a wrong anti-forgery token (no auth) is 401, not 403", "DELETE",
+                   "/api/v1/me/relationships/employee/key", wrong_token, expect=(401,)))
+    out.append(api("POST revoke with a wrong anti-forgery token (no auth) is 401, not 403", "POST",
+                   "/api/v1/me/relationships/employee/revoke", wrong_token, expect=(401,)))
     out.append(api("POST on manifest", "POST", "/.well-known/ata-manifest.json"))
     out.append(api("HEAD on manifest", "HEAD", "/.well-known/ata-manifest.json"))
 

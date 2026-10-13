@@ -4,7 +4,7 @@ import org.springframework.boot.info.BuildProperties;
 
 /**
  * The release this server is running, which the self-service page shows in its footer and no other page does
- * (decision record 47 in docs/adr). The version is the one the build records from pom.xml in
+ * (decision record 46 in docs/adr). The version is the one the build records from pom.xml in
  * META-INF/build-info.properties, which is the jar's version and the top heading of CHANGELOG.md.
  *
  * @param version the full version, such as 1.0.1

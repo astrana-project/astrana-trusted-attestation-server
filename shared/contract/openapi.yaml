@@ -72,9 +72,13 @@ paths:
         of setting one. Clearing pauses attestation without giving up the grant. The relationship goes back to having no
         key (status unkeyed), and saving a key again fully reverses the clearing (see decision record 20). Clearing,
         like registering, never lifts revoked_at or expires_at. The key_cleared audit entry is written only when a key
-        was present, so saving an already-empty field again records nothing.
+        was present, so saving an already-empty field again records nothing. The request must carry the session's
+        anti-forgery token in the X-CSRF-TOKEN header, as every request that changes something does (see decision record
+        41).
       security:
         - iamSession: []
+      parameters:
+        - $ref: "#/components/parameters/AntiForgeryToken"
       requestBody:
         required: true
         content:
@@ -99,6 +103,8 @@ paths:
             or contains only spaces, tabs, carriage returns and line feeds is NOT a 400, because it clears the key.
         "401":
           description: Not authenticated. Status code only, with no body and no Content-Type.
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: >
             relationship_type not held by this caller, including a value outside the vocabulary. Status code only, with
@@ -116,7 +122,7 @@ paths:
           description: >
             Content Too Large. The request body is over 64 kilobytes (65,536 bytes), and is refused before any key in it
             is read. Status code only, with no body and no Content-Type. A request that is also not authenticated gets
-            401, not 413.
+            401, and one whose anti-forgery token is missing or wrong gets 403, not 413.
         "421":
           $ref: "#/components/responses/MisdirectedRequest"
     delete:
@@ -126,14 +132,19 @@ paths:
         Deletes this one relationship's row entirely, which removes the relationship rather than revoking it (see the
         README, How it works). Other relationships the member holds are unaffected. It works the same whether the
         relationship has a key or has none yet (see decision record 1). The audit log records the removal as the event
-        key_removed.
+        key_removed. The request must carry the session's anti-forgery token in the X-CSRF-TOKEN header, as every
+        request that changes something does (see decision record 48).
       security:
         - iamSession: []
+      parameters:
+        - $ref: "#/components/parameters/AntiForgeryToken"
       responses:
         "204":
           description: Deleted
         "401":
           description: Not authenticated. Status code only, with no body and no Content-Type.
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: >
             relationship_type not held by this caller at all, including a value outside the vocabulary. Status code
@@ -159,20 +170,12 @@ paths:
         always revoke without the organisation's permission. Unlike DELETE, the row survives, so the organisation can
         restore it later with extend_member_relationship rather than a new grant. The call is idempotent. On a
         relationship that is already revoked it succeeds, changes nothing and writes no second audit entry. The request
-        must carry the session's anti-forgery token in the X-CSRF-TOKEN header. The self-service page reads it from its
-        <meta name="csrf-token"> element. This stops a plain form on another site, including a sibling subdomain, from
-        revoking a member's relationship.
+        must carry the session's anti-forgery token in the X-CSRF-TOKEN header, as every request that changes something
+        does (see decision record 48).
       security:
         - iamSession: []
       parameters:
-        - name: X-CSRF-TOKEN
-          in: header
-          required: true
-          schema:
-            type: string
-          description: >
-            The framework's anti-forgery token for this session, as the self-service page carries it in <meta
-            name="csrf-token" content="...">.
+        - $ref: "#/components/parameters/AntiForgeryToken"
       responses:
         "204":
           description: >
@@ -181,9 +184,7 @@ paths:
         "401":
           description: Not authenticated. Status code only, with no body and no Content-Type.
         "403":
-          description: >
-            Forbidden. The X-CSRF-TOKEN header is missing or does not match the session. Status code only, with no body
-            and no Content-Type.
+          $ref: "#/components/responses/Forbidden"
         "404":
           description: >
             relationship_type not held by this caller at all, including a value outside the vocabulary. Status code
@@ -227,7 +228,22 @@ paths:
           $ref: "#/components/responses/MisdirectedRequest"
 
 components:
+  parameters:
+    AntiForgeryToken:
+      name: X-CSRF-TOKEN
+      in: header
+      required: true
+      schema:
+        type: string
+      description: >
+        The framework's anti-forgery token for this session, as the self-service page carries it in <meta
+        name="csrf-token" content="...">. Read from this header only, never from the body.
+
   responses:
+    Forbidden:
+      description: >
+        Forbidden. The X-CSRF-TOKEN header is missing or does not match the session. Status code only, with no body and
+        no Content-Type. A request that is also not authenticated gets 401, not 403.
     MisdirectedRequest:
       description: >
         Misdirected Request. The request arrived over plain HTTP with no TLS-terminating proxy declared, or its proxy's

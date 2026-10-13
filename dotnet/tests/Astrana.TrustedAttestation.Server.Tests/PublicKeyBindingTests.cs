@@ -242,12 +242,4 @@ public class PublicKeyBindingTests
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("The body was read.");
     }
-
-    [Fact]
-    public async Task The_key_put_binds_the_same_body_the_same_way()
-    {
-        var request = await SetKeyRequest.BindAsync(RequestWith(Encoding.UTF8.GetBytes("""{"public_key":"xyz"}""")));
-
-        Assert.Equal("xyz", request!.PublicKey);
-    }
 }

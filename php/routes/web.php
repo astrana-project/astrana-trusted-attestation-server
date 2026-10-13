@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
  * Everything runs in the web middleware group, including the API, because the contract's security scheme
  * is the session cookie the organisation's sign-in established, not a bearer token this server issued, so
  * the API needs the same session handling the pages do. CSRF is excluded for /api/* in bootstrap/app.php,
- * and the note there says why that is safe.
+ * apart from a signed-in member's changes, and the note there says why.
  */
 
 // The public landing page: unauthenticated, indexable, and what the manifest's enrollment_url points
@@ -88,7 +88,8 @@ Route::get('/.well-known/ata-manifest.json', [PageController::class, 'manifest']
 foreach (['/api/v1', '/api'] as $prefix) {
     // The body is capped at 64 kilobytes on the two operations that read one, setting a key and the
     // attestation lookup (LimitRequestBody), with HTTP 413 and no body beyond it, as on the other two
-    // implementations. A key request with no member signed in is answered 401 before the cap. The body
+    // implementations. A key request with no member signed in is answered 401 before the cap, and one
+    // with a missing or wrong anti-forgery token 403, because the web group's check runs first. The body
     // is then read as JSON whatever its Content-Type says, by the controller.
     Route::prefix($prefix)->group(function (): void {
         Route::get('/me', [ApiController::class, 'me']);

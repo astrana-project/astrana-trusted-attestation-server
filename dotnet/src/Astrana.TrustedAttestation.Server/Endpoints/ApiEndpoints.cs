@@ -88,8 +88,8 @@ public static class ApiEndpoints
     internal static async Task<IResult> SetKey(
         HttpContext http,
         string relationshipType,
-        SetKeyRequest request,
         MemberIdentityResolver resolver,
+        IAntiforgery antiforgery,
         RelationshipService relationships,
         TimeProvider timeProvider,
         CancellationToken cancellationToken)
@@ -99,21 +99,30 @@ public static class ApiEndpoints
             return Results.Unauthorized();
         }
 
+        if (await ForgeryRefusedAsync(http, antiforgery))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        // Read here rather than bound as a parameter, so a forged request is refused before its body is
+        // read, and a body over the cap is answered 413 only once the session and the token have passed.
+        var publicKey = await PublicKeyBody.ReadAsync(http);
+
         // A present but blank public_key, empty or only spaces, tabs, carriage returns and line feeds,
         // means "clear the key". The member pauses the relationship while keeping the grant, and the
         // service receives null. The lenient body reader also turns an absent, JSON-null or wrong-typed
         // public_key into a null string, and that stays 400, so a garbled body never wipes a key. Any
         // other string that will not parse, including one holding other whitespace, is a malformed key
         // and also 400.
-        if (request.PublicKey is null)
+        if (publicKey is null)
         {
             return Results.BadRequest();
         }
 
         byte[]? key = null;
-        if (!PublicKey.IsBlank(request.PublicKey))
+        if (!PublicKey.IsBlank(publicKey))
         {
-            if (!PublicKey.TryParse(request.PublicKey, out var parsed))
+            if (!PublicKey.TryParse(publicKey, out var parsed))
             {
                 return Results.BadRequest();
             }
@@ -147,12 +156,18 @@ public static class ApiEndpoints
         HttpContext http,
         string relationshipType,
         MemberIdentityResolver resolver,
+        IAntiforgery antiforgery,
         RelationshipService relationships,
         CancellationToken cancellationToken)
     {
         if (!resolver.TryGetSubject(http.User, out var subject))
         {
             return Results.Unauthorized();
+        }
+
+        if (await ForgeryRefusedAsync(http, antiforgery))
+        {
+            return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
 
         // A hard delete of this one relationship, not a soft revoke and not a return to unkeyed: a member
@@ -176,10 +191,7 @@ public static class ApiEndpoints
             return Results.Unauthorized();
         }
 
-        // A browser preflights a cross-origin PUT or DELETE, but not a plain POST, so a form on a sibling
-        // subdomain, which counts as the same site for the session cookie, could otherwise revoke. The
-        // self-service page sends the token in the X-CSRF-TOKEN header.
-        if (!await antiforgery.IsRequestValidAsync(http))
+        if (await ForgeryRefusedAsync(http, antiforgery))
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -191,6 +203,15 @@ public static class ApiEndpoints
             ? Results.NoContent()
             : Results.NotFound();
     }
+
+    /// <summary>
+    /// Whether a request that changes something lacks the session's anti-forgery token. A page on a sibling
+    /// subdomain counts as the same site for the session cookie, so the cookie alone does not show that the
+    /// member asked for the change. The self-service page sends the token in the X-CSRF-TOKEN header, and
+    /// the header is the only place it is looked for, so the answer never depends on reading the body.
+    /// </summary>
+    private static async Task<bool> ForgeryRefusedAsync(HttpContext http, IAntiforgery antiforgery) =>
+        !http.Request.Headers.ContainsKey(AntiforgeryHeader) || !await antiforgery.IsRequestValidAsync(http);
 
     internal static async Task<IResult> Attest(
         AttestRequest request,

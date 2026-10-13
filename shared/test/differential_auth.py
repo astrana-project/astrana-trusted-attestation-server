@@ -5,7 +5,8 @@ The companion to ``shared/test/differential.py``. That one diffs the anonymous s
 the same member to every implementation and diffs the signed-in write path, set-key, delete, self-revoke,
 and the /me projection those produce. Same premise. A verifying Astrana instance must not be able to tell the
 stacks apart, so any request that gets a materially different answer from two of them is a bug in at least
-one.
+one. Every request that changes something carries the anti-forgery token the self-service page holds, as the page's
+script sends it, apart from the cases that check what happens without it.
 
 Its headline is the /me ``expires_at`` value. The functional suite (``shared/test/conformance/check.py``) checks
 that /me carries the right field *keys*, not the string each field serialises to -- which is exactly how a
@@ -211,44 +212,63 @@ def run(apps):
 
     # set-key
     scenario("PUT valid key on unkeyed -> 200 with the key echoed",
-             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": KEY_A})
+             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": KEY_A}, csrf=PAGE_TOKEN)
     scenario("PUT idempotent (same key) -> 200",
-             keyed, "PUT", EMPLOYEE_KEY, {"public_key": KEY_A})
+             keyed, "PUT", EMPLOYEE_KEY, {"public_key": KEY_A}, csrf=PAGE_TOKEN)
     # Blank means empty or nothing but spaces, tabs, carriage returns and line feeds, and clears the key.
     # Any other whitespace character is a malformed key, and the three must agree on where that line is.
     scenario("A key of spaces, tabs, carriage returns and line feeds clears the key",
-             keyed, "PUT", EMPLOYEE_KEY, {"public_key": " \t\r\n "})
+             keyed, "PUT", EMPLOYEE_KEY, {"public_key": " \t\r\n "}, csrf=PAGE_TOKEN)
     scenario("A key of one non-breaking space is refused as malformed",
-             keyed, "PUT", EMPLOYEE_KEY, {"public_key": " "})
+             keyed, "PUT", EMPLOYEE_KEY, {"public_key": " "}, csrf=PAGE_TOKEN)
     scenario("A key of one form feed is refused as malformed",
-             keyed, "PUT", EMPLOYEE_KEY, {"public_key": "\f"})
+             keyed, "PUT", EMPLOYEE_KEY, {"public_key": "\f"}, csrf=PAGE_TOKEN)
     scenario("PUT short key -> 400",
-             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": SHORT})
+             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": SHORT}, csrf=PAGE_TOKEN)
     scenario("PUT all-zero key -> 400",
-             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": ALLZERO})
+             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": ALLZERO}, csrf=PAGE_TOKEN)
     scenario("PUT url-safe key -> 400",
-             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": URLSAFE})
+             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": URLSAFE}, csrf=PAGE_TOKEN)
     scenario("PUT number key -> identical shape",
-             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": 1234})
+             unkeyed, "PUT", EMPLOYEE_KEY, {"public_key": 1234}, csrf=PAGE_TOKEN)
     scenario("PUT missing public_key -> identical shape",
-             unkeyed, "PUT", EMPLOYEE_KEY, {"other": "x"})
+             unkeyed, "PUT", EMPLOYEE_KEY, {"other": "x"}, csrf=PAGE_TOKEN)
     scenario("PUT key on a relationship not held -> 404",
-             unkeyed, "PUT", "/api/v1/me/relationships/client/key", {"public_key": KEY_A})
+             unkeyed, "PUT", "/api/v1/me/relationships/client/key", {"public_key": KEY_A}, csrf=PAGE_TOKEN)
     scenario("PUT a key another member already holds -> 409",
-             conflict, "PUT", EMPLOYEE_KEY, {"public_key": KEY_B})
+             conflict, "PUT", EMPLOYEE_KEY, {"public_key": KEY_B}, csrf=PAGE_TOKEN)
 
     # delete
-    scenario("DELETE keyed relationship -> 204", keyed, "DELETE", EMPLOYEE_KEY)
-    scenario("DELETE unkeyed relationship -> 204", unkeyed, "DELETE", EMPLOYEE_KEY)
-    scenario("DELETE relationship not held -> 404", unkeyed, "DELETE", "/api/v1/me/relationships/client/key")
+    scenario("DELETE keyed relationship -> 204", keyed, "DELETE", EMPLOYEE_KEY, csrf=PAGE_TOKEN)
+    scenario("DELETE unkeyed relationship -> 204", unkeyed, "DELETE", EMPLOYEE_KEY, csrf=PAGE_TOKEN)
+    scenario("DELETE relationship not held -> 404", unkeyed, "DELETE", "/api/v1/me/relationships/client/key", csrf=PAGE_TOKEN)
 
     # self-revoke, which a signed-in member sends with the page's anti-forgery token in X-CSRF-TOKEN
     scenario("POST self-revoke on keyed -> identical shape",
              keyed, "POST", EMPLOYEE_REVOKE, csrf=PAGE_TOKEN)
-    untouched("POST self-revoke without the anti-forgery token -> 403, no body, no Content-Type, not revoked",
-              keyed, "POST", EMPLOYEE_REVOKE, expect=(403, KEYED_ENTRY, "", ""))
-    untouched("POST self-revoke with a wrong anti-forgery token -> 403, no body, no Content-Type, not revoked",
-              keyed, "POST", EMPLOYEE_REVOKE, csrf="not-the-page-token", expect=(403, KEYED_ENTRY, "", ""))
+
+    # Every request that changes something needs the page's anti-forgery token when the session is live. A
+    # missing or wrong one is refused with 403 and nothing else, and the relationship stays as it was.
+    for name, method, path, payload in (("PUT key", "PUT", EMPLOYEE_KEY, {"public_key": KEY_B}),
+                                        ("DELETE key", "DELETE", EMPLOYEE_KEY, None),
+                                        ("POST self-revoke", "POST", EMPLOYEE_REVOKE, None)):
+        untouched(f"{name} without the anti-forgery token -> 403, no body, no Content-Type, unchanged",
+                  keyed, method, path, expect=(403, KEYED_ENTRY, "", ""), payload=payload)
+        untouched(f"{name} with a wrong anti-forgery token -> 403, no body, no Content-Type, unchanged",
+                  keyed, method, path, expect=(403, KEYED_ENTRY, "", ""), payload=payload, csrf="not-the-page-token")
+    scenario("PUT key with the page's anti-forgery token -> 200 and the new key on record",
+             keyed, "PUT", EMPLOYEE_KEY, {"public_key": KEY_B}, read_me="employee",
+             expect=("write", 200, employee_entry(KEY_B, "active")), csrf=PAGE_TOKEN)
+    scenario("DELETE key with the page's anti-forgery token -> 204 and the relationship gone",
+             keyed, "DELETE", EMPLOYEE_KEY, read_me="employee", expect=("write", 204, (200, "absent")),
+             csrf=PAGE_TOKEN)
+
+    # The session, then the token, then the size: a forged request is refused 403 whatever its body.
+    untouched("PUT key with a body over 64 kilobytes and no anti-forgery token -> 403, not 413, unchanged",
+              keyed, "PUT", EMPLOYEE_KEY, expect=(403, KEYED_ENTRY, "", ""), body=OVERSIZED, headers=JSON_TYPE)
+    untouched("PUT key with a body over 64 kilobytes and the page's anti-forgery token -> 413, unchanged",
+              keyed, "PUT", EMPLOYEE_KEY, expect=(413, KEYED_ENTRY, "", ""), body=OVERSIZED, headers=JSON_TYPE,
+              csrf=PAGE_TOKEN)
 
     # A POST naming another method is answered as the POST it is. No implementation reads a _method field
     # in the query string or a form body, or an X-HTTP-Method-Override header, so a plain form or a text

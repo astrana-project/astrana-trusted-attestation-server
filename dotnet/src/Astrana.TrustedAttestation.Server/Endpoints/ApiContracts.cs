@@ -61,26 +61,11 @@ public sealed record MeResponse
     public required IReadOnlyList<RelationshipWithKey> Relationships { get; init; }
 }
 
-public sealed record SetKeyRequest
-{
-    [JsonPropertyName("public_key")]
-    public string? PublicKey { get; init; }
-
-    /// <summary>
-    /// Read leniently, for the same reason as <see cref="AttestRequest"/>: a public_key that is a number,
-    /// an object or an array must reach the handler as "no usable key" and be refused there with a clean
-    /// 400, not rejected by model binding with a framework exception in the body. Errors on this contract
-    /// are status-code-only; a leaked binding failure would break that, and only in the environment that
-    /// happens to have detailed errors switched on.
-    /// </summary>
-    public static async ValueTask<SetKeyRequest?> BindAsync(HttpContext context) =>
-        new SetKeyRequest { PublicKey = await PublicKeyBody.ReadAsync(context) };
-}
-
 /// <summary>
-/// Reads a request body's <c>public_key</c> as a string, or nothing. Shared by the two anonymous- and
-/// member-facing bodies that both carry only that one field and both must treat a wrong-typed or
-/// unparseable body as an absent key rather than as a reason to fail before the handler runs.
+/// Reads a request body's <c>public_key</c> as a string, or nothing. Shared by the attestation lookup's
+/// binding and the key handler, whose bodies both carry only that one field and both must treat a
+/// wrong-typed or unparseable body as an absent key rather than as a reason to fail before the handler
+/// decides. The key handler reads the body itself, once the session and the anti-forgery token have passed.
 ///
 /// <para>The body is read whatever its Content-Type says, and it is malformed, so read as carrying no key,
 /// when it starts with a byte order mark, when anything follows the JSON value, when it is not valid UTF-8,

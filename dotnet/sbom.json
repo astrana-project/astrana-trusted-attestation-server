@@ -26,9 +26,9 @@
     },
     "component": {
       "type": "application",
-      "bom-ref": "Astrana.TrustedAttestation@1.0.6",
+      "bom-ref": "Astrana.TrustedAttestation@1.0.7",
       "name": "Astrana.TrustedAttestation",
-      "version": "1.0.6"
+      "version": "1.0.7"
     }
   },
   "components": [
@@ -1808,7 +1808,7 @@
   ],
   "dependencies": [
     {
-      "ref": "Astrana.TrustedAttestation@1.0.6",
+      "ref": "Astrana.TrustedAttestation@1.0.7",
       "dependsOn": [
         "pkg:nuget/Microsoft.AspNetCore.Authentication.OpenIdConnect@10.0.11",
         "pkg:nuget/Microsoft.EntityFrameworkCore.SqlServer@10.0.11",

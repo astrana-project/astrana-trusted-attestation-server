@@ -344,9 +344,19 @@ class Client:
         # Set during login when the instance turns out to speak SAML; see _saml_acs_url.
         self.saml_acs_url: str | None = None
 
+        # The anti-forgery token from the client's self-service page, once the suite has read it. Like the
+        # page's script, the client then sends it in X-CSRF-TOKEN with every PUT and DELETE.
+        self.anti_forgery_token: str | None = None
+
     def request(self, method: str, url: str, body: bytes | None = None,
                 headers: dict | None = None) -> tuple[int, bytes, dict]:
-        request = urllib.request.Request(url, data=body, method=method, headers=headers or {})
+        """One request, following redirects. A header given as None is left out, which is how a check sends
+        a PUT or DELETE without the anti-forgery token the client would otherwise add."""
+        sent = dict(headers or {})
+        if method in ("PUT", "DELETE") and self.anti_forgery_token:
+            sent.setdefault("X-CSRF-TOKEN", self.anti_forgery_token)
+        sent = {name: value for name, value in sent.items() if value is not None}
+        request = urllib.request.Request(url, data=body, method=method, headers=sent)
 
         try:
             with self.opener.open(request, timeout=REQUEST_TIMEOUT) as response:
@@ -1057,6 +1067,24 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
         _, body, _ = client.get(f"{base_url}/me")
         return csrf_token(body) or ""
 
+    def keep_page_token(client: Client) -> None:
+        """Keeps the anti-forgery token on the client's self-service page, which the client then sends with
+        every PUT and DELETE, as the page's script does."""
+        client.anti_forgery_token = page_token(client)
+
+    def put_key(client: Client, relationship_type: str, public_key: str, token: str | None) -> tuple[int, bytes, dict]:
+        """A key PUT carrying ``token`` in X-CSRF-TOKEN, or no such header at all when it is None."""
+        return client.request("PUT", key_url(relationship_type), json.dumps({"public_key": public_key}).encode(),
+                              {"Content-Type": "application/json", "X-CSRF-TOKEN": token})
+
+    def refused_as_forged(description: str, response: tuple[int, bytes, dict]) -> None:
+        """A request refused for its anti-forgery token: 403, with no body and no Content-Type."""
+        status, raw, headers = response
+        results.check(description, status, 403)
+        results.check_that("...and the refusal carries no body", not raw, f"got {len(raw)} bytes")
+        results.check_that("...and no Content-Type", _header_named(headers, "Content-Type") is None,
+                           f"got {_header_named(headers, 'Content-Type')!r}")
+
     def self_revoke(client: Client, relationship_type: str, token: str | None = None) -> tuple[int, bytes, dict]:
         """A member's self-revoke as the self-service page sends it: a plain POST carrying the page's
         anti-forgery token in the X-CSRF-TOKEN header. ``token`` sends a token of the caller's choosing
@@ -1386,6 +1414,15 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     status, _, _ = self_revoke(anonymous, "employee", "not-the-page-token")
     results.check("POST revoke without a session is 401 even with a token in X-CSRF-TOKEN", status, 401)
 
+    status, _, _ = put_key(anonymous, "employee", random_key(), "not-the-page-token")
+    results.check("PUT on a relationship key without a session is 401 even with a token in X-CSRF-TOKEN", status, 401)
+
+    status, _ = anonymous.json_request("DELETE", key_url("employee"))
+    results.check("DELETE on a relationship without a session is 401", status, 401)
+
+    status, _, _ = anonymous.request("DELETE", key_url("employee"), None, {"X-CSRF-TOKEN": "not-the-page-token"})
+    results.check("DELETE on a relationship without a session is 401 even with a token in X-CSRF-TOKEN", status, 401)
+
     # The stylesheet has to be readable before anyone signs in, because the pages a member sees on the
     # way in -- the login redirect, and any error along the way -- are served before there is a session.
     # Behind the authentication filter, the stylesheet would redirect to the identity provider and those
@@ -1451,10 +1488,12 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
                        b"<h1" in me_html
                        and (b"<h2" not in me_html or me_html.index(b"<h1") < me_html.index(b"<h2")),
                        "a level-2 heading appears before the page's h1")
-    # The page's script sends this token with a self-revoke. Without it every revoke below is refused 403,
-    # so its absence is named here rather than left to read as several unrelated failures.
+    # The page's script sends this token with every request that changes something. Without it every such
+    # request below is refused 403, so its absence is named here rather than left to read as many unrelated
+    # failures.
     results.check_that("the signed-in page carries the anti-forgery token its script sends "
                        '(<meta name="csrf-token">)', bool(csrf_token(me_html)), "no csrf-token meta on /me")
+    keep_page_token(alice)
 
     # The running version, for the people who operate and support the server to confirm which version is
     # running, is on the self-service page alone (decision record 46). An exact version anywhere a stranger can read it tells them which servers run a
@@ -1491,8 +1530,18 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     results.check("...and carries no key", employment and employment.get("public_key"), None)
 
     employment_key = random_key()
+
+    # A page on a sibling subdomain counts as the same site for the session cookie, so setting a key needs
+    # the anti-forgery token as well, and a missing or wrong one is refused with 403 and nothing else.
+    refused_as_forged("signed in, PUT on a relationship key without the anti-forgery token is 403",
+                      put_key(alice, "employee", employment_key, None))
+    refused_as_forged("signed in, PUT on a relationship key with a wrong anti-forgery token is 403",
+                      put_key(alice, "employee", employment_key, "not-the-page-token"))
+    status, me = alice.json_request("GET", f"{api}/me")
+    results.check("...and neither refusal set the key", (relationship(me, "employee") or {}).get("status"), "unkeyed")
+
     status, saved = alice.json_request("PUT", key_url("employee"), {"public_key": employment_key})
-    results.check("PUT on the employee relationship is 200", status, 200)
+    results.check("PUT on the employee relationship with the page's anti-forgery token is 200", status, 200)
     if saved:
         results.check("...and echoes the key back", saved.get("public_key"), employment_key)
         results.check("...names the relationship it applied to", saved.get("relationship_type"), "employee")
@@ -1671,6 +1720,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
         return results
 
     results.check_that("bob can sign in", True)
+    keep_page_token(bob)
 
     status, _ = bob.json_request("PUT", key_url("client"), {"public_key": employment_key})
     results.check("registering another member's key is 409", status, 409)
@@ -1704,6 +1754,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
         return results
 
     results.check_that("carol can sign in", True)
+    keep_page_token(carol)
 
     status, me = carol.json_request("GET", f"{api}/me")
     held = relationship(me, "licensed_professional")
@@ -1732,6 +1783,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     dave = Client(verify_tls)
     if login(dave, base_url, "dave", "password"):
         results.check_that("dave can sign in", True)
+        keep_page_token(dave)
 
         status, me = dave.json_request("GET", f"{api}/me")
         results.check("GET /me is 200, not an error", status, 200)
@@ -1754,8 +1806,17 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # organisation can grant it again if the member should be re-invited.
     results.section("alice: removing one relationship leaves the other")
 
+    # Removing a relationship needs the anti-forgery token too, and without it nothing is removed.
+    refused_as_forged("signed in, DELETE without the anti-forgery token is 403",
+                      alice.request("DELETE", key_url("employee"), None, {"X-CSRF-TOKEN": None}))
+    refused_as_forged("signed in, DELETE with a wrong anti-forgery token is 403",
+                      alice.request("DELETE", key_url("employee"), None, {"X-CSRF-TOKEN": "not-the-page-token"}))
+    status, payload = attest(employment_key)
+    results.check("...and neither refusal removed the relationship: its key still attests", payload,
+                  {"valid": True, "relationship_type": "employee", "status": "active"})
+
     status, _ = alice.json_request("DELETE", key_url("employee"))
-    results.check("DELETE is 204", status, 204)
+    results.check("DELETE with the page's anti-forgery token is 204", status, 204)
 
     status, payload = attest(employment_key)
     results.check("the removed relationship's key stops attesting entirely", payload, {"valid": False})
@@ -1790,20 +1851,13 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # status other than active is invalid to the peer, even though the lookup succeeded.
     results.section("carol: self-revoke is one-directional")
 
-    # Self-revoke is a plain POST, the one request a form on another site, or on a sibling subdomain that
-    # counts as the same site for the session cookie, could send without a preflight. So with a live
-    # session it needs the anti-forgery token the self-service page carries, and a missing or wrong token
-    # is refused with 403 and nothing else, leaving the relationship as it was.
-    status, raw, headers = self_revoke(carol, "licensed_professional", "")
-    results.check("signed in, self-revoke without the anti-forgery token is 403", status, 403)
-    results.check_that("...and the refusal carries no body", not raw, f"got {len(raw)} bytes")
-    results.check_that("...and no Content-Type", _header_named(headers, "Content-Type") is None,
-                       f"got {_header_named(headers, 'Content-Type')!r}")
-    status, raw, headers = self_revoke(carol, "licensed_professional", "not-the-page-token")
-    results.check("signed in, self-revoke with a wrong anti-forgery token is 403", status, 403)
-    results.check_that("...and the refusal carries no body", not raw, f"got {len(raw)} bytes")
-    results.check_that("...and no Content-Type", _header_named(headers, "Content-Type") is None,
-                       f"got {_header_named(headers, 'Content-Type')!r}")
+    # Like every request that changes something, self-revoke needs the anti-forgery token the self-service
+    # page carries when the session is live, and a missing or wrong token is refused with 403 and nothing
+    # else, leaving the relationship as it was.
+    refused_as_forged("signed in, self-revoke without the anti-forgery token is 403",
+                      self_revoke(carol, "licensed_professional", ""))
+    refused_as_forged("signed in, self-revoke with a wrong anti-forgery token is 403",
+                      self_revoke(carol, "licensed_professional", "not-the-page-token"))
     status, payload = attest(carol_key)
     results.check("...and neither refusal revoked anything: her key still attests as active", payload,
                   {"valid": True, "relationship_type": "licensed_professional",
@@ -2046,11 +2100,11 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # endpoints. A key is 44 characters, so no well-formed request comes anywhere near the cap.
     oversized = b'{"public_key": "' + b"A" * (80 * 1024) + b'"}'
 
-    def send_oversized(client: Client, method: str, url: str) -> tuple[int | str, bytes]:
+    def send_oversized(client: Client, method: str, url: str, headers: dict | None = None) -> tuple[int | str, bytes]:
         # A server that drops the connection instead of answering is a failed check here, not a dead
         # instance, so it must not stop the run the way an unreachable server does.
         try:
-            status, body, _ = client.request(method, url, oversized, {"Content-Type": "application/json"})
+            status, body, _ = client.request(method, url, oversized, {"Content-Type": "application/json", **(headers or {})})
             return status, body
         except Unreachable as dropped:
             return f"connection dropped ({dropped})", b""
@@ -2058,6 +2112,12 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     status, put_body = send_oversized(alice, "PUT", key_url("client"))
     results.check("PUT on a relationship key with a body over 64 kilobytes is 413", status, 413)
     results.check_that("...and the refusal carries no body", not put_body, f"got {len(put_body)} bytes")
+    # The session comes first, then the anti-forgery token, then the size, so a forged request is refused
+    # whatever it carries.
+    status, put_body = send_oversized(alice, "PUT", key_url("client"), {"X-CSRF-TOKEN": None})
+    results.check("PUT with a body over 64 kilobytes and no anti-forgery token is 403, not 413", status, 403)
+    status, put_body = send_oversized(anonymous, "PUT", key_url("client"))
+    results.check("PUT with a body over 64 kilobytes and no session is 401, not 413", status, 401)
     status, raw = send_oversized(anonymous, "POST", f"{api}/attest")
     results.check("POST /attest with a body over 64 kilobytes is 413", status, 413)
     results.check_that("...and the refusal carries no body", not raw, f"got {len(raw)} bytes")

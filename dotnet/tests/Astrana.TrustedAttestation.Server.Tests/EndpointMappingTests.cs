@@ -28,6 +28,7 @@ public class EndpointMappingTests
         public RouteTable()
         {
             var services = new ServiceCollection().AddLogging().AddRouting();
+            services.AddAntiforgery(ApiEndpoints.ConfigureAntiforgery);
             services.AddSingleton(Options.Create(new TrustedAttestationOptions()));
             services.AddSingleton<MemberIdentityResolver>();
             services.AddSingleton<IRelationshipStore, FakeRelationshipStore>();
