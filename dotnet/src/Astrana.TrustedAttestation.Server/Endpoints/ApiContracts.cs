@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Unicode;
 using Astrana.TrustedAttestation.Server.Contract;
 using Astrana.TrustedAttestation.Server.Data;
 
@@ -82,10 +83,12 @@ public sealed record SetKeyRequest
 /// unparseable body as an absent key rather than as a reason to fail before the handler runs.
 ///
 /// <para>The body is read whatever its Content-Type says, and it is malformed, so read as carrying no key,
-/// when it starts with a byte order mark, when anything follows the JSON value, or when it is not valid
-/// UTF-8, inside the string or outside it. The three implementations agree on each of those, so the same
-/// body is a 400 on the key endpoint and <c>{"valid":false}</c> on attestation whichever stack receives it.
-/// Above <see cref="MaxBytes"/> the body is refused outright with HTTP 413 and no body.</para>
+/// when it starts with a byte order mark, when anything follows the JSON value, when it is not valid UTF-8,
+/// or anywhere in it arrays and objects are nested more than <see cref="MaxDepth"/> deep, a number has more
+/// than <see cref="MaxNumberDigits"/> digits, or a string or a name holds an escaped lone surrogate. The
+/// contract sets each of those, so the same body is a 400 on the key endpoint and <c>{"valid":false}</c>
+/// on attestation whichever stack receives it. Above <see cref="MaxBytes"/> the body is refused outright
+/// with HTTP 413 and no body.</para>
 /// </summary>
 internal static class PublicKeyBody
 {
@@ -96,7 +99,15 @@ internal static class PublicKeyBody
     /// </summary>
     public const int MaxBytes = 64 * 1024;
 
+    /// <summary>The most arrays and objects a body may have open at once, its own object included.</summary>
+    public const int MaxDepth = 64;
+
+    /// <summary>The most digits a number in a body may have, those of its fraction and exponent included.</summary>
+    public const int MaxNumberDigits = 1000;
+
     private static readonly byte[] ByteOrderMark = [0xEF, 0xBB, 0xBF];
+
+    private static readonly JsonDocumentOptions Reading = new() { MaxDepth = MaxDepth };
 
     public static async ValueTask<string?> ReadAsync(HttpContext context)
     {
@@ -108,16 +119,19 @@ internal static class PublicKeyBody
         var body = await ReadCappedAsync(context.Request.Body, context.RequestAborted);
 
         // The stream parser would skip a byte order mark silently. JSON text (RFC 8259, section 8.1) must
-        // not begin with one, and the other two implementations refuse it, so it is checked by hand.
-        if (body.AsSpan().StartsWith(ByteOrderMark))
+        // not begin with one, and the other two implementations refuse it, so it is checked by hand. The
+        // parser also checks the UTF-8 of a string only when it decodes it, so a bad byte in a string the
+        // key is not read from would pass, and the whole body is checked first.
+        if (body.AsSpan().StartsWith(ByteOrderMark) || !Utf8.IsValid(body))
         {
             return null;
         }
 
         try
         {
-            using var document = JsonDocument.Parse(body);
-            if (document.RootElement.ValueKind == JsonValueKind.Object
+            using var document = JsonDocument.Parse(body, Reading);
+            if (IsWithinLimits(document.RootElement)
+                && document.RootElement.ValueKind == JsonValueKind.Object
                 && document.RootElement.TryGetProperty("public_key", out var value)
                 && value.ValueKind == JsonValueKind.String)
             {
@@ -126,16 +140,31 @@ internal static class PublicKeyBody
         }
         catch (JsonException)
         {
-            // Not JSON, invalid UTF-8 outside a string, or something after the value: no key.
+            // Not JSON, nested too deep, or something after the value.
         }
         catch (InvalidOperationException)
         {
-            // Invalid UTF-8 inside the string. The reader validates the string's bytes only when it
-            // decodes them, and reports it this way rather than as a JsonException.
+            // A string or a name holding an escaped lone surrogate, which does not decode to text. The reader
+            // reports it this way rather than as a JsonException.
         }
 
         return null;
     }
+
+    /// <summary>
+    /// Whether every name and string in the value decodes to text and every number is short enough. Every
+    /// one is checked, a name's earlier value included when the name is used twice, as the other two
+    /// implementations check them as they parse.
+    /// </summary>
+    private static bool IsWithinLimits(JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.Object => element.EnumerateObject()
+            .All(member => member.Name is not null && IsWithinLimits(member.Value)),
+        JsonValueKind.Array => element.EnumerateArray().All(IsWithinLimits),
+        JsonValueKind.String => element.GetString() is not null,
+        JsonValueKind.Number => element.GetRawText().Count(char.IsAsciiDigit) <= MaxNumberDigits,
+        _ => true,
+    };
 
     /// <summary>
     /// The whole body, or a refusal once it passes the cap. The cap counts the body's own bytes as they are

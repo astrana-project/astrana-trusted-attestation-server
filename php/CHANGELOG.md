@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.8] - 2026-10-13
+
+### Fixed
+
+- The answers from the attestation endpoint and the member API, and the manifest, now write slashes and characters
+  outside ASCII as they are, and control characters with upper-case letters, as the .NET and Java implementations write
+  them, instead of as `\/` and `\u` escapes.
+- A request body nested more than 64 levels deep, or that contains a number more than 1,000 digits long, is now read as
+  containing no key, as the contract sets out, so the three implementations give it the same answer.
+
 ## [1.0.7] - 2026-10-13
 
 ### Fixed

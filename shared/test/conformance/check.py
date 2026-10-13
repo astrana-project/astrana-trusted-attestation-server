@@ -1966,14 +1966,31 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     # answers 400 and changes nothing, and /attest answers {valid: false}, in all three. Each malformed
     # body here carries a key that would otherwise be accepted or recognised, so a parser that quietly
     # tolerated the fault would show up as a 200 or a valid: true rather than pass by accident.
+    #
+    # The contract also limits what a body may hold anywhere in it. A body is malformed when arrays and
+    # objects are nested more than 64 deep, counting the body's own object, when a number has more than
+    # 1,000 digits, or when a string or a name holds an escaped lone surrogate.
     fresh_key = random_key()
     well_formed = json.dumps({"public_key": fresh_key}).encode()
     registered = json.dumps({"public_key": client_key}).encode()
+
+    def beside(key: str, member: bytes) -> bytes:
+        return b'{"public_key": "' + key.encode() + b'", "n": ' + member + b"}"
+
+    beyond_the_limits = (
+        ("arrays nested 65 deep", b"[" * 64 + b"]" * 64),
+        ("a number of 1,001 digits", b"9" * 1001),
+        ("an escaped lone surrogate", rb'"\ud800"'),
+        ("an escaped lone surrogate in a name", rb'{"\ud800": 1}'),
+        ("bytes that are not UTF-8", b'"\xff\xfe"'),
+    )
     for description, malformed, recognised in (
             ("a byte order mark in front of the JSON", b"\xef\xbb\xbf" + well_formed, b"\xef\xbb\xbf" + registered),
             ("a second token after the JSON", well_formed + b" {}", registered + b" {}"),
             ("bytes that are not UTF-8 inside the key", b'{"public_key": "\xff\xfe' + fresh_key.encode() + b'"}',
-             b'{"public_key": "\xff\xfe' + client_key.encode() + b'"}')):
+             b'{"public_key": "\xff\xfe' + client_key.encode() + b'"}'),
+            *((f"{limit} beside the key", beside(fresh_key, member), beside(client_key, member))
+              for limit, member in beyond_the_limits)):
         status, put_body, _ = alice.request("PUT", key_url("client"), malformed, {"Content-Type": "application/json"})
         results.check(f"PUT on a relationship key with {description} is 400", status, 400)
         results.check_that("...and the refusal carries no body", not put_body, f"got {len(put_body)} bytes")
@@ -1988,6 +2005,16 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
             body = None
         results.check(f"POST /attest with {description} is 200 and exactly valid:false, the registered key "
                       "inside it notwithstanding", (status, body), (200, {"valid": False}))
+
+    for description, member in (
+            ("arrays nested 64 deep, counting the body itself", b"[" * 63 + b"]" * 63),
+            ("a number of 1,000 digits", b"9" * 1000),
+            ("an escaped surrogate pair", rb'"\ud83d\ude00"')):
+        status, raw, _ = anonymous.request("POST", f"{api}/attest", beside(client_key, member),
+                                           {"Content-Type": "application/json"})
+        results.check(f"POST /attest with the registered key beside {description} recognises the key",
+                      (status, json.loads(raw.decode()) if raw else None),
+                      (200, {"valid": True, "relationship_type": "client", "status": "active"}))
 
     # The body is read as JSON whatever the Content-Type header says, so a form-encoded body is a
     # malformed body, and a JSON body under a form Content-Type is read all the same.
@@ -2015,7 +2042,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
     status, _ = alice.json_request("PUT", key_url("client"), {"public_key": client_key})
     results.check("the key is restored for the sections that follow", status, 200)
 
-    # A body over 64 kilobytes is refused before it is read, with 413 and nothing else, on both
+    # A body over 64 kilobytes is refused before any key in it is read, with 413 and nothing else, on both
     # endpoints. A key is 44 characters, so no well-formed request comes anywhere near the cap.
     oversized = b'{"public_key": "' + b"A" * (80 * 1024) + b'"}'
 

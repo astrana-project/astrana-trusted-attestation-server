@@ -7,7 +7,9 @@ namespace App\Http\Controllers;
 use App\Models\MemberRelationship;
 use App\Services\MemberIdentityResolver;
 use App\Services\RelationshipService;
+use App\Support\PublicKeyBody;
 use App\Support\PublicKeys;
+use App\Support\ResponseJson;
 use App\Support\Timestamps;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,7 +51,7 @@ final class ApiController extends Controller
 
         // An empty array is a real answer, not an error. A member the organisation has granted nothing is
         // exactly what everyone looks like before their first grant.
-        return response()->json([
+        return ResponseJson::response([
             // From the organisation's own sign-in session. Astrana Trusted Attestation does not store this.
             'name' => $member->name,
             'relationships' => $this->relationships->findAllHeldBy($member->iamSubjectId)
@@ -81,7 +83,7 @@ final class ApiController extends Controller
         // key, the same test the other two implementations apply. An absent, JSON-null or non-string
         // public_key stays a 400, so a garbled body never wipes a key. A present string that will not
         // parse is a mistyped key, also 400.
-        $raw = $request->json('public_key');
+        $raw = PublicKeyBody::publicKey($request->getContent());
         if (! is_string($raw)) {
             return response('', Response::HTTP_BAD_REQUEST);
         }
@@ -114,7 +116,7 @@ final class ApiController extends Controller
             return response('', Response::HTTP_NOT_FOUND);
         }
 
-        return response()->json([
+        return ResponseJson::response([
             'public_key' => $row->public_key === null ? null : PublicKeys::toBase64($row->public_key),
             'relationship_type' => $row->relationship_type,
             'relationship_subtype' => $row->relationship_subtype,
@@ -161,12 +163,12 @@ final class ApiController extends Controller
      */
     public function attest(Request $request): JsonResponse
     {
-        $key = PublicKeys::parse($request->json('public_key'));
+        $key = PublicKeys::parse(PublicKeyBody::publicKey($request->getContent()));
 
         if ($key === null) {
             // A malformed key is answered the same way an unknown one is. Distinguishing the two would
             // leak shape information for no benefit.
-            return response()->json(['valid' => false]);
+            return ResponseJson::response(['valid' => false]);
         }
 
         $row = $this->relationships->attest($key);
@@ -174,7 +176,7 @@ final class ApiController extends Controller
         if ($row === null) {
             // Not on record at all: exactly a bare invalid, with nothing that would tell a caller probing
             // at random whether they got close.
-            return response()->json(['valid' => false]);
+            return ResponseJson::response(['valid' => false]);
         }
 
         // On record. The caller can only hold this key because the member gave it to them, so they are
@@ -190,6 +192,6 @@ final class ApiController extends Controller
 
         $body['status'] = $row->statusAt(Carbon::now())->value;
 
-        return response()->json($body);
+        return ResponseJson::response($body);
     }
 }

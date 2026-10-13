@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.astrana.trustedattestation.data.MemberRelationship;
 import org.astrana.trustedattestation.security.MemberIdentity;
 import org.astrana.trustedattestation.security.MemberIdentityResolver;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -284,6 +286,69 @@ class ApiControllerTest {
         assertThat(controller.attest(body(invalid, "application/json")).getBody())
                 .isEqualTo(AttestResponse.INVALID);
         verifyNoInteractions(relationships);
+    }
+
+    // -- What a body may hold, as the contract limits it -----------------------------------------------
+
+    private static String readBesideAKey(String member) {
+        return ApiController.readPublicKey(
+                ("{\"public_key\":\"abc\",\"n\":" + member + "}").getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Arrays nested inside the body's object, so the body is one deeper than this. */
+    private static String arrays(int depth) {
+        return "[".repeat(depth) + "]".repeat(depth);
+    }
+
+    private static String digits(int count) {
+        return "9".repeat(count);
+    }
+
+    static Stream<String> membersBeyondTheLimits() {
+        return Stream.of(
+                arrays(64),
+                arrays(1000),
+                digits(1001),
+                "-" + digits(1001),
+                digits(1000) + "e5", // the exponent's digits count
+                "1." + digits(1000), // and the fraction's
+                "\"\\ud800\"", // a high surrogate alone
+                "\"\\udc00\"", // a low surrogate alone
+                "\"\\udc00\\ud800\"", // a pair the wrong way round
+                "\"\\ud800\\u0041\"", // a high surrogate before something else
+                "[\"x\", {\"y\": \"\\ud800\"}]",
+                "{\"\\ud800\": 1}"); // in a name
+    }
+
+    static Stream<String> membersWithinTheLimits() {
+        return Stream.of(
+                arrays(63), // 64 deep, counting the body's own object
+                digits(1000),
+                "-" + digits(1000), // a sign is not a digit
+                digits(998) + "e+2",
+                "1." + digits(998) + "E-1",
+                "\"\\ud83d\\ude00\"", // a surrogate pair
+                "{\"" + "n".repeat(60_000) + "\": 1}"); // a long name
+    }
+
+    @ParameterizedTest
+    @MethodSource("membersBeyondTheLimits")
+    void aBodyHoldingSomethingBeyondTheLimitsIsMalformed(String member) {
+        assertThat(readBesideAKey(member)).isNull();
+    }
+
+    @ParameterizedTest
+    @MethodSource("membersWithinTheLimits")
+    void aBodyHoldingNothingBeyondTheLimitsIsRead(String member) {
+        assertThat(readBesideAKey(member)).isEqualTo("abc");
+    }
+
+    @Test
+    void aLoneSurrogateUnderANameUsedTwiceMakesTheBodyMalformed() {
+        // The later value replaces the earlier one in the tree, so the strings are checked as they are read.
+        byte[] body = "{\"n\":\"\\ud800\",\"n\":\"x\",\"public_key\":\"abc\"}".getBytes(StandardCharsets.UTF_8);
+
+        assertThat(ApiController.readPublicKey(body)).isNull();
     }
 
     @Test

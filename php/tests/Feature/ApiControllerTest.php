@@ -443,6 +443,35 @@ final class ApiControllerTest extends TestCase
     }
 
     #[Test]
+    public function attest_writes_a_subtype_as_the_other_implementations_write_it(): void
+    {
+        // A slash and a letter outside ASCII as they are, and a control character with upper-case hex
+        // digits, byte for byte what the .NET and Java implementations send.
+        $this->store->byPublicKey = $this->relationship('employee', subtype: "R&D / Lab é\u{1F}", keyed: true);
+
+        $response = $this->controller()->attest($this->request(null, ['public_key' => base64_encode(self::rawKey())]));
+
+        self::assertSame(
+            '{"valid":true,"relationship_type":"employee","relationship_subtype":"R&D / Lab é\u001F","status":"active"}',
+            $response->getContent(),
+        );
+    }
+
+    #[Test]
+    public function the_members_own_answers_write_a_slash_as_it_is(): void
+    {
+        $saved = $this->relationship('employee', subtype: 'R&D / Lab', keyed: true);
+        $this->store->all = [$saved];
+        $this->store->finds = [$saved, $saved];
+
+        $listed = $this->controller()->me($this->request(['sub' => 'alice']));
+        $set = $this->controller()->setKey($this->request(['sub' => 'alice'], ['public_key' => base64_encode(self::rawKey())]), 'employee');
+
+        self::assertStringContainsString('"relationship_subtype":"R&D / Lab"', (string) $listed->getContent());
+        self::assertStringContainsString('"relationship_subtype":"R&D / Lab"', (string) $set->getContent());
+    }
+
+    #[Test]
     public function attest_with_a_public_key_that_is_an_array_is_ok_and_invalid(): void
     {
         // A shape each framework binds differently by default: an array (or object) public_key is read

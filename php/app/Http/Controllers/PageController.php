@@ -14,6 +14,7 @@ use App\Services\MemberIdentityResolver;
 use App\Services\RelationshipService;
 use App\Services\UiStrings;
 use App\Support\PublicKeys;
+use App\Support\ResponseJson;
 use App\Support\RunningRelease;
 use App\Support\TextDirection;
 use App\Support\Timestamps;
@@ -352,6 +353,6 @@ final class PageController extends Controller
      */
     public function manifest(ManifestBuilder $manifests): JsonResponse
     {
-        return response()->json($manifests->build());
+        return ResponseJson::response($manifests->build());
     }
 }

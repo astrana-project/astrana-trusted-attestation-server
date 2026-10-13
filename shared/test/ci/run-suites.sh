@@ -17,6 +17,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 declare -A URL=([dotnet]=https://localhost:15443 [java]=https://localhost:16443 [php]=https://localhost:17443)
 IMPLS=(dotnet java php)
+psql_for() { echo "psql -q -v ON_ERROR_STOP=1 -h postgres -U trusted_attestation -d trusted_attestation_$1"; }
 TITLE="Astrana Trusted Attestation Server conformance"
 failed=()
 runs=()
@@ -73,7 +74,7 @@ for impl in "${IMPLS[@]}"; do
   python3 conformance/check.py \
     --base-url "${URL[$impl]}" \
     --database postgres \
-    --sql-command "psql -q -v ON_ERROR_STOP=1 -h postgres -U trusted_attestation -d trusted_attestation_$impl" \
+    --sql-command "$(psql_for "$impl")" \
     --json "$OUT/runs/keycloak-$impl.json" --idp Keycloak --implementation "$impl" \
     2>&1 | tee "$OUT/conformance-$impl.txt" || failed+=("conformance:$impl")
   [ -f "$OUT/runs/keycloak-$impl.json" ] && runs+=("$OUT/runs/keycloak-$impl.json")
@@ -84,10 +85,19 @@ python3 differential.py \
   --base-url "${URL[dotnet]}" --base-url "${URL[java]}" --base-url "${URL[php]}" \
   2>&1 | tee "$OUT/differential.txt" || failed+=("differential")
 
+# The differential suite's second part: about two minutes of generated requests to the attestation endpoint,
+# each sent to all three, with on-record keys it plants in each database for the run and removes afterwards.
+echo; echo "===== differential: attestation fuzzing"
+fuzz_apps=()
+for impl in "${IMPLS[@]}"; do
+  fuzz_apps+=(--app "$impl" "${URL[$impl]}" postgres "$(psql_for "$impl")")
+done
+python3 fuzz_attest.py "${fuzz_apps[@]}" 2>&1 | tee "$OUT/fuzz-attest.txt" || failed+=("differential:fuzzing")
+
 # The accessibility suite checks the key form's error flow only when the member holds a relationship, and
 # the conformance suite clears its fixtures when it finishes, so grant alice one for the duration.
 ALICE="11111111-1111-4111-8111-111111111111"
-sql() { psql -q -v ON_ERROR_STOP=1 -h postgres -U trusted_attestation -d "trusted_attestation_$1" -c "$2"; }
+sql() { $(psql_for "$1") -c "$2"; }
 for impl in "${IMPLS[@]}"; do
   sql "$impl" "CALL grant_member_relationship('$ALICE', 'employee', NULL, 'ci');" || echo "could not grant the accessibility fixture for $impl"
 done

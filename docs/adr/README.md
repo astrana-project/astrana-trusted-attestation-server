@@ -70,6 +70,7 @@ Never edit a record into a different decision. The old record is the history of 
 |  27 | [Ed25519 for attestation keys](0027-ed25519-for-attestation-keys.md)                                                                                                                           | 3, 4, 6       |
 |  28 | [Attestation keys are checked for format only, in the handler, in all three implementations](0028-attestation-keys-are-checked-for-format-only-in-the-handler-in-all-three-implementations.md) | 4, 20, 26, 27 |
 |  29 | [Attestation keys are stored as raw bytes and rows are ordered by a sequential identifier](0029-attestation-keys-are-stored-as-raw-bytes-and-rows-are-ordered-by-a-sequential-identifier.md)   | 4, 27         |
+|  48 | [All three give the same answer to unusual JSON](0048-all-three-give-the-same-answer-to-unusual-json.md)                                                                                       | 4, 5, 28      |
 
 ## Discovery and running
 

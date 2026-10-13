@@ -1,6 +1,9 @@
 package org.astrana.trustedattestation.web;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -69,12 +72,27 @@ public class ApiController {
     /** HTTP 413 - Content Too Large, by number: the constant's name has moved between Spring releases. */
     private static final int CONTENT_TOO_LARGE = 413;
 
+    /** The most arrays and objects a body may have open at once, its own object included. */
+    static final int MAX_DEPTH = 64;
+
+    /** The most digits a number in a body may have, those of its fraction and exponent included. */
+    static final int MAX_NUMBER_DIGITS = 1000;
+
     // Reads request bodies by hand (see readPublicKey). Its own instance rather than the application's
     // configured ObjectMapper, because it only ever walks a JSON tree looking for one literal wire key and
     // so needs none of that configuration, and because it must exist whether or not the context publishes
     // an ObjectMapper bean to inject. Trailing tokens after the JSON value make the body malformed, as on
-    // the other two implementations, rather than being ignored.
-    private static final JsonMapper JSON = JsonMapper.builder()
+    // the other two implementations, rather than being ignored. The contract's limits on depth and on a
+    // number's digits are Jackson's own constraints, which count a number's digits the way the contract
+    // does. Jackson's limit on the length of a name is lifted to the size of a body, because the contract
+    // sets none.
+    private static final JsonMapper JSON = JsonMapper.builder(JsonFactory.builder()
+                    .streamReadConstraints(StreamReadConstraints.builder()
+                            .maxNestingDepth(MAX_DEPTH)
+                            .maxNumberLength(MAX_NUMBER_DIGITS)
+                            .maxNameLength(MAX_BODY_BYTES)
+                            .build())
+                    .build())
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .build();
 
@@ -244,8 +262,9 @@ public class ApiController {
      * <p>A body that is not valid UTF-8, that starts with a byte order mark, that carries anything after
      * the JSON value, that is not a JSON object, or whose public_key is not a JSON string yields null,
      * treated as a malformed body by both callers rather than as a reason to fail before the handler runs.
-     * The same three byte-level rules on all three implementations: a byte order mark is not part of JSON,
-     * a second value is not one document, and invalid UTF-8 is not text.
+     * So does a body that, anywhere in it, nests arrays and objects more than {@link #MAX_DEPTH} deep, holds
+     * a number of more than {@link #MAX_NUMBER_DIGITS} digits, or holds a string or a name with an escaped
+     * lone surrogate. The contract sets each of those rules for all three implementations.
      */
     static String readPublicKey(byte[] body) {
         if (body == null || body.length == 0) {
@@ -270,10 +289,31 @@ public class ApiController {
 
         try {
             JsonNode value = JSON.readTree(text).get("public_key");
-            return value != null && value.isTextual() ? value.asText() : null;
-        } catch (JsonProcessingException _) {
+            return value != null && value.isTextual() && everyStringIsText(text) ? value.asText() : null;
+        } catch (IOException _) {
             return null;
         }
+    }
+
+    /**
+     * Whether every name and string in the body is Unicode text. Jackson decodes an escaped lone surrogate
+     * into a string rather than refusing it, and a tree keeps only the last value of a name used twice, so
+     * the strings are checked as the parser meets them.
+     */
+    private static boolean everyStringIsText(String text) throws IOException {
+        try (JsonParser parser = JSON.createParser(text)) {
+            for (JsonToken token = parser.nextToken(); token != null; token = parser.nextToken()) {
+                if ((token == JsonToken.FIELD_NAME || token == JsonToken.VALUE_STRING)
+                        && hasLoneSurrogate(parser.getText())) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasLoneSurrogate(String text) {
+        return text.codePoints().anyMatch(point -> Character.getType(point) == Character.SURROGATE);
     }
 
     private static <T> ResponseEntity<T> unauthorized() {

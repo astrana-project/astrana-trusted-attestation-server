@@ -13,7 +13,7 @@
 
   <groupId>org.astrana</groupId>
   <artifactId>trusted-attestation-server</artifactId>
-  <version>1.0.5</version>
+  <version>1.0.6</version>
   <name>Astrana Trusted Attestation Server</name>
   <description>Spring Boot implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)</description>
   <!--
@@ -212,12 +212,17 @@
         straight from the repository's single source under /shared rather than restated in Java or kept as
         per-implementation copies. Record 14 in docs/adr has every implementation read
         relationship-types.json rather than restate the list, so the vocabulary cannot drift between the
-        three implementations. Paths are relative to this module (java/), so ../shared resolves to the
-        repository's shared/ directory.
+        three implementations. Only the contract files the server reads are packaged, as in the other two
+        implementations, not the OpenAPI document or the manifest schema. Paths are relative to this module
+        (java/), so ../shared resolves to the repository's shared/ directory.
       -->
       <resource>
         <directory>../shared/contract</directory>
         <targetPath>contract</targetPath>
+        <includes>
+          <include>attribution.json</include>
+          <include>relationship-types.json</include>
+        </includes>
       </resource>
       <resource>
         <directory>../shared/schema</directory>

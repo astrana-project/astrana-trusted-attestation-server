@@ -16,6 +16,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.InvalidMediaTypeException;
+import org.springframework.http.MediaType;
 import org.springframework.security.web.header.HeaderWriter;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.ForwardedHeaderFilter;
@@ -166,42 +168,72 @@ public class ProxyTerminationConfig {
      * out: its filter can be told to ignore {@code Forwarded}, but still reads {@code X-Forwarded-Ssl}
      * whenever {@code X-Forwarded-Proto} is absent. Everything else is the filter's own behaviour, including
      * hiding every forwarded header from the rest of the chain once applied.
+     *
+     * <p>A Content-Type with a wildcard in it is hidden too, so the request is served as one with no
+     * Content-Type, which the API reads the same way, as the other two implementations do. A wildcard names a
+     * range of media types rather than the type of a body. Spring's filter copies the request's headers into
+     * a form that refuses a wildcard Content-Type once the request has a character encoding, which Spring
+     * Boot gives every request, and it answers any request whose headers it cannot copy with HTTP 400 - Bad
+     * Request.
      */
     static final class XForwardedHeaderFilter extends ForwardedHeaderFilter {
 
         @Override
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
                 throws ServletException, IOException {
-            super.doFilterInternal(new UnhonouredHeadersHidden(request), response, chain);
+            super.doFilterInternal(new HeadersHidden(request), response, chain);
         }
     }
 
-    /** The request as it arrived, less the {@link #UNHONOURED_HEADERS}, whatever their case. */
-    private static final class UnhonouredHeadersHidden extends HttpServletRequestWrapper {
+    /**
+     * The request as it arrived, less the {@link #UNHONOURED_HEADERS} and a Content-Type with a wildcard in
+     * it, whatever their case.
+     */
+    private static final class HeadersHidden extends HttpServletRequestWrapper {
 
-        UnhonouredHeadersHidden(HttpServletRequest request) {
+        private static final String CONTENT_TYPE = "Content-Type";
+
+        private final boolean contentTypeHidden;
+
+        HeadersHidden(HttpServletRequest request) {
             super(request);
+            contentTypeHidden = isWildcard(request.getContentType());
+        }
+
+        @Override
+        public String getContentType() {
+            return contentTypeHidden ? null : super.getContentType();
         }
 
         @Override
         public String getHeader(String name) {
-            return isUnhonoured(name) ? null : super.getHeader(name);
+            return isHidden(name) ? null : super.getHeader(name);
         }
 
         @Override
         public Enumeration<String> getHeaders(String name) {
-            return isUnhonoured(name) ? Collections.emptyEnumeration() : super.getHeaders(name);
+            return isHidden(name) ? Collections.emptyEnumeration() : super.getHeaders(name);
         }
 
         @Override
         public Enumeration<String> getHeaderNames() {
             return Collections.enumeration(Collections.list(super.getHeaderNames()).stream()
-                    .filter(name -> !isUnhonoured(name))
+                    .filter(name -> !isHidden(name))
                     .toList());
         }
 
-        private static boolean isUnhonoured(String name) {
-            return UNHONOURED_HEADERS.stream().anyMatch(name::equalsIgnoreCase);
+        private boolean isHidden(String name) {
+            return UNHONOURED_HEADERS.stream().anyMatch(name::equalsIgnoreCase)
+                    || (contentTypeHidden && CONTENT_TYPE.equalsIgnoreCase(name));
+        }
+
+        private static boolean isWildcard(String contentType) {
+            try {
+                MediaType type = MediaType.parseMediaType(contentType);
+                return type.isWildcardType() || type.isWildcardSubtype();
+            } catch (InvalidMediaTypeException _) {
+                return false;
+            }
         }
     }
 }
