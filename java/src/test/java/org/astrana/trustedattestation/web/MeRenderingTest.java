@@ -54,15 +54,24 @@ class MeRenderingTest {
     }
 
     @Test
-    void thePageCarriesTheAntiForgeryTokenAndItsScriptSendsItWithARevoke() {
+    void thePageCarriesTheAntiForgeryTokenAndItsScriptSendsItWithEveryChange() {
         // The same meta tag name and header name on all three implementations, so one conformance check
-        // can read the token from any of them.
+        // can read the token from any of them. Saving or clearing a key, revoking and removing each send it.
         String page = renderWith(employee(null, null));
 
         assertThat(page)
                 .contains("<meta name=\"csrf-token\" content=\"" + TemplateRendering.CSRF_TOKEN + "\"/>")
-                .contains("document.querySelector(\"meta[name='csrf-token']\").content")
-                .contains("headers: { \"X-CSRF-TOKEN\": token }");
+                .contains("const csrfToken = document.querySelector(\"meta[name=csrf-token]\").content;");
+        for (String change : List.of("save", "revoke", "remove")) {
+            assertThat(scriptFunction(page, change)).as(change).contains("\"X-CSRF-TOKEN\": csrfToken");
+        }
+    }
+
+    /** The page script's function of this name, from its declaration to the next function's. */
+    private static String scriptFunction(String page, String name) {
+        String rest = page.substring(page.indexOf("async function " + name + "("));
+        int next = rest.indexOf("function ", "async function ".length() + name.length());
+        return next < 0 ? rest : rest.substring(0, next);
     }
 
     @Test

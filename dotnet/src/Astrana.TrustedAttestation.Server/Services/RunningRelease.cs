@@ -2,7 +2,7 @@ namespace Astrana.TrustedAttestation.Server.Services;
 
 /// <summary>
 /// The release this server is running, which the self-service page shows in its footer and no other page does
-/// (decision record 47 in docs/adr). The build sets the assembly's version from the top heading of CHANGELOG.md, the
+/// (decision record 46 in docs/adr). The build sets the assembly's version from the top heading of CHANGELOG.md, the
 /// version the release is tagged and published under, so this is read from the assembly rather than stated again.
 /// </summary>
 public sealed class RunningRelease(string version)

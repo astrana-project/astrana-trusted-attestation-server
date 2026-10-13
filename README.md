@@ -5,7 +5,7 @@
 
 [![MIT licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE.md)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/astrana-project/astrana-trusted-attestation-server/badge)](https://scorecard.dev/viewer/?uri=github.com/astrana-project/astrana-trusted-attestation-server)
-[![Integration tests on master](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/integration.yml/badge.svg?branch=master)](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/integration.yml)
+[![Integration tests on master](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/integration.yml/badge.svg?branch=master)](https://astrana-project.github.io/astrana-trusted-attestation-server/)
 [![CodeQL code scanning on master](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/codeql.yml/badge.svg?branch=master)](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/codeql.yml)
 [![Security scans on master](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/scan.yml/badge.svg?branch=master)](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/scan.yml)
 [![Formatting checks on master](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/format.yml/badge.svg?branch=master)](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/format.yml)
@@ -170,8 +170,8 @@ Server builds its own image.
 
 The three are checked against each other on every change to an implementation or to `shared/`. The conformance suite
 runs against each implementation, the differential suite sends the same requests to all three and compares the answers,
-and the accessibility suite checks the landing page and the self-service page of each. The current results for `master`
-are published at
+including generated broken, oversized and unusual requests to the attestation endpoint, and the accessibility suite
+checks the landing page and the self-service page of each. The current results for `master` are published at
 [astrana-project.github.io/astrana-trusted-attestation-server](https://astrana-project.github.io/astrana-trusted-attestation-server/).
 
 [![Integration](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/integration.yml/badge.svg?branch=master)](https://github.com/astrana-project/astrana-trusted-attestation-server/actions/workflows/integration.yml)

@@ -1,6 +1,6 @@
 # 21. One session cookie identifies the member, and it never crosses sites
 
-Accepted on 2026-10-05.
+Superseded by record 48 on 2026-10-13.
 
 ## Context
 

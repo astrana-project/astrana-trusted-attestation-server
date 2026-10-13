@@ -157,9 +157,10 @@
 
 <script>
     // Talks to the same API operations any other caller would use, and the page has no privileged back
-    // door of its own. Saving and removing a key are JSON requests a browser preflights across origins. The
-    // revoke is a plain POST, so it carries the session's anti-forgery token in the X-CSRF-TOKEN header,
-    // read from the meta tag in the head.
+    // door of its own. Every request that changes something, saving or clearing a key, revoking and
+    // removing, carries the session's anti-forgery token in the X-CSRF-TOKEN header, read from the meta tag
+    // in the head. The session cookie alone would not do, because a page on a sibling subdomain counts as
+    // the same site for it.
     //
     // One delegated listener rather than three per relationship: the number of relationships is whatever
     // the organisation granted, and wiring handlers per card would mean the page's behaviour depended on
@@ -202,7 +203,7 @@
             const response = await fetch(url(section, "key"), {
                 method: "PUT",
                 credentials: "same-origin",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken },
                 body: JSON.stringify({ public_key: value })
             });
 
@@ -249,7 +250,8 @@
 
             const response = await fetch(url(section, "key"), {
                 method: "DELETE",
-                credentials: "same-origin"
+                credentials: "same-origin",
+                headers: { "X-CSRF-TOKEN": csrfToken }
             });
 
             // 404 counts as done: the relationship is gone either way, and telling the member their
@@ -348,7 +350,7 @@
         @endif
     @endif
     {{-- The running version, for the people who operate and support the server to confirm which version is
-         running. Only this page shows it (decision record 47 in docs/adr). --}}
+         running. Only this page shows it (decision record 46 in docs/adr). --}}
     &middot;
     <a href="{{ $release::RELEASES_URL }}" rel="noopener" target="_blank">{{ $release->label() }}</a>
 </footer>

@@ -88,19 +88,28 @@ final class MemberPageTest extends TestCase
     }
 
     #[Test]
-    public function the_script_sends_the_token_on_revoke_in_the_shared_header(): void
+    public function the_script_sends_the_token_with_every_change_in_the_shared_header(): void
     {
+        // Saving or clearing a key, revoking and removing each send it.
         $this->store->all = [$this->relationship('employee', null)];
         $page = $this->page();
 
-        $revoke = substr($page, (int) strpos($page, 'async function revoke('));
-        $revoke = substr($revoke, 0, (int) strpos($revoke, 'async function remove('));
-
-        self::assertStringContainsString('"X-CSRF-TOKEN": csrfToken', $revoke);
+        foreach (['save', 'revoke', 'remove'] as $change) {
+            self::assertStringContainsString('"X-CSRF-TOKEN": csrfToken', self::scriptFunction($page, $change), $change);
+        }
         self::assertStringContainsString(
             'const csrfToken = document.querySelector("meta[name=csrf-token]").content;',
             $page
         );
+    }
+
+    /** The page script's function of this name, from its declaration to the next function's. */
+    private static function scriptFunction(string $page, string $name): string
+    {
+        $rest = substr($page, (int) strpos($page, 'async function '.$name.'('));
+        $next = strpos($rest, 'function ', strlen('async function '.$name));
+
+        return $next === false ? $rest : substr($rest, 0, $next);
     }
 
     /** The opening tag of the relationship's key field, from its start to its closing bracket. */

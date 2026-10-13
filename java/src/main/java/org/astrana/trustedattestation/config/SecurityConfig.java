@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import org.astrana.trustedattestation.config.TrustedAttestationProperties.Protocol;
 import org.astrana.trustedattestation.security.MemberIdentityResolver;
@@ -67,6 +68,9 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.authentication.logout.SimpleUrlLogoutSuccessHandler;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.HeaderWriter;
 import org.springframework.security.web.header.HeaderWriterFilter;
 import org.springframework.security.web.header.writers.HstsHeaderWriter;
@@ -93,22 +97,59 @@ public class SecurityConfig {
      */
     private static final RequestMatcher API = request -> request.getRequestURI().startsWith("/api/");
 
+    /** A relationship's key, under both the versioned and unversioned prefixes. */
+    private static final Pattern KEY_PATH = Pattern.compile("^/api(/v1)?/me/relationships/[^/]+/key$");
+
     /** A member's own revoke, under both the versioned and unversioned prefixes. */
     private static final Pattern SELF_REVOKE_PATH = Pattern.compile("^/api(/v1)?/me/relationships/[^/]+/revoke$");
 
     /**
-     * The API requests the CSRF filter lets through without a token: all of them except a signed-in
-     * member's revoke. A browser preflights a cross-origin PUT or DELETE with a JSON body, but not a plain
-     * POST, so a form on a sibling subdomain, which counts as the same site for the session cookie, could
-     * otherwise revoke. The self-service page sends the token in the {@code X-CSRF-TOKEN} header, the name
-     * all three implementations read. A revoke with no session is let through to answer 401 like any other
-     * API call without one, as on the other two implementations, because the CSRF filter runs ahead of the
-     * sign-in check and would otherwise answer 403 for a token the caller could never have held.
+     * The member's requests that change something: setting or clearing a key and removing a relationship
+     * (PUT and DELETE on the key), and revoking one (POST on revoke). Only the methods the contract defines,
+     * so a method a path does not take is answered by the dispatcher, as on the other two implementations.
      */
-    static final RequestMatcher API_WITHOUT_ANTI_FORGERY = request -> API.matches(request)
-            && !("POST".equals(request.getMethod())
-                    && SELF_REVOKE_PATH.matcher(request.getRequestURI()).matches()
-                    && memberSignedIn());
+    private static final RequestMatcher MEMBER_CHANGE = request -> switch (request.getMethod()) {
+        case "PUT", "DELETE" -> KEY_PATH.matcher(request.getRequestURI()).matches();
+        case "POST" -> SELF_REVOKE_PATH.matcher(request.getRequestURI()).matches();
+        default -> false;
+    };
+
+    /**
+     * The API requests the CSRF filter lets through without a token: everything except a signed-in member's
+     * change. A page on a sibling subdomain counts as the same site for the session cookie, so the cookie
+     * alone does not show the member asked for a change. The self-service page sends the token in the
+     * {@code X-CSRF-TOKEN} header, the name all three implementations read. What stays exempt is what cannot
+     * carry a token: the anonymous attestation lookup, which a verifying Astrana instance calls with no
+     * session, and a member's change with no session, which is let through to answer 401 like any other API
+     * call without one, as on the other two implementations. The CSRF filter runs ahead of the sign-in check
+     * and would otherwise answer 403 for a token the caller could never have held. Reads need no token, and
+     * the filter never asks one of them.
+     */
+    static final RequestMatcher API_WITHOUT_ANTI_FORGERY =
+            request -> API.matches(request) && !(MEMBER_CHANGE.matches(request) && memberSignedIn());
+
+    /**
+     * Reads the anti-forgery token from the {@code X-CSRF-TOKEN} header alone on the API, which is where the
+     * contract puts it and the only place the other two implementations look. Elsewhere, the sign-out form
+     * among them, the framework reads the form field as usual.
+     */
+    static final class HeaderOnlyOnTheApi implements CsrfTokenRequestHandler {
+
+        private final CsrfTokenRequestHandler framework = new XorCsrfTokenRequestAttributeHandler();
+
+        @Override
+        public void handle(HttpServletRequest request, HttpServletResponse response, Supplier<CsrfToken> csrfToken) {
+            framework.handle(request, response, csrfToken);
+        }
+
+        @Override
+        public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {
+            if (API.matches(request) && request.getHeader(csrfToken.getHeaderName()) == null) {
+                return null;
+            }
+            return framework.resolveCsrfTokenValue(request, csrfToken);
+        }
+    }
 
     /**
      * The language switcher's endpoint. Anonymous and outside the CSRF filter: the switcher sits on the
@@ -294,20 +335,15 @@ public class SecurityConfig {
                                 loginEntryPoint(protocol, oidcRegistrations, samlRegistrations),
                                 AnyRequestMatcher.INSTANCE))
 
-                // Disabled for the API apart from a signed-in member's revoke, the language switcher's
-                // endpoint and a sign-out with no live session only.
-                //
-                // The session cookie is SameSite=Lax, which stops a cross-site page from making the browser
-                // attach it to a PUT or DELETE, and these are application/json requests, which are
-                // preflighted and fail CORS without a matching policy. The page therefore calls exactly the
-                // same operations any other caller would, with no privileged back door of its own, which is
-                // also what lets the shared conformance suite drive all three implementations identically.
-                // A revoke is a plain POST and needs the token, see API_WITHOUT_ANTI_FORGERY. The switcher's
-                // POST has no session to hold a token, see SET_LANGUAGE, and neither does a sign-out after
-                // the session has gone, see SIGN_OUT_WITHOUT_SESSION. A missing or wrong token is answered
-                // 403 with no body, through the status-only error page.
-                .csrf(csrf ->
-                        csrf.ignoringRequestMatchers(API_WITHOUT_ANTI_FORGERY, SET_LANGUAGE, SIGN_OUT_WITHOUT_SESSION))
+                // Asked of a signed-in member's every change through the API and of a sign-out with a live
+                // session, and of nothing else on the API, see API_WITHOUT_ANTI_FORGERY. The page calls
+                // exactly the same operations any other caller would, with no privileged back door of its
+                // own, which is also what lets the shared conformance suite drive all three implementations
+                // identically. The switcher's POST has no session to hold a token, see SET_LANGUAGE, and
+                // neither does a sign-out after the session has gone, see SIGN_OUT_WITHOUT_SESSION. A
+                // missing or wrong token is answered 403 with no body, through the status-only error page.
+                .csrf(csrf -> csrf.csrfTokenRequestHandler(new HeaderOnlyOnTheApi())
+                        .ignoringRequestMatchers(API_WITHOUT_ANTI_FORGERY, SET_LANGUAGE, SIGN_OUT_WITHOUT_SESSION))
 
                 // Exactly the header set decision record 35 fixes, from one list shared with the 404 answered
                 // ahead of this chain, so no response goes out with a different set. See
@@ -542,7 +578,7 @@ public class SecurityConfig {
      * to, and the registration has a signing key. Without the address, Spring refuses the response and the
      * member would see an error page. Without the key, Spring cannot make the LogoutRequest at all, because
      * it signs every one. In either case the sign-out stays local and lands on /signed-out, which works
-     * whatever the provider supports (decision record 42).
+     * whatever the provider supports (decision record 41).
      */
     static RequestMatcher singleLogoutAvailable(RelyingPartyRegistrationRepository registrations) {
         return request -> {

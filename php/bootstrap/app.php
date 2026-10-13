@@ -50,16 +50,14 @@ return Application::configure(basePath: dirname(__DIR__))
         }
 
         /*
-         * CSRF is excluded for the API, except the self-revoke.
+         * CSRF is excluded for the API, except a signed-in member's changes.
          *
-         * The session cookie is SameSite=Lax, which stops a cross-site page from making the browser
-         * attach it to a PUT or DELETE, and these are application/json requests, which are preflighted
-         * and fail CORS without a matching policy. The self-revoke is a plain POST with no body, which a
-         * form on a sibling subdomain could submit with the cookie attached, so a signed-in member's
-         * revoke carries the token in the X-CSRF-TOKEN header (PreventRequestForgeryUnlessSignedOut).
-         * The self-service page calls the same operations any other caller would, with no privileged
-         * back door of its own, which is also what lets the shared conformance suite drive all three
-         * implementations identically.
+         * Setting or clearing a key, removing a relationship and the self-revoke carry the token in the
+         * X-CSRF-TOKEN header when a member is signed in (PreventRequestForgeryUnlessSignedOut). Reads need
+         * none, and the anonymous attestation lookup has no session to hold one. The self-service page
+         * calls the same operations any other caller would, with no privileged back door of its own,
+         * which is also what lets the shared conformance suite drive all three implementations
+         * identically.
          */
         /*
          * On the API an empty string is data, not an omission: a present but empty public_key is the member
@@ -107,7 +105,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'set-language',
         ]);
 
-        // The same check, answered 403 rather than 419, and asked of the sign-out and the self-revoke
+        // The same check, answered 403 rather than 419, and asked of the sign-out and the member's changes
         // only when a member is signed in. See the middleware.
         $middleware->web(replace: [
             PreventRequestForgery::class => PreventRequestForgeryUnlessSignedOut::class,

@@ -8,7 +8,7 @@ use App\Exceptions\ConfigurationException;
 
 /**
  * The release this server is running, which the self-service page shows in its footer and no other page does
- * (decision record 47 in docs/adr).
+ * (decision record 46 in docs/adr).
  *
  * Read from the top heading of CHANGELOG.md, the version the release is tagged and published under, so the version is
  * written in one place. The changelog ships with the application, in the image and in every copy of the php folder.

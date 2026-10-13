@@ -159,10 +159,11 @@
 </main>
 
 <script th:inline="javascript">
-    // Talks to the same API operations any other caller would use -- the page has no privileged back door
-    // of its own. The session cookie is SameSite=Lax, so a cross-site page cannot make the browser issue
-    // them with the member's cookie attached. Revoke is a plain POST, which a form on a sibling subdomain
-    // could send, so it also carries the anti-forgery token from the page's csrf-token meta tag.
+    // Talks to the same API operations any other caller would use, and the page has no privileged back
+    // door of its own. Every request that changes something, saving or clearing a key, revoking and
+    // removing, carries the session's anti-forgery token in the X-CSRF-TOKEN header, read from the meta tag
+    // in the head. The session cookie alone would not do, because a page on a sibling subdomain counts as
+    // the same site for it.
     //
     // One delegated listener rather than three per relationship: the number of relationships is whatever
     // the organisation granted, and wiring handlers per card would mean the page's behaviour depended on
@@ -170,6 +171,7 @@
     (function () {
         // Inlined as it is: the controller has already written it as an escaped literal for this script.
         const T = /*[(${scriptStrings})]*/ {};
+        const csrfToken = document.querySelector("meta[name=csrf-token]").content;
 
         function show(section, message, kind) {
             const output = section.querySelector("[data-message]");
@@ -205,7 +207,7 @@
             const response = await fetch(url(section, "key"), {
                 method: "PUT",
                 credentials: "same-origin",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken },
                 body: JSON.stringify({ public_key: value })
             });
 
@@ -231,11 +233,10 @@
         async function revoke(section) {
             if (!window.confirm(T["revoke_confirm"])) return;
 
-            const token = document.querySelector("meta[name='csrf-token']").content;
             const response = await fetch(url(section, "revoke"), {
                 method: "POST",
                 credentials: "same-origin",
-                headers: { "X-CSRF-TOKEN": token }
+                headers: { "X-CSRF-TOKEN": csrfToken }
             });
 
             if (response.status === 204) {
@@ -253,7 +254,8 @@
 
             const response = await fetch(url(section, "key"), {
                 method: "DELETE",
-                credentials: "same-origin"
+                credentials: "same-origin",
+                headers: { "X-CSRF-TOKEN": csrfToken }
             });
 
             // 404 counts as done: the relationship is gone either way, and telling the member their
@@ -353,7 +355,7 @@
         <span th:unless="${attribution.licenseUrl}" th:text="${t['licence_link']}">Licence</span>
     </span>
     <!-- The running version, for the people who operate and support the server to confirm which version is
-         running. Only this page shows it (decision record 47 in docs/adr). -->
+         running. Only this page shows it (decision record 46 in docs/adr). -->
     &middot;
     <a th:href="${release.releasesUrl}" rel="noopener" target="_blank" th:text="${release.label}">vX.Y.Z</a>
 </footer>

@@ -59,7 +59,7 @@ final class TrustedAttestationServiceProvider extends ServiceProvider
         // deployment and puts it beyond the organisation's reach, so nothing here could remove it.
         $this->app->singleton(Attribution::class, fn (): Attribution => new Attribution);
 
-        // The running version, which the self-service page shows in its footer (decision record 47 in docs/adr).
+        // The running version, which the self-service page shows in its footer (decision record 46 in docs/adr).
         $this->app->singleton(RunningRelease::class, fn (): RunningRelease => new RunningRelease);
 
         // The write path: its decisions live in RelationshipService, over a store and a transaction runner

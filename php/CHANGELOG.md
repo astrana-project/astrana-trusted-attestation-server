@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.9] - 2026-10-13
+
+### Security
+
+- Saving or clearing a key and removing a relationship now need the session's anti-forgery token in the `X-CSRF-TOKEN`
+  header, as revoking already did. Without it a signed-in member's request is refused with HTTP 403 - Forbidden and
+  changes nothing.
+- The member API reads the anti-forgery token from the `X-CSRF-TOKEN` header and nowhere else. It used to accept a
+  `_token` field in the query string or the request body, and the `X-XSRF-TOKEN` header, as well.
+
 ## [1.0.8] - 2026-10-13
 
 ### Fixed
