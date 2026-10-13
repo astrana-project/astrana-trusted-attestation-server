@@ -8,6 +8,7 @@ use App\Models\MemberRelationship;
 use App\Services\MemberIdentityResolver;
 use App\Services\RelationshipStore;
 use App\Support\PublicKeys;
+use App\Support\RunningRelease;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Support\ProgrammableRelationshipStore;
 use Tests\TestCase;
@@ -61,7 +62,10 @@ final class MemberPageTest extends TestCase
         // implementations showed it. A subtype is shown when it is not null and not empty, whatever it says.
         $this->store->all = [$this->relationship('employee', '0')];
 
-        self::assertStringContainsString('&middot; <span class="fw-normal text-body-secondary">0</span>', $this->page());
+        self::assertStringContainsString(
+            '&middot; <span class="fw-normal text-body-secondary">0</span>',
+            $this->page()
+        );
     }
 
     #[Test]
@@ -119,7 +123,8 @@ final class MemberPageTest extends TestCase
         self::assertStringContainsString('<html lang="ar" dir="rtl">', $arabic);
 
         self::assertStringContainsString('dir="ltr"', self::keyInput($arabic));
-        self::assertStringContainsString('dir="ltr"', self::keyInput($this->withUnencryptedCookie('ata_locale', 'en')->page()));
+        $english = $this->withUnencryptedCookie('ata_locale', 'en')->page();
+        self::assertStringContainsString('dir="ltr"', self::keyInput($english));
     }
 
     #[Test]
@@ -152,5 +157,55 @@ final class MemberPageTest extends TestCase
         self::assertStringNotContainsString('</', $script);
         self::assertStringNotContainsString('&', $script);
         self::assertStringNotContainsString("'", $script);
+    }
+
+    /** The version the release is published under, the top heading of this implementation's changelog. */
+    private static function changelogVersion(): string
+    {
+        preg_match('/^## \[(\d+\.\d+\.\d+)\]/m', (string) file_get_contents(base_path('CHANGELOG.md')), $heading);
+
+        return $heading[1] ?? '';
+    }
+
+    #[Test]
+    public function the_footer_links_the_running_version_to_the_releases_page(): void
+    {
+        // Only this page shows the running version, for the people who operate and support the server to
+        // confirm which version is running (decision record 47 in docs/adr).
+        $page = $this->page();
+        $start = (int) strpos($page, '<footer');
+        $footer = substr($page, $start, (int) strpos($page, '</footer>') - $start);
+
+        self::assertStringContainsString(
+            '<a href="https://www.astrana.org/releases" rel="noopener" target="_blank">'
+                .'v'.self::changelogVersion().'</a>',
+            $footer
+        );
+    }
+
+    #[Test]
+    public function the_public_pages_do_not_show_the_running_version(): void
+    {
+        foreach (['/', '/signed-out', '/license'] as $path) {
+            $page = (string) $this->get($path)->assertOk()->getContent();
+
+            self::assertStringNotContainsString('https://www.astrana.org/releases', $page, $path);
+            self::assertStringNotContainsString('v'.self::changelogVersion(), $page, $path);
+        }
+    }
+
+    #[Test]
+    public function the_public_routes_work_when_the_changelog_cannot_be_read(): void
+    {
+        // Only the self-service page needs the running version, so a changelog that cannot be read leaves every
+        // other route answering.
+        $this->app->singleton(
+            RunningRelease::class,
+            fn (): RunningRelease => new RunningRelease('/no/such/folder/CHANGELOG.md')
+        );
+
+        foreach (['/', '/signed-out', '/license', '/.well-known/ata-manifest.json'] as $path) {
+            $this->get($path)->assertOk();
+        }
     }
 }

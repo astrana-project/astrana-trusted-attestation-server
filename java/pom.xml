@@ -13,7 +13,7 @@
 
   <groupId>org.astrana</groupId>
   <artifactId>trusted-attestation-server</artifactId>
-  <version>1.0.4</version>
+  <version>1.0.5</version>
   <name>Astrana Trusted Attestation Server</name>
   <description>Spring Boot implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)</description>
   <!--
@@ -254,6 +254,10 @@
 
         The jar tools, spring-boot-jarmode-tools, are left out of the jar. They extract its layers, which
         nothing here does: the image runs the jar as it is.
+
+        The build records this file's version in META-INF/build-info.properties, which is where the
+        self-service page reads the running version from. The time is left out, so that the same source
+        builds the same jar.
       -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
@@ -264,6 +268,16 @@
           </additionalClasspathElements>
           <includeTools>false</includeTools>
         </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build-info</goal>
+            </goals>
+            <configuration>
+              <time>off</time>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
       <!--

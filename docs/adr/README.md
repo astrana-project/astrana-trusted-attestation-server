@@ -86,6 +86,7 @@ Never edit a record into a different decision. The old record is the history of 
 |  33 | [One accessible interface shared by all three implementations](0033-one-accessible-interface-shared-by-all-three-implementations.md)      | 2, 5, 6, 20, 30 |
 |  34 | [Organisation-configured localisation, resolved in a fixed order](0034-organisation-configured-localisation-resolved-in-a-fixed-order.md) | 6, 21, 30, 33   |
 |  35 | [A fixed set of security headers, and no Content-Security-Policy](0035-a-fixed-set-of-security-headers-and-no-content-security-policy.md) | 5, 31, 33       |
+|  47 | [The running version is shown on the self-service page only](0047-the-running-version-is-shown-on-the-self-service-page-only.md)          | 33, 39, 44      |
 
 ## Delivery
 

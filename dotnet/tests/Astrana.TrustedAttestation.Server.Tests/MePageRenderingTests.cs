@@ -92,6 +92,7 @@ public partial class MePageRenderingTests
             EnrollmentUrl = "https://org.example/enrol",
             AttestationUrl = "https://org.example/attest",
         });
+        builder.Services.AddSingleton(new RunningRelease("1.2.3"));
         builder.Services.AddSingleton(new MemberIdentityResolver(Options.Create(new TrustedAttestationOptions())));
         builder.Services.AddSingleton(new RelationshipService(
             store, new ImmediateTransactionRunner(), new RecordingAuditWriter(), new RecordingSelfRevoke(), catalog));

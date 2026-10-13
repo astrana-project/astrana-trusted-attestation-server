@@ -20,6 +20,24 @@
     <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
   </PropertyGroup>
 
+  <!-- The version is the top heading of CHANGELOG.md, the version the release is tagged and published under, so the
+       version the self-service page shows is the release that is running, and the changelog stays the one place it is
+       written. -->
+  <PropertyGroup>
+    <ChangelogPath>$(MSBuildProjectDirectory)/../../CHANGELOG.md</ChangelogPath>
+    <ChangelogVersion Condition="Exists('$(ChangelogPath)')">$([System.Text.RegularExpressions.Regex]::Match(
+      $([System.IO.File]::ReadAllText('$(ChangelogPath)')),
+      '(?m)(?&lt;=^## \[)\d+\.\d+\.\d+(?=\])').Value)</ChangelogVersion>
+    <Version>$(ChangelogVersion)</Version>
+  </PropertyGroup>
+
+  <Target Name="RequireChangelogVersion" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <NoVersionHeading>$(ChangelogPath) has no version heading such as ## [1.0.0] - 2026-10-05.</NoVersionHeading>
+    </PropertyGroup>
+    <Error Condition="'$(ChangelogVersion)' == ''" Text="$(NoVersionHeading) The build takes its version from there." />
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.11" />

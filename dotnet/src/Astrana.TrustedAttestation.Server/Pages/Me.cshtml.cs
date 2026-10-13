@@ -58,7 +58,8 @@ public sealed class MeModel(
     TimeProvider timeProvider,
     UiStrings strings,
     ManifestDocument manifest,
-    Attribution attribution) : PageModel
+    Attribution attribution,
+    RunningRelease release) : PageModel
 {
     /// <summary>
     /// The organisation's own name, in the member's language where the manifest offers it.
@@ -84,6 +85,9 @@ public sealed class MeModel(
 
     /// <summary>Fixed, and not organisation-configurable. See <see cref="Contract.Attribution"/>.</summary>
     public Attribution Attribution => attribution;
+
+    /// <summary>The running version, shown in this page's footer only. See <see cref="RunningRelease"/>.</summary>
+    public RunningRelease Release => release;
 
     public string MemberName { get; private set; } = string.Empty;
 

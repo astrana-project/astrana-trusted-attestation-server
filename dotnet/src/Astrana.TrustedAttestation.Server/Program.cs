@@ -61,6 +61,7 @@ builder.Services.AddSingleton(RelationshipTypeCatalog.Load());
 // The fixed footer. Not in configuration at all: decision record 33 in docs/adr requires it on every deployment
 // and puts it beyond the organisation's reach, so there is deliberately no setting that could remove it.
 builder.Services.AddSingleton(Attribution.Load());
+builder.Services.AddSingleton(RunningRelease.OfThisBuild());
 builder.Services.AddSingleton(TimeProvider.System);
 
 // The manifest is validated as the container builds it, so an instance with a broken manifest never

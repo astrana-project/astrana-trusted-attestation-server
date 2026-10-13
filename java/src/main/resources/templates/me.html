@@ -352,6 +352,10 @@
            target="_blank" th:text="${t['licence_link']}">Licence</a>
         <span th:unless="${attribution.licenseUrl}" th:text="${t['licence_link']}">Licence</span>
     </span>
+    <!-- The running version, for the people who operate and support the server to confirm which version is
+         running. Only this page shows it (decision record 47 in docs/adr). -->
+    &middot;
+    <a th:href="${release.releasesUrl}" rel="noopener" target="_blank" th:text="${release.label}">vX.Y.Z</a>
 </footer>
 </body>
 </html>

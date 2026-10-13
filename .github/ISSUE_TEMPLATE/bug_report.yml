@@ -24,7 +24,9 @@ body:
     id: version
     attributes:
       label: Version or commit
-      description: The implementation's version from its CHANGELOG, such as 1.0.0, or the commit hash.
+      description:
+        The implementation's version, shown in the footer of the self-service page and at the top of its CHANGELOG, such
+        as 1.0.1, or the commit hash.
     validations:
       required: true
   - type: dropdown

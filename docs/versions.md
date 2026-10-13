@@ -31,9 +31,9 @@ Each implementation's changelog lists what every release changed:
 - [Java changelog](../java/CHANGELOG.md)
 - [PHP changelog](../php/CHANGELOG.md)
 
-Read the entries between your version and the new one before you update. A release that changes the database schema says
-so in its entry, and you apply the change by hand. To hear about new releases, watch the repository's releases on
-GitHub.
+The self-service page shows the version a server is running in its footer. Read the entries between that version and the
+new one before you update. A release that changes the database schema says so in its entry, and you apply the change by
+hand. To hear about new releases, watch the repository's releases on GitHub.
 
 Every published image carries three tags, its full version such as `1.0.0`, its major and minor version such as `1.0`,
 and `latest`. Pull the full version, so that the image changes only when you choose to update. Each implementation's

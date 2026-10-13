@@ -1,5 +1,6 @@
 @page "/me"
 @model MeModel
+@using Astrana.TrustedAttestation.Server.Services
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     var s = Model.Strings;
@@ -218,6 +219,10 @@
             <span>@s["licence_link"]</span>
         }
     }
+    @* The running version, for the people who operate and support the server to confirm which version is
+       running. Only this page shows it (decision record 47 in docs/adr). *@
+    <text> &middot; </text>
+    <a href="@RunningRelease.ReleasesUrl" rel="noopener" target="_blank">@Model.Release.Label</a>
 </footer>
 
 <script>

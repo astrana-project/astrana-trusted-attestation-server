@@ -347,6 +347,10 @@
             <span>{{ $t['licence_link'] }}</span>
         @endif
     @endif
+    {{-- The running version, for the people who operate and support the server to confirm which version is
+         running. Only this page shows it (decision record 47 in docs/adr). --}}
+    &middot;
+    <a href="{{ $release::RELEASES_URL }}" rel="noopener" target="_blank">{{ $release->label() }}</a>
 </footer>
 </body>
 </html>

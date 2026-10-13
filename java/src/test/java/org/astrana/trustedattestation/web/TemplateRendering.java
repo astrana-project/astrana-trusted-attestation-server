@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.astrana.trustedattestation.contract.Attribution;
 import org.astrana.trustedattestation.service.LocalizationSettings;
+import org.astrana.trustedattestation.service.RunningRelease;
 import org.astrana.trustedattestation.service.UiStrings;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -27,6 +28,9 @@ final class TemplateRendering {
 
     /** The anti-forgery token every rendered page is given, as Spring Security's filter would give it. */
     static final String CSRF_TOKEN = "rendered-anti-forgery-token";
+
+    /** The running release every rendered page is handed, so a test can see which pages show it. */
+    static final RunningRelease RELEASE = new RunningRelease("1.2.3");
 
     private static final SpringTemplateEngine ENGINE = engine();
 
@@ -66,6 +70,7 @@ final class TemplateRendering {
         model.put("orgLogo", null);
         model.put("orgLogoDark", null);
         model.put("attribution", new Attribution());
+        model.put("release", RELEASE);
         model.put("signedOut", false);
         model.put("memberName", "Alice");
         model.put("relationships", List.of());
