@@ -26,7 +26,7 @@ Content-Type headers.
 
 A body is read as JSON text by RFC 8259 whatever its Content-Type says. It is malformed, and so holds no key,
 when it is not valid UTF-8, starts with a byte order mark or holds anything after its one value. Decision
-record 48 adds three limits. A body is also malformed when, anywhere in it, arrays and objects nest more than 64
+record 47 adds three limits. A body is also malformed when, anywhere in it, arrays and objects nest more than 64
 deep, counting the outermost, a number has more than 1,000 digits, or a string or a name holds a lone surrogate
 escape. Many of the requests hold an on-record key in a malformed body, and each of those must be answered
 {"valid":false}. Where public_key appears twice, its last value is the one read.

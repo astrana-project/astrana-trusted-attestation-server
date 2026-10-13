@@ -11,7 +11,7 @@ info:
     malformed when it is not valid UTF-8, starts with a byte order mark or has anything after its one JSON value. It is
     also malformed when, anywhere in it, arrays and objects are nested more than 64 deep, counting the outermost, a
     number has more than 1,000 digits, counting those of its fraction and exponent, or a string or a name contains a \u
-    escape of a surrogate that is not half of a pair (see decision record 48). A malformed body carries no key. When a
+    escape of a surrogate that is not half of a pair (see decision record 47). A malformed body carries no key. When a
     name appears more than once in an object, its last value counts.
 servers:
   - url: https://{ata-host}/api/v1

@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The running version in the footer. The self-service page shows it, linked to the releases page, and the public
- * pages do not, even when they are handed it (decision record 47 in docs/adr).
+ * pages do not, even when they are handed it (decision record 46 in docs/adr).
  */
 class ReleaseFooterRenderingTest {
 

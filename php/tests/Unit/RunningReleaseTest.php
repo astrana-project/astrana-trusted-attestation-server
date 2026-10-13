@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The version the self-service page shows in its footer (decision record 47 in docs/adr), read from the top heading of
+ * The version the self-service page shows in its footer (decision record 46 in docs/adr), read from the top heading of
  * CHANGELOG.md, the version the release is tagged and published under.
  */
 final class RunningReleaseTest extends TestCase

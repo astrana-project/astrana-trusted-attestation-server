@@ -217,7 +217,7 @@ follows.
 
 The changelog check fails the pull request if the heading is missing, the bump does not match the files you changed, the
 three `MAJOR.MINOR` versions differ, or `java/pom.xml` or an `sbom.json` states a different version from its changelog.
-The [decision record on versioning](docs/adr/0044-version-numbers-say-what-an-update-means.md) explains why versions
+The [decision record on versioning](docs/adr/0043-version-numbers-say-what-an-update-means.md) explains why versions
 work this way.
 
 ## Reviewing a translation
@@ -253,7 +253,7 @@ to check those signatures. The signing identity is made from the repository's na
 branch, so renaming any of them changes it. The verify commands in the installation guides, and the identity the
 workflow checks its own signatures against, must then be updated in the same pull request. The workflow's
 `id-token: write` permission must stay, because signing depends on it.
-[Decision record 45](docs/adr/0045-anyone-can-check-where-a-published-image-came-from.md) explains why releases are
+[Decision record 44](docs/adr/0044-anyone-can-check-where-a-published-image-came-from.md) explains why releases are
 signed this way.
 
 ## Developer Certificate of Origin

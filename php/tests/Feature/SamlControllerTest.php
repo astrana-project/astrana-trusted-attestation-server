@@ -476,7 +476,7 @@ final class SamlControllerTest extends TestCase
         // Single logout needs a signed LogoutRequest, and an unsigned one is no more than a request anyone
         // could have written. With no key the session ends here and the member lands on /signed-out, exactly
         // as against an IdP that offers no single logout, which is what the other two implementations do
-        // (decision record 42).
+        // (decision record 41).
         $this->withoutSpKeypair();
         $session = $this->newSession();
         $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);

@@ -303,7 +303,7 @@ class SecurityConfigTest {
     @Test
     void singleLogoutIsSkippedWithoutASigningKey() {
         // Spring signs every LogoutRequest, so with no key the request cannot be made and the sign-out stays
-        // local, which works whatever the provider supports (decision record 42).
+        // local, which works whatever the provider supports (decision record 41).
         signInOverSaml("keycloak");
 
         assertThat(singleLogoutAvailable(

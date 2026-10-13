@@ -1,4 +1,4 @@
-# 42. Single logout needs a signing key
+# 41. Single logout needs a signing key
 
 Accepted on 2026-10-10.
 

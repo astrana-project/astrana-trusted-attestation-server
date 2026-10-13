@@ -43,7 +43,7 @@ The three template engines render the same document.
   rendered from `shared/contract/attribution.json`, with the licence link's label from the strings file. On the
   self-service page only, the footer ends with the running version, such as `v1.0.1`, linked to
   `https://www.astrana.org/releases`.
-  [Decision record 47](../../docs/adr/0047-the-running-version-is-shown-on-the-self-service-page-only.md) says why.
+  [Decision record 46](../../docs/adr/0046-the-running-version-is-shown-on-the-self-service-page-only.md) says why.
 
 The licence page states the software's own licence and trademark notice, so it is always in English and carries
 `lang="en" dir="ltr"`. It has the project name as its heading and title, and no organisation name or logo. It uses the

@@ -144,7 +144,7 @@ class MeControllerTest {
         // target and the org name renders as plain text.
         assertThat(model.getAttribute("contactUrl")).isNull();
         assertThat(model.getAttribute("attribution")).isSameAs(attribution);
-        // The running version, which only this page shows (decision record 47 in docs/adr).
+        // The running version, which only this page shows (decision record 46 in docs/adr).
         assertThat(model.getAttribute("release")).isSameAs(release);
         assertThat(model.getAttribute("t")).isEqualTo(Map.of("title", "Your relationships"));
         verifyNoInteractions(relationships);

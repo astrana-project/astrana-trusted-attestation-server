@@ -120,7 +120,7 @@ without its notice. The file is generated, so it is not kept in Git.
 ## Changelog and bill of materials
 
 `CHANGELOG.md` follows Keep a Changelog, with no Unreleased section, as
-[decision record 44](../docs/adr/0044-version-numbers-say-what-an-update-means.md) describes. `sbom.json` is a CycloneDX
+[decision record 43](../docs/adr/0043-version-numbers-say-what-an-update-means.md) describes. `sbom.json` is a CycloneDX
 software bill of materials for the published image, generated from the Composer lock file without the development
 dependencies. It also lists what the image installs outside Composer. These are the Debian packages the `Dockerfile`
 adds, at the versions the image was last built with, and the `sqlsrv` and `pdo_sqlsrv` extensions and Microsoft's ODBC

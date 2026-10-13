@@ -1,4 +1,4 @@
-# 45. Anyone can check where a published image came from
+# 44. Anyone can check where a published image came from
 
 Accepted on 2026-10-08.
 
@@ -6,7 +6,7 @@ Accepted on 2026-10-08.
 
 Each release of an implementation publishes its container image and a GitHub release that includes its software bill of
 materials, the list of every component the image contains
-([record 44](0044-version-numbers-say-what-an-update-means.md)). Whoever pulls the image or downloads the bill of
+([record 43](0043-version-numbers-say-what-an-update-means.md)). Whoever pulls the image or downloads the bill of
 materials needs to be able to check where it came from. It should be the one this repository's release workflow built
 and published, and not something published in its place under the same name.
 

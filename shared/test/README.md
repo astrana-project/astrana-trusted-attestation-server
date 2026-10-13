@@ -62,7 +62,7 @@ numbers, invalid UTF-8, byte order marks, sizes either side of the 64 kilobyte l
 
 It does not measure how long an answer takes. A body is read as JSON whatever its `Content-Type` says, and where
 `public_key` appears twice its last value is the one read. A body is malformed, and so holds no key, when it is not JSON
-by RFC 8259 or breaks one of the limits decision record 48 sets. Those are arrays and objects nested more than 64 deep,
+by RFC 8259 or breaks one of the limits decision record 47 sets. Those are arrays and objects nested more than 64 deep,
 counting the outermost, a number with more than 1,000 digits, and a lone surrogate escape in any string or name. An
 on-record key in a malformed body gets `{"valid":false}`. The suite plants three on-record keys, one active, one revoked
 and one expired, in each implementation's database for the run, and removes them when it finishes. It reports a

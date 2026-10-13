@@ -171,7 +171,7 @@ final class MemberPageTest extends TestCase
     public function the_footer_links_the_running_version_to_the_releases_page(): void
     {
         // Only this page shows the running version, for the people who operate and support the server to
-        // confirm which version is running (decision record 47 in docs/adr).
+        // confirm which version is running (decision record 46 in docs/adr).
         $page = $this->page();
         $start = (int) strpos($page, '<footer');
         $footer = substr($page, $start, (int) strpos($page, '</footer>') - $start);

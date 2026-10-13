@@ -1,4 +1,4 @@
-# 44. Version numbers say what an update means
+# 43. Version numbers say what an update means
 
 Accepted on 2026-10-07.
 
