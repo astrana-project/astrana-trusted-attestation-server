@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Http\Controllers\SamlController;
+use App\Http\Controllers\SamlSingleLogoutController;
 use App\Services\MemberIdentityResolver;
 use App\Services\Saml\SamlClient;
 use Illuminate\Http\Request;
@@ -172,6 +173,11 @@ final class SamlControllerTest extends TestCase
         return new SamlController(new SamlClient);
     }
 
+    private function singleLogoutController(): SamlSingleLogoutController
+    {
+        return new SamlSingleLogoutController(new SamlClient);
+    }
+
     private function newSession(): Store
     {
         return new Store('ata_session', new ArraySessionHandler(60));
@@ -233,7 +239,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->newSession();
         $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
 
-        $response = $this->controller()->singleLogout($this->request($session, [], ['SAMLRequest' => self::posted($xml)]));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, [], ['SAMLRequest' => self::posted($xml)]));
 
         $this->assertLandsOnTheLandingPage($response->getTargetUrl());
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -439,7 +445,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->newSession();
         $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
 
-        $response = $this->controller()->singleLogout($this->request($session, ['SAMLResponse' => 'not a SAML message']));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, ['SAMLResponse' => 'not a SAML message']));
 
         self::assertSame('/signed-out', $this->pathOf($response->getTargetUrl()));
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -499,7 +505,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->newSession();
         $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
 
-        $response = $this->controller()->singleLogout($this->request($session));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session));
 
         $this->assertLandsOnTheLandingPage($response->getTargetUrl());
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -514,7 +520,7 @@ final class SamlControllerTest extends TestCase
         $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
         $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(), false);
 
-        $response = $this->controller()->singleLogout($this->request($session, $query));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, $query));
 
         $this->assertLandsOnTheLandingPage($response->getTargetUrl());
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -532,7 +538,7 @@ final class SamlControllerTest extends TestCase
         $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
         $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(), true);
 
-        $response = $this->controller()->singleLogout($this->request($session, $query));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, $query));
 
         $this->assertLandsOnTheLandingPage($response->getTargetUrl());
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -552,7 +558,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->signedInSession('the-name-id');
         $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(self::SINGLE_LOGOUT), true);
 
-        $response = $this->controller()->singleLogout($this->request($session, $query));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, $query));
 
         self::assertSame(Constants::STATUS_SUCCESS, $this->answeredStatus($response->getTargetUrl()));
         parse_str((string) parse_url($response->getTargetUrl(), PHP_URL_QUERY), $params);
@@ -570,7 +576,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->signedInSession('member-a');
         $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(self::SINGLE_LOGOUT, 'member-b'), true);
 
-        $response = $this->controller()->singleLogout($this->request($session, $query));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, $query));
 
         self::assertSame(Constants::STATUS_REQUESTER, $this->answeredStatus($response->getTargetUrl()));
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -604,7 +610,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->signedInSession('the-name-id');
         $query = $this->redirectBindingMessage('SAMLRequest', $xml, true, $signatureAlgorithm);
 
-        $response = $this->controller()->singleLogout($this->request($session, $query));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, $query));
 
         self::assertSame(Constants::STATUS_REQUESTER, $this->answeredStatus($response->getTargetUrl()));
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -620,7 +626,7 @@ final class SamlControllerTest extends TestCase
         $xml = self::logoutRequestXml(self::SINGLE_LOGOUT, 'the-name-id', self::IDP_ENTITY_ID, time() + 60);
         $query = $this->redirectBindingMessage('SAMLRequest', $xml, true);
 
-        $response = $this->controller()->singleLogout($this->request($session, $query));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, $query));
 
         self::assertSame(Constants::STATUS_SUCCESS, $this->answeredStatus($response->getTargetUrl()));
         self::assertNull($session->get(MemberIdentityResolver::SESSION_KEY));
@@ -634,7 +640,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->newSession();
         $query = $this->redirectBindingMessage('SAMLRequest', self::logoutRequestXml(self::SINGLE_LOGOUT, 'member-b'), true);
 
-        $response = $this->controller()->singleLogout($this->request($session, $query));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, $query));
 
         self::assertSame(Constants::STATUS_SUCCESS, $this->answeredStatus($response->getTargetUrl()));
     }
@@ -699,7 +705,7 @@ final class SamlControllerTest extends TestCase
         Log::spy();
 
         try {
-            $this->controller()->singleLogout($request);
+            $this->singleLogoutController()->singleLogout($request);
             self::fail('the logout request was answered');
         } catch (HttpException $refusal) {
             self::assertSame(404, $refusal->getStatusCode());
@@ -720,7 +726,7 @@ final class SamlControllerTest extends TestCase
         $session->put('trusted_attestation.saml.logout_request_id', 'ONELOGIN_the-request');
         $query = $this->redirectBindingMessage('SAMLResponse', self::logoutResponseXml('ONELOGIN_the-request'), true);
 
-        $response = $this->controller()->singleLogout($this->request($session, $query));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, $query));
 
         self::assertSame('/signed-out', $this->pathOf($response->getTargetUrl()));
     }
@@ -738,7 +744,7 @@ final class SamlControllerTest extends TestCase
         $session->put('trusted_attestation.saml.logout_request_id', 'ONELOGIN_the-request');
         $query = $this->redirectBindingMessage('SAMLResponse', self::logoutResponseXml('ONELOGIN_another'), true);
 
-        $response = $this->controller()->singleLogout($this->request($session, $query));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, $query));
 
         self::assertSame('/signed-out', $this->pathOf($response->getTargetUrl()));
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -760,7 +766,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->signedInSession('the-name-id');
         $xml = $this->signedByIdp(self::logoutRequestXml(self::APP_URL.'/auth/saml/logout'));
 
-        $response = $this->controller()->singleLogout($this->request($session, [], [
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, [], [
             'SAMLRequest' => self::posted($xml),
             'RelayState' => 'the-relay-state',
         ]));
@@ -784,7 +790,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->signedInSession('member-a');
         $xml = $this->signedByIdp(self::logoutRequestXml(self::APP_URL.'/auth/saml/logout', 'member-b'));
 
-        $response = $this->controller()->singleLogout($this->request($session, [], [
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, [], [
             'SAMLRequest' => self::posted($xml),
             'RelayState' => 'the-relay-state',
         ]));
@@ -813,7 +819,7 @@ final class SamlControllerTest extends TestCase
         Log::spy();
         $session = $this->signedInSession('the-name-id');
 
-        $response = $this->controller()->singleLogout($this->request($session, [], ['SAMLRequest' => self::posted($this->signedByIdp($xml))]));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, [], ['SAMLRequest' => self::posted($this->signedByIdp($xml))]));
 
         self::assertSame(Constants::STATUS_REQUESTER, $this->answeredStatus($response->getTargetUrl()));
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -833,7 +839,7 @@ final class SamlControllerTest extends TestCase
         $session->put('trusted_attestation.saml.logout_request_id', 'ONELOGIN_the-request');
         $xml = $this->signedByIdp(self::logoutResponseXml('ONELOGIN_the-request', self::APP_URL.'/auth/saml/logout'));
 
-        $response = $this->controller()->singleLogout($this->request($session, [], ['SAMLResponse' => self::posted($xml)]));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, [], ['SAMLResponse' => self::posted($xml)]));
 
         self::assertSame('/signed-out', $this->pathOf($response->getTargetUrl()));
         self::assertNull($session->get('trusted_attestation.saml.logout_request_id'));
@@ -852,7 +858,7 @@ final class SamlControllerTest extends TestCase
         $session->put('trusted_attestation.saml.logout_request_id', 'ONELOGIN_the-request');
         $xml = $this->signedByIdp(self::logoutResponseXml('ONELOGIN_another'));
 
-        $response = $this->controller()->singleLogout($this->request($session, [], ['SAMLResponse' => self::posted($xml)]));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, [], ['SAMLResponse' => self::posted($xml)]));
 
         self::assertSame('/signed-out', $this->pathOf($response->getTargetUrl()));
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));
@@ -870,7 +876,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->newSession();
         $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
 
-        $response = $this->controller()->singleLogout($this->request($session, [], [
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, [], [
             'SAMLResponse' => self::posted(self::logoutResponseXml('ONELOGIN_the-request')),
         ]));
 
@@ -976,7 +982,7 @@ final class SamlControllerTest extends TestCase
         $session = $this->newSession();
         $session->put(MemberIdentityResolver::SESSION_KEY, ['sub' => 'member-subject']);
 
-        $response = $this->controller()->singleLogout($this->request($session, [], ['anything' => 'else']));
+        $response = $this->singleLogoutController()->singleLogout($this->request($session, [], ['anything' => 'else']));
 
         $this->assertLandsOnTheLandingPage($response->getTargetUrl());
         self::assertSame(['sub' => 'member-subject'], $session->get(MemberIdentityResolver::SESSION_KEY));

@@ -64,7 +64,7 @@ final class PublicKeyBody
 
         preg_match_all(self::NUMBER, $withoutStrings, $numbers);
         foreach ($numbers[0] as $number) {
-            if (preg_match_all('/[0-9]/', $number) > self::MAX_NUMBER_DIGITS) {
+            if (preg_match_all('/\d/', $number) > self::MAX_NUMBER_DIGITS) {
                 return true;
             }
         }

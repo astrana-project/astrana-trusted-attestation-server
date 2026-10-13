@@ -57,7 +57,9 @@ class RunningReleaseTest {
         // a message that says what to do, as the other two implementations refuse to build or to serve the page.
         ObjectProvider<BuildProperties> none = new DefaultListableBeanFactory().getBeanProvider(BuildProperties.class);
 
-        assertThatThrownBy(() -> new TrustedAttestationConfig().runningRelease(none))
+        TrustedAttestationConfig config = new TrustedAttestationConfig();
+
+        assertThatThrownBy(() -> config.runningRelease(none))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("META-INF/build-info.properties")
                 .hasMessageContaining("Build the server with Maven");

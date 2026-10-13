@@ -71,7 +71,7 @@ public static class ProviderLogoutRequest
             }
 
             var session = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            var exchange = new Exchange(session.Principal, LogoutAddress(context.Request, modulePath));
+            var exchange = new Exchange(session.Principal, SingleLogoutAddress(context.Request, modulePath));
             Current.Value = exchange;
             await next();
 
@@ -90,7 +90,7 @@ public static class ProviderLogoutRequest
     /// The single logout address the SAML handler advertises, made from the request's scheme, host and path base
     /// the same way the handler makes it.
     /// </summary>
-    private static Uri LogoutAddress(HttpRequest request, string modulePath) =>
+    private static Uri SingleLogoutAddress(HttpRequest request, string modulePath) =>
         new Saml2Urls(new Uri(UriHelper.BuildAbsolute(request.Scheme, request.Host, request.PathBase)), modulePath)
             .LogoutUrl;
 

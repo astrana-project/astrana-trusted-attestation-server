@@ -6,6 +6,7 @@ use App\Http\Controllers\ApiController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SamlController;
+use App\Http\Controllers\SamlSingleLogoutController;
 use App\Http\Middleware\LimitRequestBody;
 use Illuminate\Support\Facades\Route;
 
@@ -64,7 +65,8 @@ Route::post('/signout', [AuthController::class, 'signout']);
  * LogoutRequest over the HTTP-Redirect binding or the HTTP-POST binding, and Keycloak posts by default. The
  * POST is exempt from CSRF in bootstrap/app.php for the same reason the assertion consumer is. On either
  * binding it acts only on a logout message whose signature verifies, never on the request alone
- * (SamlController::singleLogout). The member's own sign-out is the CSRF-protected POST /signout above.
+ * (SamlSingleLogoutController::singleLogout). The member's own sign-out is the CSRF-protected POST /signout
+ * above.
  *
  * One operational consequence of deciding this here: `php artisan route:cache` freezes whichever
  * protocol was configured when the cache was written. Changing protocol therefore needs
@@ -75,7 +77,7 @@ if (config('trusted_attestation.iam.protocol') === 'saml') {
     Route::get('/auth/saml/login', [SamlController::class, 'login']);
     Route::post('/auth/saml/acs', [SamlController::class, 'acs']);
     Route::get('/auth/saml/metadata', [SamlController::class, 'metadata']);
-    Route::match(['get', 'post'], '/auth/saml/logout', [SamlController::class, 'singleLogout']);
+    Route::match(['get', 'post'], '/auth/saml/logout', [SamlSingleLogoutController::class, 'singleLogout']);
 }
 
 Route::get('/.well-known/ata-manifest.json', [PageController::class, 'manifest']);

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.8] - 2026-10-14
+
+### Changed
+
+- The code that answers SAML logout requests was restructured. The server behaves exactly as before.
+
 ## [1.0.7] - 2026-10-13
 
 ### Security
