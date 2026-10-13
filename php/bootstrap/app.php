@@ -10,6 +10,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -132,6 +133,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Applied to every response, including the manifest and the API.
         $middleware->append(SecurityHeaders::class);
+
+        // No CORS. Nothing calls the API from a browser on another site: the self-service page calls it from
+        // this server's own address, and an Astrana instance calls the attestation endpoint from its server.
+        // Laravel's CORS middleware, which runs on every request by default, would otherwise let a script on
+        // any site call the API from a visitor's browser and read the answers. The other two
+        // implementations have no CORS handling either.
+        $middleware->remove(HandleCors::class);
 
         // Audit pruning, checked on a small random fraction of requests. See the middleware for why this
         // stack schedules it this way rather than with a background process or a database scheduler.

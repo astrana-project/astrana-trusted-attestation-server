@@ -37,6 +37,41 @@ final class SecurityHeadersTest extends TestCase
         $response->assertHeader('X-XSS-Protection', '0');
     }
 
+    /** @return iterable<string, array{string, string, array<string, string>}> */
+    public static function crossSiteRequests(): iterable
+    {
+        yield 'an attestation request' => ['POST', '/api/v1/attest', ['CONTENT_TYPE' => 'application/json']];
+        yield 'a member API request without a session' => ['GET', '/api/v1/me', []];
+        yield 'a preflight for saving a key' => ['OPTIONS', '/api/v1/me/relationships/employee/key', [
+            'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'PUT',
+            'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'content-type',
+        ]];
+        yield 'a preflight for an attestation request' => ['OPTIONS', '/api/v1/attest', [
+            'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
+        ]];
+    }
+
+    /**
+     * No implementation lets a script on another site call the API from a visitor's browser, so none sends
+     * a CORS header, to an ordinary request or to a preflight.
+     *
+     * @param  array<string, string>  $server
+     */
+    #[Test]
+    #[DataProvider('crossSiteRequests')]
+    public function a_request_from_another_site_gets_no_cors_headers(string $method, string $path, array $server): void
+    {
+        $body = $method === 'POST' ? '{"public_key":"AAAA"}' : null;
+        $response = $this->call($method, $path, [], [], [], ['HTTP_ORIGIN' => 'https://another-site.example'] + $server, $body);
+
+        $cors = array_values(array_filter(
+            array_keys($response->headers->all()),
+            static fn (string $name): bool => str_starts_with(strtolower($name), 'access-control-'),
+        ));
+
+        self::assertSame([], $cors);
+    }
+
     #[Test]
     public function responses_are_not_cached(): void
     {

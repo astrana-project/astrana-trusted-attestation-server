@@ -95,7 +95,8 @@ OVERSIZED = b'{"public_key":"' + b"A" * (80 * 1024) + b'"}'
 # Removing a line turns that case back into a hard failure -- which is exactly what you want the moment you
 # decide the three should agree on it.
 ACCEPTED = {
-    "OPTIONS on attest": "CORS-preflight handling is a framework default; no consumer sends OPTIONS here",
+    "OPTIONS on attest": ("the status of an OPTIONS answer is a router default; no consumer sends OPTIONS here, "
+                          "and the conformance suite checks that none of the three sends a CORS header"),
     "HEAD on me": "HEAD on an authenticated endpoint: 405 vs a GET-shaped 401 is a router default",
     "PATCH on me key": "an unsupported method on a real path; 405 vs auth-first 401 is a router default",
     "POST on manifest": "an unsupported method on a public GET; 405 vs a CSRF 403 is a framework default",
