@@ -2424,6 +2424,23 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
         results.check_that(f"{description} sets no cookie for an anonymous caller",
                            not sets_cookie(response_headers), "a Set-Cookie was returned")
 
+    # Nothing calls the API from a browser on another site: the self-service page calls it from this server's
+    # own address, and an Astrana instance calls the attestation endpoint from its server. So no response
+    # carries a CORS header, an ordinary answer or the answer to a preflight, and a script on another site
+    # can neither call the API from a visitor's browser nor read what it answers.
+    other_site = {"Origin": "https://another-site.example"}
+    for description, method, url, body, extra in (
+            ("an attestation answer", "POST", f"{api}/attest", b'{"public_key": "AAAA"}',
+             {"Content-Type": "application/json"}),
+            ("a member API answer without a session", "GET", f"{api}/me", None, {}),
+            ("the answer to a preflight for saving a key", "OPTIONS", f"{api}/me/relationships/employee/key", None,
+             {"Access-Control-Request-Method": "PUT", "Access-Control-Request-Headers": "content-type"}),
+            ("the answer to a preflight for an attestation request", "OPTIONS", f"{api}/attest", None,
+             {"Access-Control-Request-Method": "POST"})):
+        _, _, response_headers = anonymous.request(method, url, body, {**other_site, **extra})
+        cors = sorted(key for key in response_headers if key.lower().startswith("access-control-"))
+        results.check_that(f"{description} to another site sends no CORS header", not cors, f"got {cors}")
+
     # An unauthenticated request that is refused has nothing to persist, so it plants no session either.
     _, _, unauth_headers = anonymous.request("GET", f"{api}/me")
     results.check_that("an unauthenticated /me plants no cookie",

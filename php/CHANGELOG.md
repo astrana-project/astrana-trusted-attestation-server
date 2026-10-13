@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.10] - 2026-10-13
+
+### Security
+
+- The API no longer answers with `Access-Control-Allow-Origin: *` or accepts a CORS (Cross-Origin Resource Sharing)
+  preflight from another site, so a script on another website can no longer call it from a visitor's browser or read the
+  answers, the same as the .NET and Java implementations.
+
 ## [1.0.9] - 2026-10-13
 
 ### Security
