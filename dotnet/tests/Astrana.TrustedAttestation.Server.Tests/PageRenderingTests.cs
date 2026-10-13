@@ -114,7 +114,7 @@ public class PageRenderingTests
     public async Task The_self_service_page_footer_links_the_running_version_to_the_releases_page()
     {
         // The one page that shows the running version, for the people who operate and support the server to
-        // confirm which version is running (decision record 47 in docs/adr).
+        // confirm which version is running (decision record 46 in docs/adr).
         var (status, body) = (await Render("/me"))["/me"];
 
         Assert.Equal(HttpStatusCode.OK, status);

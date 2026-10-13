@@ -285,7 +285,7 @@ public class MeModelTests
     [Fact]
     public void The_page_carries_the_running_release_for_its_footer()
     {
-        // The self-service page is the one page that shows the running version (decision record 47 in docs/adr).
+        // The self-service page is the one page that shows the running version (decision record 46 in docs/adr).
         var model = Model(SignedIn());
 
         Assert.Same(Release, model.Release);

@@ -17,7 +17,7 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.boot.info.BuildProperties;
 
 /**
- * The version the self-service page shows in its footer (decision record 47 in docs/adr). The build records the
+ * The version the self-service page shows in its footer (decision record 46 in docs/adr). The build records the
  * version from pom.xml in META-INF/build-info.properties, and it has to be the top heading of CHANGELOG.md, the
  * version the release is tagged and published under, so that the version shown is the release that is running.
  */

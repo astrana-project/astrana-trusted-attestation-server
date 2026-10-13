@@ -415,7 +415,7 @@ final class PageControllerTest extends TestCase
     #[Test]
     public function only_the_self_service_page_is_handed_the_running_release(): void
     {
-        // The self-service page shows the running version in its footer and no other page does (decision record 47
+        // The self-service page shows the running version in its footer and no other page does (decision record 46
         // in docs/adr).
         $me = $this->me($this->request(['sub' => 'alice', 'name' => 'Alice']));
         $landing = $this->controller()->landing($this->request());

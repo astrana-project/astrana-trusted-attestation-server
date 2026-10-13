@@ -43,5 +43,5 @@ installation page shows how.
 
 ## Why versions work this way
 
-[Decision record 44](adr/0044-version-numbers-say-what-an-update-means.md) gives the reasons. To choose the version for
+[Decision record 43](adr/0043-version-numbers-say-what-an-update-means.md) gives the reasons. To choose the version for
 a change you are contributing, see [Changelog and version](../CONTRIBUTING.md#changelog-and-version) in CONTRIBUTING.md.

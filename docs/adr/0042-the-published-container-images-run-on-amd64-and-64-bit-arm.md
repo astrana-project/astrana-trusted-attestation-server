@@ -1,4 +1,4 @@
-# 43. The published container images run on amd64 and 64-bit ARM
+# 42. The published container images run on amd64 and 64-bit ARM
 
 Accepted on 2026-10-11.
 

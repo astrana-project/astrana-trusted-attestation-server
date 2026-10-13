@@ -54,7 +54,7 @@ Never edit a record into a different decision. The old record is the history of 
 |  22 | [Authorisation code with PKCE is the only OAuth flow](0022-authorisation-code-with-pkce-is-the-only-oauth-flow.md)                                                           | 2             |
 |  23 | [The same token and assertion checks in all three, beyond the frameworks' defaults](0023-the-same-token-and-assertion-checks-in-all-three-beyond-the-frameworks-defaults.md) | 2, 5          |
 |  24 | [Sign-out is local and works whatever the provider supports](0024-sign-out-is-local-and-works-whatever-the-provider-supports.md)                                             | 2, 21         |
-|  42 | [Single logout needs a signing key](0042-single-logout-needs-a-signing-key.md)                                                                                               | 2, 21, 24, 26 |
+|  41 | [Single logout needs a signing key](0041-single-logout-needs-a-signing-key.md)                                                                                               | 2, 21, 24, 26 |
 
 ## The API
 
@@ -70,7 +70,7 @@ Never edit a record into a different decision. The old record is the history of 
 |  27 | [Ed25519 for attestation keys](0027-ed25519-for-attestation-keys.md)                                                                                                                           | 3, 4, 6       |
 |  28 | [Attestation keys are checked for format only, in the handler, in all three implementations](0028-attestation-keys-are-checked-for-format-only-in-the-handler-in-all-three-implementations.md) | 4, 20, 26, 27 |
 |  29 | [Attestation keys are stored as raw bytes and rows are ordered by a sequential identifier](0029-attestation-keys-are-stored-as-raw-bytes-and-rows-are-ordered-by-a-sequential-identifier.md)   | 4, 27         |
-|  48 | [All three give the same answer to unusual JSON](0048-all-three-give-the-same-answer-to-unusual-json.md)                                                                                       | 4, 5, 28      |
+|  47 | [All three give the same answer to unusual JSON](0047-all-three-give-the-same-answer-to-unusual-json.md)                                                                                       | 4, 5, 28      |
 
 ## Discovery and running
 
@@ -87,7 +87,7 @@ Never edit a record into a different decision. The old record is the history of 
 |  33 | [One accessible interface shared by all three implementations](0033-one-accessible-interface-shared-by-all-three-implementations.md)      | 2, 5, 6, 20, 30 |
 |  34 | [Organisation-configured localisation, resolved in a fixed order](0034-organisation-configured-localisation-resolved-in-a-fixed-order.md) | 6, 21, 30, 33   |
 |  35 | [A fixed set of security headers, and no Content-Security-Policy](0035-a-fixed-set-of-security-headers-and-no-content-security-policy.md) | 5, 31, 33       |
-|  47 | [The running version is shown on the self-service page only](0047-the-running-version-is-shown-on-the-self-service-page-only.md)          | 33, 39, 44      |
+|  46 | [The running version is shown on the self-service page only](0046-the-running-version-is-shown-on-the-self-service-page-only.md)          | 33, 39, 43      |
 
 ## Delivery
 
@@ -98,10 +98,10 @@ Never edit a record into a different decision. The old record is the history of 
 |  38 | [Shared feature versions, independent patches, release on merge](0038-shared-feature-versions-independent-patches-release-on-merge.md)                   | 5, 7, 36         |
 |  39 | [Security fixes ship in the latest release only](0039-security-fixes-ship-in-the-latest-release-only.md)                                                 | 12, 38           |
 |  40 | [Published images are application-only, demonstrations are bundled](0040-published-images-are-application-only-demonstrations-are-bundled.md)            | 2, 5, 9          |
-|  43 | [The published container images run on amd64 and 64-bit ARM](0043-the-published-container-images-run-on-amd64-and-64-bit-arm.md)                         | 2, 5, 9, 40      |
-|  44 | [Version numbers say what an update means](0044-version-numbers-say-what-an-update-means.md)                                                             | 5, 7, 12, 36, 38 |
-|  45 | [Anyone can check where a published image came from](0045-anyone-can-check-where-a-published-image-came-from.md)                                         | 44               |
-|  46 | [The published container images contain only what the server needs](0046-the-published-container-images-contain-only-what-the-server-needs.md)           | 6, 43            |
+|  42 | [The published container images run on amd64 and 64-bit ARM](0042-the-published-container-images-run-on-amd64-and-64-bit-arm.md)                         | 2, 5, 9, 40      |
+|  43 | [Version numbers say what an update means](0043-version-numbers-say-what-an-update-means.md)                                                             | 5, 7, 12, 36, 38 |
+|  44 | [Anyone can check where a published image came from](0044-anyone-can-check-where-a-published-image-came-from.md)                                         | 43               |
+|  45 | [The published container images contain only what the server needs](0045-the-published-container-images-contain-only-what-the-server-needs.md)           | 6, 42            |
 
 ## Dates and names
 

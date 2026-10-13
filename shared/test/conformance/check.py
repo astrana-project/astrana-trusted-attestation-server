@@ -148,7 +148,7 @@ def _start_tags(body: bytes, name: str) -> list[dict]:
 
 def _release_links(body: bytes) -> list[str]:
     """The text of every link in the page's footer that points at the Astrana releases page, where the
-    self-service page shows the running version (decision record 47)."""
+    self-service page shows the running version (decision record 46)."""
     footer = re.search(r"<footer\b.*?</footer>", body.decode("utf-8", "replace"), re.S)
     anchors = re.findall(r'<a\b[^>]*\bhref="([^"]*)"[^>]*>(.*?)</a>', footer.group(0) if footer else "", re.S)
     return [html.unescape(text).strip() for href, text in anchors if html.unescape(href) == RELEASES_URL]
@@ -1333,7 +1333,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
 
     carries_switcher("/", "fr")
 
-    # Signing out lands on the landing page with a confirmation (decision record 42), at one fixed address
+    # Signing out lands on the landing page with a confirmation (decision record 41), at one fixed address
     # every implementation shares, so the provider's post-logout redirect can be registered once. The
     # confirmation is a shared string in the resolved locale, and it appears only there: the plain landing
     # page says nothing about a sign-out that did not happen.
@@ -1457,7 +1457,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
                        '(<meta name="csrf-token">)', bool(csrf_token(me_html)), "no csrf-token meta on /me")
 
     # The running version, for the people who operate and support the server to confirm which version is
-    # running, is on the self-service page alone (decision record 47). An exact version anywhere a stranger can read it tells them which servers run a
+    # running, is on the self-service page alone (decision record 46). An exact version anywhere a stranger can read it tells them which servers run a
     # release with a known vulnerability, so no public page, document or response header states it.
     release_links = _release_links(me_html)
     results.check(f"the self-service page footer links the running version to {RELEASES_URL}",
@@ -2293,7 +2293,7 @@ def run(base_url: str, verify_tls: bool, sql_command: str, database: str) -> Res
             results.check("after signing out, the API no longer sees a session", after, 401)
 
     # Signing out with no session has nothing to end, so it answers the redirect to /signed-out whatever
-    # the anti-forgery token says (decision record 42). A fresh client, so there is no session and no token at all.
+    # the anti-forgery token says (decision record 41). A fresh client, so there is no session and no token at all.
     status, signout_headers, _ = Client(verify_tls).request_without_following(
         "POST", f"{base_url}/signout", b"", {"Content-Type": "application/x-www-form-urlencoded"})
     results.check_that("signing out with no session answers a redirect", status in _REDIRECTS, f"got {status}")

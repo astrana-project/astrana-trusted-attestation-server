@@ -1,4 +1,4 @@
-# 47. The running version is shown on the self-service page only
+# 46. The running version is shown on the self-service page only
 
 Accepted on 2026-10-13.
 
@@ -6,7 +6,7 @@ Accepted on 2026-10-13.
 
 When a member reports a problem, the people who operate and support the server may need to confirm which version is
 running, without needing access to the hosting. Each implementation is released under the version at the top of its own
-changelog ([record 44](0044-version-numbers-say-what-an-update-means.md)), and security fixes ship in the latest release
+changelog ([record 43](0043-version-numbers-say-what-an-update-means.md)), and security fixes ship in the latest release
 only ([record 39](0039-security-fixes-ship-in-the-latest-release-only.md)). So anyone who knows a server's exact version
 also knows which published vulnerabilities it still has. Every page has the same attribution footer
 ([record 33](0033-one-accessible-interface-shared-by-all-three-implementations.md)).

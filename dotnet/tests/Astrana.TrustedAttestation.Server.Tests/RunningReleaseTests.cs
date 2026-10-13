@@ -4,7 +4,7 @@ using Astrana.TrustedAttestation.Server.Services;
 namespace Astrana.TrustedAttestation.Server.Tests;
 
 /// <summary>
-/// The version the self-service page shows in its footer (decision record 47 in docs/adr). The build takes it from the
+/// The version the self-service page shows in its footer (decision record 46 in docs/adr). The build takes it from the
 /// top heading of this implementation's CHANGELOG.md, the version the release is tagged and published under, so that
 /// the version shown is the release that is running.
 /// </summary>

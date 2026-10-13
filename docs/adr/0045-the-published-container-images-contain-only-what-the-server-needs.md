@@ -1,4 +1,4 @@
-# 46. The published container images contain only what the server needs
+# 45. The published container images contain only what the server needs
 
 Accepted on 2026-10-12.
 
@@ -9,7 +9,7 @@ server never uses still widens the attack surface, makes the image larger to pul
 organisation has to scan and patch. Whatever is in the image also has to be kept patched at its source, or it becomes a
 list of known vulnerabilities.
 
-[Record 43](0043-the-published-container-images-run-on-amd64-and-64-bit-arm.md) decides what goes into the images on top
+[Record 42](0042-the-published-container-images-run-on-amd64-and-64-bit-arm.md) decides what goes into the images on top
 of the base they are built on, and says nothing about the base itself.
 
 ## Decision

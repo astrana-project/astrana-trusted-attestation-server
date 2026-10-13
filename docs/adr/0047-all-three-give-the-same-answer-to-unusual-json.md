@@ -1,4 +1,4 @@
-# 48. All three give the same answer to unusual JSON
+# 47. All three give the same answer to unusual JSON
 
 Accepted on 2026-10-13.
 

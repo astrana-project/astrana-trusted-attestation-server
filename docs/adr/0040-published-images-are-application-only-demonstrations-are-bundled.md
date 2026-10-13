@@ -1,6 +1,6 @@
 # 40. Published images are application-only, demonstrations are bundled
 
-Superseded by record 43 on 2026-10-11.
+Superseded by record 42 on 2026-10-11.
 
 ## Context
 
