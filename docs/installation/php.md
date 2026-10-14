@@ -667,6 +667,18 @@ cosign verify-blob sbom.json --bundle sbom.json.sigstore.json \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
+When a release includes `provenance.intoto.jsonl`, it is the record of how the image was built, with one line for each
+processor the image is built for, as Docker shows it above. Check it and its signature,
+`provenance.intoto.jsonl.sigstore.json`, the same way.
+
+```bash
+curl -LO https://github.com/astrana-project/astrana-trusted-attestation-server/releases/download/php-v<version>/provenance.intoto.jsonl
+curl -LO https://github.com/astrana-project/astrana-trusted-attestation-server/releases/download/php-v<version>/provenance.intoto.jsonl.sigstore.json
+cosign verify-blob provenance.intoto.jsonl --bundle provenance.intoto.jsonl.sigstore.json \
+  --certificate-identity-regexp '^https://github\.com/astrana-project/astrana-trusted-attestation-server/\.github/workflows/release\.yml@refs/heads/master$' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
 The 1.0.0 releases have no `sbom.json.sigstore.json`, because this repository's GitHub releases can't take new files
 once they're published. Check a 1.0.0 bill of materials with the [GitHub CLI](https://cli.github.com/) instead, signed
 in to any GitHub account. It confirms that the file is the one published in that release.

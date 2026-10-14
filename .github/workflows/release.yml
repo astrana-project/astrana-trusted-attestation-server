@@ -16,8 +16,10 @@
 # Each image carries a provenance attestation and a software bill of materials, which BuildKit attaches to the image
 # index, and cosign signs the index by its digest with a keyless Sigstore certificate issued to this workflow. That one
 # signature covers the image for every platform and both attestations. The software bill of materials attached to the
-# release is signed the same way, into sbom.json.sigstore.json beside it. The job then verifies both signatures against
-# the identity the installation guides tell users to check, so a missing or wrong signature fails the release.
+# release is signed the same way, into sbom.json.sigstore.json beside it. The provenance record of each platform image
+# is read from the published index into provenance.intoto.jsonl, one in-toto statement per line, so that it can be read
+# without container tools, and signed into provenance.intoto.jsonl.sigstore.json. The job then verifies every signature
+# against the identity the installation guides tell users to check, so a missing or wrong signature fails the release.
 #
 # The image of a release published before signing began can be signed once, from this same workflow, so that its
 # signature carries the same identity. In GitHub, open Actions, then Release, then Run workflow. Leave the branch as
@@ -209,6 +211,20 @@ jobs:
           SBOM: ${{ matrix.implementation }}/sbom.json
         run: cosign sign-blob --yes --bundle sbom.json.sigstore.json "$SBOM"
 
+      # The provenance records exactly as published with the image, which the image's signature already covers, as a
+      # file anyone can read and check on the GitHub release.
+      - name: Read the provenance records from the published image
+        if: steps.tag.outputs.released == 'false'
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: >-
+          python3 .github/scripts/provenance.py "astrana/ata-${{ matrix.implementation }}" "$DIGEST"
+          provenance.intoto.jsonl
+
+      - name: Sign the provenance records
+        if: steps.tag.outputs.released == 'false'
+        run: cosign sign-blob --yes --bundle provenance.intoto.jsonl.sigstore.json provenance.intoto.jsonl
+
       - name: Verify the signatures
         if: steps.tag.outputs.released == 'false'
         env:
@@ -218,6 +234,9 @@ jobs:
           bash .github/scripts/verify-image.sh "$IMAGE"
           cosign verify-blob --bundle sbom.json.sigstore.json --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" \
             --certificate-oidc-issuer "$SIGNER_ISSUER" "$SBOM"
+          cosign verify-blob --bundle provenance.intoto.jsonl.sigstore.json \
+            --certificate-identity-regexp "$SIGNER_IDENTITY_REGEXP" --certificate-oidc-issuer "$SIGNER_ISSUER" \
+            provenance.intoto.jsonl
 
       # Tagging points each tag at the same digest, so the signature covers the tagged image. An image an earlier run
       # published already has its full-version tag, which cannot be pushed again, so only the other tags are added.
@@ -245,7 +264,8 @@ jobs:
         run: >-
           gh release create "$TAG" --target "$GITHUB_SHA" --title "$TITLE" --notes-file release-notes.md "${{
           matrix.implementation }}/sbom.json#Software bill of materials (CycloneDX)" "sbom.json.sigstore.json#Signature
-          of the software bill of materials (Sigstore bundle)"
+          of the software bill of materials (Sigstore bundle)" "provenance.intoto.jsonl#Provenance records (in-toto)"
+          "provenance.intoto.jsonl.sigstore.json#Signature of the provenance records (Sigstore bundle)"
 
   sign-existing:
     name: Sign an existing release (${{ matrix.implementation }})
