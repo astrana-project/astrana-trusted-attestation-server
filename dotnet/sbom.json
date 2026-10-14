@@ -3,7 +3,7 @@
   "specVersion": "1.7",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-05T09:58:49Z",
+    "timestamp": "2026-10-14T21:26:58Z",
     "tools": {
       "components": [
         {
@@ -26,9 +26,9 @@
     },
     "component": {
       "type": "application",
-      "bom-ref": "Astrana.TrustedAttestation@1.0.8",
+      "bom-ref": "Astrana.TrustedAttestation@1.0.9",
       "name": "Astrana.TrustedAttestation",
-      "version": "1.0.8"
+      "version": "1.0.9"
     }
   },
   "components": [
@@ -300,20 +300,20 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:nuget/Microsoft.AspNetCore.Authentication.OpenIdConnect@10.0.11",
+      "bom-ref": "pkg:nuget/Microsoft.AspNetCore.Authentication.OpenIdConnect@10.0.13",
       "authors": [
         {
           "name": "Microsoft"
         }
       ],
       "name": "Microsoft.AspNetCore.Authentication.OpenIdConnect",
-      "version": "10.0.11",
-      "description": "ASP.NET Core middleware that enables an application to support the OpenID Connect authentication workflow.\n\nThis package was built from the source code at https://github.com/dotnet/dotnet/tree/e2f47b0110ed922f21a1522da67279133ce28f32",
+      "version": "10.0.13",
+      "description": "ASP.NET Core middleware that enables an application to support the OpenID Connect authentication workflow.\n\nThis package was built from the source code at https://github.com/dotnet/dotnet/tree/4099f83977f4d29604a9aeb971fb0a7bc1d5f699",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "FC41ADAE035BC14A26F88E1E768B29C685580B0B7D0CF9BF6B63BF2FDF0DC215CA1B26908A8DF0BC52E46B2FF3A119C3735259C2BC7CCFA467747DFA2B773B9D"
+          "content": "E2E8FC8D73F1074F5AD734407116744E383A85BCB6ABFDD6C420919428FA2E79FA1E5392398600F0F3E9E4923AF57949EB4FDD36E338BD86415F9F33EFA36651"
         }
       ],
       "licenses": [
@@ -324,7 +324,7 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.AspNetCore.Authentication.OpenIdConnect@10.0.11",
+      "purl": "pkg:nuget/Microsoft.AspNetCore.Authentication.OpenIdConnect@10.0.13",
       "externalReferences": [
         {
           "url": "https://asp.net/",
@@ -414,20 +414,20 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:nuget/Microsoft.Data.SqlClient@6.1.6",
+      "bom-ref": "pkg:nuget/Microsoft.Data.SqlClient@6.1.7",
       "authors": [
         {
           "name": "Microsoft"
         }
       ],
       "name": "Microsoft.Data.SqlClient",
-      "version": "6.1.6",
+      "version": "6.1.7",
       "description": "The current data provider for SQL Server and Azure SQL databases. This has replaced System.Data.SqlClient. These classes provide access to SQL and encapsulate database-specific protocols, including tabular data stream (TDS).\n\n      Commonly Used Types:\n      Microsoft.Data.SqlClient.SqlConnection\n      Microsoft.Data.SqlClient.SqlException\n      Microsoft.Data.SqlClient.SqlParameter\n      Microsoft.Data.SqlClient.SqlDataReader\n      Microsoft.Data.SqlClient.SqlCommand\n      Microsoft.Data.SqlClient.SqlTransaction\n      Microsoft.Data.SqlClient.SqlParameterCollection\n      Microsoft.Data.SqlClient.SqlClientFactory\n\n      When using NuGet 3.x this package requires at least version 3.4.",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "DA36AE12C08C6BFC77C9B379B8DBD717FCBB6422EE990D5678A38F4064D99AC4EB7E80E175DD474F8542E2D071B670CC5174B36B2FF4AD6FD9D8449EFB6C43D8"
+          "content": "D1CA1206473AF7E8C1AA1D7C3C367BF50628B81526D330DB4CA388DB79EFB75C694A0DB4F643AE854DEB8540C63AD82D379216D7F7E5264928A1F83D8A8E0885"
         }
       ],
       "licenses": [
@@ -438,7 +438,7 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.Data.SqlClient@6.1.6",
+      "purl": "pkg:nuget/Microsoft.Data.SqlClient@6.1.7",
       "externalReferences": [
         {
           "url": "https://aka.ms/sqlclientproject",
@@ -452,24 +452,24 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:nuget/Microsoft.Data.SqlClient.SNI.runtime@6.0.2",
+      "bom-ref": "pkg:nuget/Microsoft.Data.SqlClient.SNI.runtime@6.0.3",
       "authors": [
         {
           "name": "Microsoft"
         }
       ],
       "name": "Microsoft.Data.SqlClient.SNI.runtime",
-      "version": "6.0.2",
+      "version": "6.0.3",
       "description": "Internal implementation package not meant for direct consumption. Please do not reference directly.\n\nWhen using NuGet 3.x this package requires at least version 3.4.",
       "scope": "excluded",
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "89D512D7FADCC9B9906F591013C9280BE28A2AF31A150529E8A4BA8B903033FD747E54FF408A15261179E2B79F3140EF4D8571E68791A3298A14AF4B370A8724"
+          "content": "D8FE3CCB9BE65CBC82DC0C0B9A563F3E29138B56063BC8AB8348C4900B897B3144678C64353828CE76C4A647E290E74D8B885F7A74C9D512975820C457AA0BF5"
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.Data.SqlClient.SNI.runtime@6.0.2",
+      "purl": "pkg:nuget/Microsoft.Data.SqlClient.SNI.runtime@6.0.3",
       "externalReferences": [
         {
           "url": "https://aka.ms/sqlclientproject",
@@ -486,20 +486,20 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.11",
+      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.13",
       "authors": [
         {
           "name": "Microsoft"
         }
       ],
       "name": "Microsoft.EntityFrameworkCore",
-      "version": "10.0.11",
+      "version": "10.0.13",
       "description": "Entity Framework Core is a modern object-database mapper for .NET. It supports LINQ queries, change tracking, updates, and schema migrations. EF Core works with SQL Server, Azure SQL Database, SQLite, Azure Cosmos DB, MySQL, PostgreSQL, and other databases through a provider plugin API.\n\nCommonly Used Types:\nMicrosoft.EntityFrameworkCore.DbContext\nMicrosoft.EntityFrameworkCore.DbSet",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "E690895E52C640444CCB0140AF22BC5419AFF3A7FD22511654E29F1CD820F3B08252C0224387B58BC4653747CA0CD5F887BA842BAA2ED7D051E2628D2D5B063F"
+          "content": "B65A07598BE6B6740C8104DD6687ED7AB6FE17696BC8297DFED4B7DF4AC849306FB0C7195529752711FB704563B871CA46607868533CC7104C07ACD0068093D7"
         }
       ],
       "licenses": [
@@ -510,7 +510,7 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.11",
+      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.13",
       "externalReferences": [
         {
           "url": "https://docs.microsoft.com/ef/core/",
@@ -524,20 +524,20 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Abstractions@10.0.11",
+      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Abstractions@10.0.13",
       "authors": [
         {
           "name": "Microsoft"
         }
       ],
       "name": "Microsoft.EntityFrameworkCore.Abstractions",
-      "version": "10.0.11",
+      "version": "10.0.13",
       "description": "Provides abstractions and attributes that are used to configure Entity Framework Core",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "68E3F54D4AD91DED17552CA98B91F2E78A7E2AD72833C78F917626D7C9F28046C3C71EF4ECA26B404BB5E6F7748B773F36BD20E828AE933928FD8FB6C11B6A46"
+          "content": "ED8B3075C3A5EB09E3880DEB6720C6C18AC999610C8CDDA4BACCF067D567D8963127F738EFF1FC2E2ACBD4696758D4B264CE281403102BDE0E83C01ECB7FB854"
         }
       ],
       "licenses": [
@@ -548,7 +548,7 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore.Abstractions@10.0.11",
+      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore.Abstractions@10.0.13",
       "externalReferences": [
         {
           "url": "https://docs.microsoft.com/ef/core/",
@@ -562,20 +562,20 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Analyzers@10.0.11",
+      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Analyzers@10.0.13",
       "authors": [
         {
           "name": "Microsoft"
         }
       ],
       "name": "Microsoft.EntityFrameworkCore.Analyzers",
-      "version": "10.0.11",
+      "version": "10.0.13",
       "description": "CSharp Analyzers for Entity Framework Core.",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "2E1FF2808E054979249884BA209CA535BBF9C75360207BA1D63C35E467463EE495EE0F3584756267C43238C7A0094C18E0BAA97DE7074F1A6A2E80D3C460435E"
+          "content": "177A1A92FF849BC9BEB78782BBF42D7F3816FDB910EE53529B0843015F58E3F04D5D4F700F7C516A372D6548C91CF10D6C7F46DC1A67415DE9E3FC56E5B11DC8"
         }
       ],
       "licenses": [
@@ -586,7 +586,7 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore.Analyzers@10.0.11",
+      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore.Analyzers@10.0.13",
       "externalReferences": [
         {
           "url": "https://docs.microsoft.com/ef/core/",
@@ -600,20 +600,20 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.11",
+      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.13",
       "authors": [
         {
           "name": "Microsoft"
         }
       ],
       "name": "Microsoft.EntityFrameworkCore.Relational",
-      "version": "10.0.11",
+      "version": "10.0.13",
       "description": "Shared Entity Framework Core components for relational database providers.",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "74B40A6D0BE9B2A5B45A444078DF41BD9E558401D0E1F44103F17098D3DC0AD5483D167019ABA31D30DC59131AE2B6C69937935A8CB5186244D5B784CF89E131"
+          "content": "401C8D017E94D980FAF5CB592A87293E402AD0C0209C38836A8348D0CA5A653C15642E3432EE41CD079B4BAE41C5E857019ACF6C753C5854CEDED5C6F7DC18D6"
         }
       ],
       "licenses": [
@@ -624,7 +624,7 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.11",
+      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.13",
       "externalReferences": [
         {
           "url": "https://docs.microsoft.com/ef/core/",
@@ -638,20 +638,20 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore.SqlServer@10.0.11",
+      "bom-ref": "pkg:nuget/Microsoft.EntityFrameworkCore.SqlServer@10.0.13",
       "authors": [
         {
           "name": "Microsoft"
         }
       ],
       "name": "Microsoft.EntityFrameworkCore.SqlServer",
-      "version": "10.0.11",
+      "version": "10.0.13",
       "description": "Microsoft SQL Server database provider for Entity Framework Core.",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "8B45E915AC907D8C28D1AD4AAE6C1FE0EF90E1E67559022D5A5F6159EB68FC26BC568220BF32419AFEADD5576850D201AF7CED49878A66E9A752DF0C06E5BE86"
+          "content": "BEFE4E833FB40EC8FCC5E141B42C6DCC82CE45767C9C3F451752020C480C5AE11C2D6E979E76B5D68A32FBE2E923111C61992826909F1905766DCCD09DEC9A13"
         }
       ],
       "licenses": [
@@ -662,7 +662,7 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore.SqlServer@10.0.11",
+      "purl": "pkg:nuget/Microsoft.EntityFrameworkCore.SqlServer@10.0.13",
       "externalReferences": [
         {
           "url": "https://docs.microsoft.com/ef/core/",
@@ -1591,20 +1591,20 @@
     },
     {
       "type": "library",
-      "bom-ref": "pkg:nuget/System.Security.Cryptography.Pkcs@9.0.11",
+      "bom-ref": "pkg:nuget/System.Security.Cryptography.Pkcs@10.0.13",
       "authors": [
         {
           "name": "Microsoft"
         }
       ],
       "name": "System.Security.Cryptography.Pkcs",
-      "version": "9.0.11",
+      "version": "10.0.13",
       "description": "Provides support for PKCS and CMS algorithms.\n\nCommonly Used Types:\nSystem.Security.Cryptography.Pkcs.EnvelopedCms",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-512",
-          "content": "DC3339C00F0BBC98D62B6030A7AA21A807DBE44CC9644309BAD7BEFD6A1E625E42396E2ACEB04A94E3A858A3D2B5EC1122A50563D93FA976BD13495957442924"
+          "content": "287EBDDA7D50947E352C62C28ADD71012C60F50124CBD558F0D383BFA83357F7941C55D54EF4432C9CACB0C19A3314BD59F217C899D22E0C5E23C3FCF9D74B8A"
         }
       ],
       "licenses": [
@@ -1615,14 +1615,14 @@
         }
       ],
       "copyright": "© Microsoft Corporation. All rights reserved.",
-      "purl": "pkg:nuget/System.Security.Cryptography.Pkcs@9.0.11",
+      "purl": "pkg:nuget/System.Security.Cryptography.Pkcs@10.0.13",
       "externalReferences": [
         {
           "url": "https://dot.net/",
           "type": "website"
         },
         {
-          "url": "https://github.com/dotnet/runtime",
+          "url": "https://github.com/dotnet/dotnet",
           "type": "vcs"
         }
       ]
@@ -1808,14 +1808,15 @@
   ],
   "dependencies": [
     {
-      "ref": "Astrana.TrustedAttestation@1.0.8",
+      "ref": "Astrana.TrustedAttestation@1.0.9",
       "dependsOn": [
-        "pkg:nuget/Microsoft.AspNetCore.Authentication.OpenIdConnect@10.0.11",
-        "pkg:nuget/Microsoft.EntityFrameworkCore.SqlServer@10.0.11",
+        "pkg:nuget/Microsoft.AspNetCore.Authentication.OpenIdConnect@10.0.13",
+        "pkg:nuget/Microsoft.EntityFrameworkCore.SqlServer@10.0.13",
         "pkg:nuget/Microsoft.Identity.Client.NativeInterop@0.20.6",
         "pkg:nuget/MySql.EntityFrameworkCore@10.0.9",
         "pkg:nuget/Npgsql.EntityFrameworkCore.PostgreSQL@10.0.3",
         "pkg:nuget/Sustainsys.Saml2.AspNetCore2@2.11.0",
+        "pkg:nuget/System.Security.Cryptography.Pkcs@10.0.13",
         "pkg:npm/bootstrap@5.3.8"
       ]
     },
@@ -1859,7 +1860,7 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:nuget/Microsoft.AspNetCore.Authentication.OpenIdConnect@10.0.11",
+      "ref": "pkg:nuget/Microsoft.AspNetCore.Authentication.OpenIdConnect@10.0.13",
       "dependsOn": [
         "pkg:nuget/Microsoft.IdentityModel.Protocols.OpenIdConnect@8.19.2"
       ]
@@ -1873,15 +1874,15 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:nuget/Microsoft.Data.SqlClient.SNI.runtime@6.0.2",
+      "ref": "pkg:nuget/Microsoft.Data.SqlClient.SNI.runtime@6.0.3",
       "dependsOn": []
     },
     {
-      "ref": "pkg:nuget/Microsoft.Data.SqlClient@6.1.6",
+      "ref": "pkg:nuget/Microsoft.Data.SqlClient@6.1.7",
       "dependsOn": [
         "pkg:nuget/Azure.Core@1.50.0",
         "pkg:nuget/Azure.Identity@1.17.1",
-        "pkg:nuget/Microsoft.Data.SqlClient.SNI.runtime@6.0.2",
+        "pkg:nuget/Microsoft.Data.SqlClient.SNI.runtime@6.0.3",
         "pkg:nuget/Microsoft.Identity.Client@4.84.2",
         "pkg:nuget/Microsoft.Identity.Client.Broker@4.84.2",
         "pkg:nuget/Microsoft.IdentityModel.JsonWebTokens@8.19.2",
@@ -1889,35 +1890,35 @@
         "pkg:nuget/Microsoft.SqlServer.Server@1.0.0",
         "pkg:nuget/System.Configuration.ConfigurationManager@10.0.8",
         "pkg:nuget/System.IdentityModel.Tokens.Jwt@8.19.2",
-        "pkg:nuget/System.Security.Cryptography.Pkcs@9.0.11"
+        "pkg:nuget/System.Security.Cryptography.Pkcs@10.0.13"
       ]
     },
     {
-      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Abstractions@10.0.11",
+      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Abstractions@10.0.13",
       "dependsOn": []
     },
     {
-      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Analyzers@10.0.11",
+      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Analyzers@10.0.13",
       "dependsOn": []
     },
     {
-      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.11",
+      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.13",
       "dependsOn": [
-        "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.11"
+        "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.13"
       ]
     },
     {
-      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore.SqlServer@10.0.11",
+      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore.SqlServer@10.0.13",
       "dependsOn": [
-        "pkg:nuget/Microsoft.Data.SqlClient@6.1.6",
-        "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.11"
+        "pkg:nuget/Microsoft.Data.SqlClient@6.1.7",
+        "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.13"
       ]
     },
     {
-      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.11",
+      "ref": "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.13",
       "dependsOn": [
-        "pkg:nuget/Microsoft.EntityFrameworkCore.Abstractions@10.0.11",
-        "pkg:nuget/Microsoft.EntityFrameworkCore.Analyzers@10.0.11"
+        "pkg:nuget/Microsoft.EntityFrameworkCore.Abstractions@10.0.13",
+        "pkg:nuget/Microsoft.EntityFrameworkCore.Analyzers@10.0.13"
       ]
     },
     {
@@ -2017,8 +2018,8 @@
     {
       "ref": "pkg:nuget/MySql.EntityFrameworkCore@10.0.9",
       "dependsOn": [
-        "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.11",
-        "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.11",
+        "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.13",
+        "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.13",
         "pkg:nuget/MySql.Data@26.7.0"
       ]
     },
@@ -2031,8 +2032,8 @@
     {
       "ref": "pkg:nuget/Npgsql.EntityFrameworkCore.PostgreSQL@10.0.3",
       "dependsOn": [
-        "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.11",
-        "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.11",
+        "pkg:nuget/Microsoft.EntityFrameworkCore@10.0.13",
+        "pkg:nuget/Microsoft.EntityFrameworkCore.Relational@10.0.13",
         "pkg:nuget/Npgsql@10.0.3"
       ]
     },
@@ -2079,7 +2080,7 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:nuget/System.Security.Cryptography.Pkcs@9.0.11",
+      "ref": "pkg:nuget/System.Security.Cryptography.Pkcs@10.0.13",
       "dependsOn": []
     },
     {
