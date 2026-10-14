@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.9] - 2026-10-15
+
+### Changed
+
+- ASP.NET Core's OpenID Connect library and Entity Framework Core's SQL Server provider are updated from 10.0.11 to
+  10.0.13. Entity Framework Core 10.0.13 brings in the SQL Server driver 6.1.7 in place of 6.1.6.
+
 ## [1.0.8] - 2026-10-14
 
 ### Changed

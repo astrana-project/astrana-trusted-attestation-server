@@ -5,7 +5,7 @@
 # compiled natively for it rather than under emulation. The runtime identifier below picks the processor
 # the output is for.
 # The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa AS build
 WORKDIR /src
 
 # The contract, schema and interface inputs are embedded or copied from ../../../shared at build time,
@@ -33,7 +33,7 @@ RUN dotnet publish dotnet/src/Astrana.TrustedAttestation.Server/Astrana.TrustedA
 # locale it supports, and the time zone data, which it needs to run the audit log clean-up at Audit:RunAt in server
 # time.
 # The digest pins the exact base image, and Dependabot moves it when the tag gets a new image.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:00e0ad6a7ef8c0c1391b87f05c7ac757a15740455688f2bfcd146a3f4b987efd
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:3ed6558056b54d5c9dfefb7ff473728e022ff2bf1d976cbf8ee07b05ec594374
 WORKDIR /app
 COPY --from=build /app .
 # The third-party notices, served from the web root, also at a fixed path beside the application.
