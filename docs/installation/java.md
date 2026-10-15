@@ -439,19 +439,22 @@ A wrong client secret only shows when the first member signs in.
 
 ### As a container
 
-Pull the published image, naming the full version of the release you want. Each release has three tags. One is the full
-version, such as `1.0.0`. One is the major and minor version, such as `1.0`. The third is `latest`. The image is built
+Pull the published image by its major and minor version, such as `1.0`. That tag always points to the newest patch
+release of `1.0`, rebuilt with fixes to the base container images it is built from, so you get those fixes without a new
+version of the application. Each release also has a full-version tag, such as `1.0.0`, which always points to that
+release's first build and is never rebuilt, and the `latest` tag, which follows the newest release. The image is built
 for 64-bit Intel and AMD processors (amd64) and 64-bit ARM processors (arm64), and Docker pulls the one for the computer
-it runs on.
+it runs on. To choose when the image changes, run it by the digest `docker pull` prints, as
+`astrana/ata-java:1.0@sha256:<digest>`, and let an update tool such as Renovate propose each new digest.
 
 ```bash
-docker pull astrana/ata-java:1.0.0
+docker pull astrana/ata-java:1.0
 ```
 
 On any other processor, or to build it yourself, build the image from the repository root instead.
 
 ```bash
-docker build -f java/Dockerfile -t astrana/ata-java:1.0.0 .
+docker build -f java/Dockerfile -t astrana/ata-java:1.0 .
 ```
 
 The image is Google's distroless base image for Debian 13 with a Java 25 runtime from Eclipse Temurin, cut down to the
@@ -466,7 +469,7 @@ from a private authority, copy that trust store out of the image and add your au
 of any Java installation.
 
 ```bash
-docker create --name ata-cacerts astrana/ata-java:1.0.0
+docker create --name ata-cacerts astrana/ata-java:1.0
 docker cp ata-cacerts:/opt/java/openjdk/lib/security/cacerts /etc/ata/cacerts
 docker rm ata-cacerts
 keytool -importcert -noprompt -alias my-authority -file my-authority.crt -keystore /etc/ata/cacerts -storepass changeit
@@ -486,7 +489,7 @@ a port only your proxy can reach, with the configuration file mounted.
 
 ```bash
 docker run -d --name ata --restart unless-stopped -v /etc/ata/application.yaml:/app/config/application.yaml:ro \
-  -p 127.0.0.1:8080:8080 astrana/ata-java:1.0.0
+  -p 127.0.0.1:8080:8080 astrana/ata-java:1.0
 ```
 
 Put a TLS-terminating proxy in front. The proxy must set `X-Forwarded-Proto` and `X-Forwarded-Host` itself, from the
@@ -541,7 +544,8 @@ Each published image is signed through Sigstore by the release workflow of the A
 repository, with a short-lived certificate rather than a long-lived key. To check that the image you pulled is the one
 that workflow built, install [cosign](https://docs.sigstore.dev/cosign/system_config/installation/), version 3 or later,
 and run this command. It prints the signature's details when the image is genuine and fails when it is not. In this
-command and the ones below, put the release's full version, such as `1.0.0`, in place of `<version>`.
+command and the ones below, put the release's full version, such as `1.0.0`, in place of `<version>`. To check an image
+you run by digest, put `@sha256:<digest>` in place of `:<version>`.
 
 ```bash
 cosign verify astrana/ata-java:<version> \

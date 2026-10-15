@@ -543,26 +543,29 @@ headers.
 
 ### As a container
 
-Pull the published image, naming the full version of the release you want. Each release has three tags. One is the full
-version, such as `1.0.0`. One is the major and minor version, such as `1.0`. The third is `latest`. The image is built
+Pull the published image by its major and minor version, such as `1.0`. That tag always points to the newest patch
+release of `1.0`, rebuilt with fixes to the base container images it is built from, so you get those fixes without a new
+version of the application. Each release also has a full-version tag, such as `1.0.0`, which always points to that
+release's first build and is never rebuilt, and the `latest` tag, which follows the newest release. The image is built
 for 64-bit Intel and AMD processors (amd64) and 64-bit ARM processors (arm64), and Docker pulls the one for the computer
-it runs on.
+it runs on. To choose when the image changes, run it by the digest `docker pull` prints, as
+`astrana/ata-php:1.0@sha256:<digest>`, and let an update tool such as Renovate propose each new digest.
 
 ```bash
-docker pull astrana/ata-php:1.0.0
+docker pull astrana/ata-php:1.0
 ```
 
 On any other processor, or to build it yourself, build the image from the repository root instead.
 
 ```bash
-docker build -f php/Dockerfile -t astrana/ata-php:1.0.0 .
+docker build -f php/Dockerfile -t astrana/ata-php:1.0 .
 ```
 
 The published image supports MySQL and PostgreSQL. For SQL Server, build an image with SQL Server support yourself, from
 the repository root, by setting the `WITH_SQLSRV` build argument. It adds Microsoft's ODBC Driver 18 for SQL Server and
 the `sqlsrv` and `pdo_sqlsrv` extensions. Building it accepts Microsoft's licence terms for the ODBC driver, so read
 them first at [aka.ms/odbc18eula](https://aka.ms/odbc18eula). The image holds a copy under `/usr/share/doc/msodbcsql18`.
-Then use the name you gave it in place of `astrana/ata-php:1.0.0` in the commands below.
+Then use the name you gave it in place of `astrana/ata-php:1.0` in the commands below.
 
 ```bash
 docker build --build-arg WITH_SQLSRV=true -f php/Dockerfile -t ata-php-sqlsrv .
@@ -582,8 +585,8 @@ request was refused. Generate the application key with the image itself, then ru
 proxy can reach.
 
 ```bash
-docker run --rm astrana/ata-php:1.0.0 php artisan key:generate --show
-docker run -d --name ata --restart unless-stopped --env-file ata.env -p 127.0.0.1:8000:8000 astrana/ata-php:1.0.0
+docker run --rm astrana/ata-php:1.0 php artisan key:generate --show
+docker run -d --name ata --restart unless-stopped --env-file ata.env -p 127.0.0.1:8000:8000 astrana/ata-php:1.0
 ```
 
 Put a TLS-terminating proxy in front. The proxy must set `X-Forwarded-Proto` and `X-Forwarded-Host` itself, from the
@@ -639,7 +642,8 @@ Each published image is signed through Sigstore by the release workflow of the A
 repository, with a short-lived certificate rather than a long-lived key. To check that the image you pulled is the one
 that workflow built, install [cosign](https://docs.sigstore.dev/cosign/system_config/installation/), version 3 or later,
 and run this command. It prints the signature's details when the image is genuine and fails when it is not. In this
-command and the ones below, put the release's full version, such as `1.0.0`, in place of `<version>`.
+command and the ones below, put the release's full version, such as `1.0.0`, in place of `<version>`. To check an image
+you run by digest, put `@sha256:<digest>` in place of `:<version>`.
 
 ```bash
 cosign verify astrana/ata-php:<version> \

@@ -83,8 +83,10 @@ hear about fixes, watch the repository's releases and security advisories on Git
 ## Supported versions
 
 Security issues are fixed in the latest release of each implementation, so to get a fix, update to the latest release.
-Within a major version every release is backwards compatible, as [Versions and releases](docs/versions.md) describes, so
-updating does not bring a breaking change. Older releases do not get fixes.
+Fixes to the base container images an image is built from are published as rebuilds of the latest release's image, under
+its major and minor version and `latest` tags. Within a major version every release is backwards compatible, as
+[Versions and releases](docs/versions.md) describes, so updating does not bring a breaking change. Older releases do not
+get fixes.
 
 When a new major version is released, its release notes will say whether, and for how long, the previous major version
 continues to receive security fixes.

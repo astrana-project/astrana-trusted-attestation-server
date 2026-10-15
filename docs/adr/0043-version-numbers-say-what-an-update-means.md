@@ -1,6 +1,6 @@
 # 43. Version numbers say what an update means
 
-Accepted on 2026-10-07.
+Superseded by record 49 on 2026-10-15.
 
 ## Context
 
