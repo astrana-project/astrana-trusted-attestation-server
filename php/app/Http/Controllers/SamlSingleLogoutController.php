@@ -60,18 +60,16 @@ final class SamlSingleLogoutController extends Controller
             abort(Response::HTTP_NOT_FOUND, '');
         }
 
-        if ($request->isMethod('POST')) {
-            return $this->singleLogoutOverPost($request);
-        }
+        return match (true) {
+            $request->isMethod('POST') => $this->singleLogoutOverPost($request),
+            $request->query('SAMLResponse') !== null => $this->completeSignOut($request),
+            $request->query('SAMLRequest') !== null && $request->query('Signature') !== null => $this->answerLogoutRequest($request),
+            default => self::ignoreUnsignedMessage(),
+        };
+    }
 
-        if ($request->query('SAMLResponse') !== null) {
-            return $this->completeSignOut($request);
-        }
-
-        if ($request->query('SAMLRequest') !== null && $request->query('Signature') !== null) {
-            return $this->answerLogoutRequest($request);
-        }
-
+    private static function ignoreUnsignedMessage(): RedirectResponse
+    {
         Log::warning('A single logout request carried no signed SAML logout message, so nothing was changed.');
 
         return redirect('/');

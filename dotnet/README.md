@@ -145,10 +145,10 @@ Git ignores the written file.
 ## Changelog and bill of materials
 
 `CHANGELOG.md` follows Keep a Changelog, with no Unreleased section, as
-[decision record 43](../docs/adr/0043-version-numbers-say-what-an-update-means.md) describes. `sbom.json` is a CycloneDX
-software bill of materials generated from the project's package references by the CycloneDX .NET tool, installed with
-`dotnet tool install --global CycloneDX`. Regenerate it from this folder whenever a dependency or the version changes.
-Set `--set-version` to the version of the latest entry in `CHANGELOG.md`:
+[decision record 49](../docs/adr/0049-version-numbers-indicate-what-an-update-means-and-container-image-changes-are-published-as-rebuilds-without-a-new-version.md)
+describes. `sbom.json` is a CycloneDX software bill of materials generated from the project's package references by the
+CycloneDX .NET tool, installed with `dotnet tool install --global CycloneDX`. Regenerate it from this folder whenever a
+dependency or the version changes. Set `--set-version` to the version of the latest entry in `CHANGELOG.md`:
 
 ```bash
 dotnet-CycloneDX Astrana.TrustedAttestation.slnx -o . -fn sbom.json -t -ed -ns --set-version 1.0.0

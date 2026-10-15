@@ -218,8 +218,9 @@ follows.
 
 The changelog check fails the pull request if the heading is missing, the bump does not match the files you changed, the
 three `MAJOR.MINOR` versions differ, or `java/pom.xml` or an `sbom.json` states a different version from its changelog.
-The [decision record on versioning](docs/adr/0043-version-numbers-say-what-an-update-means.md) explains why versions
-work this way.
+The
+[decision record on versioning](docs/adr/0049-version-numbers-indicate-what-an-update-means-and-container-image-changes-are-published-as-rebuilds-without-a-new-version.md)
+explains why versions work this way.
 
 ## Reviewing a translation
 
