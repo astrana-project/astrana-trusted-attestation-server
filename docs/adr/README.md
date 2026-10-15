@@ -104,6 +104,7 @@ Never edit a record into a different decision. The old record is the history of 
 |  44 | [Anyone can check where a published image came from](0044-anyone-can-check-where-a-published-image-came-from.md)                                                                                                                                                | 43                           |
 |  45 | [The published container images contain only what the server needs](0045-the-published-container-images-contain-only-what-the-server-needs.md)                                                                                                                  | 6, 42                        |
 |  49 | [Version numbers indicate what an update means, and container image changes are published as rebuilds without a new version](0049-version-numbers-indicate-what-an-update-means-and-container-image-changes-are-published-as-rebuilds-without-a-new-version.md) | 5, 7, 12, 36, 37, 43, 44, 45 |
+|  50 | [Anyone can read how a published container image was built, without container tools](0050-anyone-can-read-how-a-published-container-image-was-built-without-container-tools.md)                                                                                 | 44, 49                       |
 
 ## Dates and names
 
