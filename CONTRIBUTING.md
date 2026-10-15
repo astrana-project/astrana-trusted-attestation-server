@@ -210,7 +210,8 @@ follows.
   leaves the changelogs alone. A change they describe is released through the code that makes it.
 - Build files that never ship need no changelog entry either. These are the Dockerfiles, the stylesheet's npm files and
   Sass source, the PHP build scripts, the `sbom.json` bills of materials, the .NET restore settings and lock files, and
-  the configuration of the JaCoCo and Spotless plugins in `java/pom.xml`.
+  the configuration of the JaCoCo and Spotless plugins in `java/pom.xml`. Merging a change to an implementation's
+  `Dockerfile` without a new version publishes a container image rebuild of its latest version, with no changelog entry.
 - Development-only dependencies need no changelog entry either. These are `require-dev` in `php/composer.json`,
   `packages-dev` in `php/composer.lock` and the dependencies with the `test` scope in `java/pom.xml`. A change to any
   other dependency's version still needs one, and so does any other change to `java/pom.xml`.

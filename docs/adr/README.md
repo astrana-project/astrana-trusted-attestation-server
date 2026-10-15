@@ -92,17 +92,18 @@ Never edit a record into a different decision. The old record is the history of 
 
 ## Delivery
 
-|     | Record                                                                                                                                                   | Derives from     |
-| --: | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-|  36 | [Parity is defined by one implementation-blind suite](0036-parity-is-defined-by-one-implementation-blind-suite.md)                                       | 2, 5             |
-|  37 | [Only behaviour the contract and the shared interface define must match](0037-only-behaviour-the-contract-and-the-shared-interface-define-must-match.md) | 5, 26, 31, 36    |
-|  38 | [Shared feature versions, independent patches, release on merge](0038-shared-feature-versions-independent-patches-release-on-merge.md)                   | 5, 7, 36         |
-|  39 | [Security fixes ship in the latest release only](0039-security-fixes-ship-in-the-latest-release-only.md)                                                 | 12, 38           |
-|  40 | [Published images are application-only, demonstrations are bundled](0040-published-images-are-application-only-demonstrations-are-bundled.md)            | 2, 5, 9          |
-|  42 | [The published container images run on amd64 and 64-bit ARM](0042-the-published-container-images-run-on-amd64-and-64-bit-arm.md)                         | 2, 5, 9, 40      |
-|  43 | [Version numbers say what an update means](0043-version-numbers-say-what-an-update-means.md)                                                             | 5, 7, 12, 36, 38 |
-|  44 | [Anyone can check where a published image came from](0044-anyone-can-check-where-a-published-image-came-from.md)                                         | 43               |
-|  45 | [The published container images contain only what the server needs](0045-the-published-container-images-contain-only-what-the-server-needs.md)           | 6, 42            |
+|     | Record                                                                                                                                                                                                                                                          | Derives from                 |
+| --: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+|  36 | [Parity is defined by one implementation-blind suite](0036-parity-is-defined-by-one-implementation-blind-suite.md)                                                                                                                                              | 2, 5                         |
+|  37 | [Only behaviour the contract and the shared interface define must match](0037-only-behaviour-the-contract-and-the-shared-interface-define-must-match.md)                                                                                                        | 5, 26, 31, 36                |
+|  38 | [Shared feature versions, independent patches, release on merge](0038-shared-feature-versions-independent-patches-release-on-merge.md)                                                                                                                          | 5, 7, 36                     |
+|  39 | [Security fixes ship in the latest release only](0039-security-fixes-ship-in-the-latest-release-only.md)                                                                                                                                                        | 12, 38                       |
+|  40 | [Published images are application-only, demonstrations are bundled](0040-published-images-are-application-only-demonstrations-are-bundled.md)                                                                                                                   | 2, 5, 9                      |
+|  42 | [The published container images run on amd64 and 64-bit ARM](0042-the-published-container-images-run-on-amd64-and-64-bit-arm.md)                                                                                                                                | 2, 5, 9, 40                  |
+|  43 | [Version numbers say what an update means](0043-version-numbers-say-what-an-update-means.md)                                                                                                                                                                    | 5, 7, 12, 36, 38             |
+|  44 | [Anyone can check where a published image came from](0044-anyone-can-check-where-a-published-image-came-from.md)                                                                                                                                                | 43                           |
+|  45 | [The published container images contain only what the server needs](0045-the-published-container-images-contain-only-what-the-server-needs.md)                                                                                                                  | 6, 42                        |
+|  49 | [Version numbers indicate what an update means, and container image changes are published as rebuilds without a new version](0049-version-numbers-indicate-what-an-update-means-and-container-image-changes-are-published-as-rebuilds-without-a-new-version.md) | 5, 7, 12, 36, 37, 43, 44, 45 |
 
 ## Dates and names
 

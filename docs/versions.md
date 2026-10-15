@@ -5,14 +5,18 @@ version of three numbers, `MAJOR.MINOR.PATCH`, following [Semantic Versioning](h
 
 ## What each number means
 
-- A new `PATCH` fixes a defect, updates a dependency or changes the code without changing what it does, such as a
-  refactor. An inconsistency, such as wording that differs from the rest of the interface, counts as a defect.
-- A new `MINOR` adds or changes functionality in a way that is backwards compatible.
-- A new `MAJOR` includes a change that is not backwards compatible.
+- A new `PATCH` changes no behaviour except to fix a defect. It can also update a code library or change the code
+  without changing what it does, such as a refactor. An inconsistency, such as wording that differs from the rest of the
+  interface, counts as a defect.
+- A new `MINOR` adds or changes behaviour in a way that is backwards compatible, so you do not have to change your
+  configuration or the systems connected to the server.
+- A new `MAJOR` includes a change that is not backwards compatible, so you may have to change your configuration or the
+  systems connected to the server.
 
-Every change to an implementation's code, its structure or the packages its code depends on gets a new version, so the
-version always tells you whether the code changed. A change to documentation, tests, the packages only development and
-tests use, the demonstrations or the base images the published images are built on does not.
+Every change to the application gets a new version, so the version always tells you whether the application changed. The
+application is the implementation's own code, the shared contract, schema and interface files it is built from, and the
+code libraries it runs with. A change to documentation, tests, the code libraries only development and tests use, the
+demonstrations or the `Dockerfile` does not.
 
 ## The three implementations
 
@@ -36,12 +40,16 @@ new one before you update. A release that changes the database schema says so in
 hand. To hear about new releases, watch the repository's releases on GitHub.
 
 Every published image carries three tags, its full version such as `1.0.0`, its major and minor version such as `1.0`,
-and `latest`. Pull the full version, so that the image changes only when you choose to update. Each implementation's
-installation page shows how.
+and `latest`. When an implementation's `Dockerfile` changes, for example to take fixes to the base container images it
+is built from, its latest release is rebuilt. The rebuild moves the major and minor version and `latest`, has a GitHub
+release that says the application is unchanged, and has no changelog entry. The full-version tag always points to the
+release's first build. Pull the major and minor version and run it by digest, so that you get every rebuild and choose
+when the image changes. Each implementation's installation page shows how.
 
 [SECURITY.md](../SECURITY.md#supported-versions) says which releases get security fixes.
 
 ## Why versions work this way
 
-[Decision record 43](adr/0043-version-numbers-say-what-an-update-means.md) gives the reasons. To choose the version for
-a change you are contributing, see [Changelog and version](../CONTRIBUTING.md#changelog-and-version) in CONTRIBUTING.md.
+[Decision record 49](adr/0049-version-numbers-indicate-what-an-update-means-and-container-image-changes-are-published-as-rebuilds-without-a-new-version.md)
+gives the reasons. To choose the version for a change you are contributing, see
+[Changelog and version](../CONTRIBUTING.md#changelog-and-version) in CONTRIBUTING.md.

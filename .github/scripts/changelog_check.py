@@ -64,10 +64,10 @@ TEST_DIRS = ("/tests/", "/src/test/")
 TEST_FILES = ("phpunit.xml", "coverage.runsettings", "sonar-project.properties")
 # Development configuration, which .dockerignore keeps out of every image and the Java build keeps out of the jar.
 DEV_FILES = ("appsettings.Development.json", "launchSettings.json", "application-dev.yml", "application-dev-saml.yml")
-# Build files that never ship themselves. The images are infrastructure, so a Dockerfile change rides along with the
-# next release. The stylesheet's npm files and Sass source only build shared/ui/dist, which is released. The PHP
-# scripts run during the install or the image build, never in the running server, and a script not named here counts
-# as released until someone checks what runs it. A bill of materials is attached to the release, not part of the
+# Build files that never ship themselves. A Dockerfile change without a new version publishes a container image rebuild
+# instead (decision record 49). The stylesheet's npm files and Sass source only build shared/ui/dist, which is released.
+# The PHP scripts run during the install or the image build, never in the running server, and a script not named here
+# counts as released until someone checks what runs it. A bill of materials is attached to the release, not part of the
 # software, and a dependency change that alters it is released through the project or lock file that made it.
 BUILD_FILES = tuple(f"{impl}/{name}" for impl in IMPLS for name in ("Dockerfile", "sbom.json")) + (
     "shared/ui/package.json",
