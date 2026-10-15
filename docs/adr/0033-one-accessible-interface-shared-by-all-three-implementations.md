@@ -20,9 +20,10 @@ and it carries that script inline. The paste button appears only when the browse
 and the disclosure that hides revoke and remove appears only when script runs. The licence page is rendered in English
 with no switcher, because it states the software's licence and trademark notice in the words they were written in. It
 renders them from `shared/contract/attribution.json` and links to the third-party notices at `/THIRD-PARTY-NOTICES.txt`.
-Every page carries the same footer, rendered from the same file, with the project's name linked to the Astrana project's
-website and a link to the licence page, and the server has no setting to configure or remove it. The landing page may be
-indexed, with the organisation's name in its title, and the self-service page carries `noindex, nofollow`.
+Every page has the same attribution in its footer, rendered from that file, with the project's name linked to the
+Astrana project's website and a link to the licence page, and the server has no setting to configure or remove it. The
+landing page may be indexed, with the organisation's name in its title, and the self-service page carries
+`noindex, nofollow`.
 
 ## Consequences
 

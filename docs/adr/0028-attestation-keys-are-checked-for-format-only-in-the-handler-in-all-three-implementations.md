@@ -24,8 +24,8 @@ key. Any other whitespace character makes the key malformed.
 
 - The same key string is accepted or refused identically wherever it is presented. A divergence here would let one
   implementation store a key another rejects.
-- Left to themselves, the frameworks' binding layers refuse different inputs with different statuses, so .NET and Java
-  read the request body by hand rather than binding it, and PHP turns off Laravel's trimming of strings and its
+- Left to themselves, the frameworks' binding layers refuse different inputs with different statuses, so all three read
+  the request body by hand rather than binding it, and PHP also turns off Laravel's trimming of strings and its
   conversion of empty strings to null on the API, so that the handler decides the result.
 - A valid body is under a hundred bytes, so the 64-kilobyte limit caps what an anonymous caller can make the server keep
   in memory, with ample room for every real request.

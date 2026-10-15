@@ -39,7 +39,7 @@ On the API the token travels in the `X-CSRF-TOKEN` header and is read from nowhe
 the framework's own form field. With a live session, a request with a missing or wrong token is refused before any key
 in it is read, with HTTP 403 - Forbidden, and nothing changes. Without a session, the API answers HTTP 401 -
 Unauthorized whatever the token says, and a sign-out lands on the confirmation page
-([record 24](0024-sign-out-is-local-and-works-whatever-the-provider-supports.md)).
+([record 41](0041-single-logout-needs-a-signing-key.md)).
 
 The SAML authentication request identifier is kept in its own short-lived SameSite=None cookie in all three, never in
 the session, and Java keeps its SAML logout request the same way. In .NET the OpenID Connect correlation value, which

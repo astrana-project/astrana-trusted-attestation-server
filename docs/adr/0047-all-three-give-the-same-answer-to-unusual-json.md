@@ -40,5 +40,6 @@ Bad Request. When a name appears more than once in an object, its last value cou
   set their parser's depth limit to 64, because their defaults are deeper. .NET decodes every string and counts the
   digits of every number. Java checks every string for a lone surrogate, and lifts Jackson's limit on the length of a
   name, which neither of the other two parsers has. PHP counts the digits of every number.
-- Accepting what the most lenient parser accepted was rejected, because it would mean lifting limits two parsers apply
-  by default, and an implementation that leaves its parser's default in place would then diverge again unnoticed.
+- Accepting what the most lenient parser accepted was rejected, because it would mean lifting limits that each of the
+  three parsers applies by default, and an implementation that leaves its parser's default in place would then diverge
+  again unnoticed.
