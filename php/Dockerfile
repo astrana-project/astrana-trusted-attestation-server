@@ -18,7 +18,7 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-script
 # Stage 2: the shared single source (contract, schema, strings, stylesheet), synced into the paths the
 # application reads. Its own stage so that shared/ itself is in no layer of the final image: a COPY
 # followed by a later rm still leaves the copied tree in the COPY layer. Only the synced copies move on.
-FROM --platform=$BUILDPLATFORM php:8.4-cli@sha256:0177c7589c0715b63e5343342a7c1f1887db759ad0b0d6ad3bb949938bba6b47 AS shared-assets
+FROM --platform=$BUILDPLATFORM php:8.4-cli@sha256:1d2cf2b7d715b5b3aa959f0150ccbcc7b71e0181b637e443abf40a7fb56bf79a AS shared-assets
 WORKDIR /app
 COPY php/scripts/sync-shared-assets.php scripts/
 COPY shared/ /shared
@@ -26,7 +26,7 @@ RUN php scripts/sync-shared-assets.php
 
 # Stage 3: the runtime image, PHP with the database drivers the server needs. The tag names the Debian
 # release, which scripts/add-native-sbom-components.php reads for the bill of materials.
-FROM php:8.4-cli-trixie@sha256:0177c7589c0715b63e5343342a7c1f1887db759ad0b0d6ad3bb949938bba6b47
+FROM php:8.4-cli-trixie@sha256:1d2cf2b7d715b5b3aa959f0150ccbcc7b71e0181b637e443abf40a7fb56bf79a
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # The published image supports MySQL and PostgreSQL only. Microsoft's ODBC driver for SQL Server may be
