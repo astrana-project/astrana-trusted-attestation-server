@@ -126,10 +126,11 @@ lock file without the development dependencies. It also lists what the image ins
 Debian packages the `Dockerfile` adds, at the versions the image was last built with, and the `sqlsrv` and `pdo_sqlsrv`
 extensions and Microsoft's ODBC driver, at the versions the `Dockerfile` pins. The published image does not hold the SQL
 Server parts, so the bill of materials marks them as optional. Regenerate it from this folder whenever a dependency or
-the version changes, counting those components as dependencies. Use the version from the changelog:
+the version changes, counting those components as dependencies. Use the version from the changelog in both
+`COMPOSER_ROOT_VERSION` and `--mc-version`:
 
 ```bash
-docker run --rm -v "$(pwd)":/app -w /app --entrypoint sh composer:2 -c \
+docker run --rm -e COMPOSER_ROOT_VERSION=1.0.0 -v "$(pwd)":/app -w /app --entrypoint sh composer:2 -c \
   'composer global config allow-plugins.cyclonedx/cyclonedx-php-composer true &&
    composer global require cyclonedx/cyclonedx-php-composer &&
    composer CycloneDX:make-sbom --output-format=JSON --output-file=sbom.json --omit=dev --spec-version=1.6 --mc-version=1.0.0 &&
