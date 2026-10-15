@@ -22,8 +22,8 @@ and that its publisher keeps patched, and nothing that the server does not use i
 - The .NET image runs on Microsoft's chiseled ASP.NET Core image, in the variant that adds language and time zone data.
   The Java image runs on Google's distroless base, which has the C library and time zone data and little else, with a
   Java runtime that jlink cuts down from Eclipse Temurin's to the modules the server uses. The PHP image runs on the
-  official PHP image for Debian, and removes the compilers and download tools that built PHP's database extensions, but
-  keeps the shell and package manager of its base.
+  official PHP image for Debian, and removes the compilers and headers that built PHP's database and intl extensions,
+  and the base image's curl, but keeps the shell and package manager of its base.
 - The .NET and Java images have a smaller attack surface than a full runtime image would give them, are smaller to pull,
   and have fewer packages for an organisation to scan and patch. Vulnerabilities in packages the server never uses are
   not reported against them, because those packages are not in them.

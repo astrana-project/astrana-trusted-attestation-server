@@ -30,7 +30,7 @@ SAML single logout runs only when the server has its signing key, and Java also 
 configured. Without a key the server does not advertise single logout in its metadata. A logout request the provider
 sends anyway is answered as if the address were absent, with HTTP 404 - Not Found and nothing beyond the status
 ([record 26](0026-error-responses-reveal-nothing-beyond-the-status-code.md)). The member stays signed in, and the server
-logs a warning that says no signing key is configured.
+logs a warning that no signing key is configured, which the .NET implementation calls a signing certificate.
 
 With a key, the server accepts a logout request the provider signs, and ends the member's session here when they sign
 out elsewhere. A logout request that names a different member from the one signed in is refused, and the session is

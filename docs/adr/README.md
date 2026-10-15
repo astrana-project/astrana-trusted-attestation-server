@@ -55,7 +55,7 @@ Never edit a record into a different decision. The old record is the history of 
 |  23 | [The same token and assertion checks in all three, beyond the frameworks' defaults](0023-the-same-token-and-assertion-checks-in-all-three-beyond-the-frameworks-defaults.md) | 2, 5          |
 |  24 | [Sign-out is local and works whatever the provider supports](0024-sign-out-is-local-and-works-whatever-the-provider-supports.md)                                             | 2, 21         |
 |  41 | [Single logout needs a signing key](0041-single-logout-needs-a-signing-key.md)                                                                                               | 2, 21, 24, 26 |
-|  48 | [Every change a member makes needs the anti-forgery token](0048-every-change-a-member-makes-needs-the-anti-forgery-token.md)                                                 | 2, 21, 24, 25 |
+|  48 | [Every change a member makes needs the anti-forgery token](0048-every-change-a-member-makes-needs-the-anti-forgery-token.md)                                                 | 2, 21, 25, 41 |
 
 ## The API
 

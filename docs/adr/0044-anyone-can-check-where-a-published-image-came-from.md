@@ -5,10 +5,10 @@ Accepted on 2026-10-08.
 ## Context
 
 Each release of an implementation publishes its container image and a GitHub release that includes its software bill of
-materials, the list of every component the image contains
-([record 43](0043-version-numbers-say-what-an-update-means.md)). Whoever pulls the image or downloads the bill of
-materials needs to be able to check where it came from. It should be the one this repository's release workflow built
-and published, and not something published in its place under the same name.
+materials, the list of the application's dependencies ([record 43](0043-version-numbers-say-what-an-update-means.md)).
+Whoever pulls the image or downloads the bill of materials needs to be able to check where it came from. It should be
+the one this repository's release workflow built and published, and not something published in its place under the same
+name.
 
 A signature shows that only if nobody else could have made it. A signature made with a long-lived key shows only that
 someone had the key.
@@ -34,9 +34,9 @@ before it tags the image or creates the release. A missing or wrong signature st
 - The signing identity is the repository, the workflow file's path and the branch. Renaming any of them changes it, and
   anyone who checks against the old identity sees new releases fail until they check against the new one.
 - Releases depend on the Sigstore service. When it cannot sign or verify, the run fails before the image or the commit
-  is tagged or the GitHub release is created, and the next run tries again. No image tag, Git tag or GitHub release
-  exists without both signatures. The failed run leaves an untagged image behind, and the next run publishes and signs a
-  new one.
+  is tagged or the GitHub release is created, and the next run tries again. No image tag, Git tag or GitHub release that
+  the workflow creates exists without both signatures. The failed run leaves an untagged image behind, and the next run
+  publishes and signs a new one.
 - The image of a release published before signing began can be signed later by the same workflow, so its signature
   carries the same identity. Its image keeps the attestations it was built with, because they cannot change without
   republishing it. Before signing, the workflow checks that the image's revision label names the release's commit. The
