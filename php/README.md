@@ -120,16 +120,17 @@ without its notice. The file is generated, so it is not kept in Git.
 ## Changelog and bill of materials
 
 `CHANGELOG.md` follows Keep a Changelog, with no Unreleased section, as
-[decision record 43](../docs/adr/0043-version-numbers-say-what-an-update-means.md) describes. `sbom.json` is a CycloneDX
-software bill of materials for the published image, generated from the Composer lock file without the development
-dependencies. It also lists what the image installs outside Composer. These are the Debian packages the `Dockerfile`
-adds, at the versions the image was last built with, and the `sqlsrv` and `pdo_sqlsrv` extensions and Microsoft's ODBC
-driver, at the versions the `Dockerfile` pins. The published image does not hold the SQL Server parts, so the bill of
-materials marks them as optional. Regenerate it from this folder whenever a dependency or the version changes, counting
-those components as dependencies. Use the version from the changelog:
+[decision record 49](../docs/adr/0049-version-numbers-indicate-what-an-update-means-and-container-image-changes-are-published-as-rebuilds-without-a-new-version.md)
+describes. `sbom.json` is a CycloneDX software bill of materials for the published image, generated from the Composer
+lock file without the development dependencies. It also lists what the image installs outside Composer. These are the
+Debian packages the `Dockerfile` adds, at the versions the image was last built with, and the `sqlsrv` and `pdo_sqlsrv`
+extensions and Microsoft's ODBC driver, at the versions the `Dockerfile` pins. The published image does not hold the SQL
+Server parts, so the bill of materials marks them as optional. Regenerate it from this folder whenever a dependency or
+the version changes, counting those components as dependencies. Use the version from the changelog in both
+`COMPOSER_ROOT_VERSION` and `--mc-version`:
 
 ```bash
-docker run --rm -v "$(pwd)":/app -w /app --entrypoint sh composer:2 -c \
+docker run --rm -e COMPOSER_ROOT_VERSION=1.0.0 -v "$(pwd)":/app -w /app --entrypoint sh composer:2 -c \
   'composer global config allow-plugins.cyclonedx/cyclonedx-php-composer true &&
    composer global require cyclonedx/cyclonedx-php-composer &&
    composer CycloneDX:make-sbom --output-format=JSON --output-file=sbom.json --omit=dev --spec-version=1.6 --mc-version=1.0.0 &&

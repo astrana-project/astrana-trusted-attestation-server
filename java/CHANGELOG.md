@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.8] - 2026-10-16
+
+### Security
+
+- The embedded Tomcat web server is updated from 11.0.25 to 11.0.27. It fixes CVE-2026-77756, which affects a server
+  behind a reverse proxy, and CVE-2026-86350, CVE-2026-78437 and CVE-2026-77762, which affect a server with HTTP/2
+  turned on.
+
+### Changed
+
+- Bouncy Castle is updated from 1.85 to 1.86, and the PostgreSQL driver from 42.7.13 to 42.7.14.
+
 ## [1.0.7] - 2026-10-13
 
 ### Security

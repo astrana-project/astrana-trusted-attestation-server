@@ -13,7 +13,7 @@
 
   <groupId>org.astrana</groupId>
   <artifactId>trusted-attestation-server</artifactId>
-  <version>1.0.7</version>
+  <version>1.0.8</version>
   <name>Astrana Trusted Attestation Server</name>
   <description>Spring Boot implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)</description>
   <!--
@@ -47,10 +47,11 @@
       advisories in the version the parent, or OpenSAML for Bouncy Castle, would otherwise bring in. Remove
       a line once the parent manages that version or a newer one.
     -->
-    <tomcat.version>11.0.25</tomcat.version>
+    <tomcat.version>11.0.27</tomcat.version>
     <jackson-bom.version>3.1.7</jackson-bom.version>
     <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
-    <bouncycastle.version>1.85</bouncycastle.version>
+    <bouncycastle.version>1.86</bouncycastle.version>
+    <postgresql.version>42.7.14</postgresql.version>
   </properties>
 
   <!--
@@ -311,6 +312,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
+        <version>3.6.4</version>
         <executions>
           <execution>
             <id>third-party-notices</id>
@@ -348,7 +350,7 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.13</version>
+        <version>0.8.15</version>
         <executions>
           <execution>
             <id>prepare-agent</id>
@@ -381,7 +383,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>3.10.3</version>
+        <version>3.10.4</version>
         <configuration>
           <java>
             <palantirJavaFormat>
