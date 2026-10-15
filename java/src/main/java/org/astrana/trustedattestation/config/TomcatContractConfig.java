@@ -30,6 +30,13 @@ public class TomcatContractConfig {
             // SecurityConfig#unknownApiPathFilter answers it with the same empty-bodied 404 the others do.
             factory.addConnectorCustomizers(connector -> connector.setEncodedSolidusHandling("passthrough"));
 
+            // Accept-Language listing more than ten languages. Tomcat refuses to parse more locales than the
+            // connector's maxLocaleCount, by throwing, and Spring's RequestContextFilter asks for the locale on
+            // every request, so the request would fail with a 500 where the other two answer it. No limit
+            // restores the answer. The header size limit still bounds the work, and MemberLocaleResolver already
+            // reads every entry of the header itself.
+            factory.addConnectorCustomizers(connector -> connector.setMaxLocaleCount(-1));
+
             // Any error Tomcat still raises in the connector itself -- a malformed request line, an
             // oversized header -- is served by the host's ErrorReportValve, which writes an HTML report and
             // a server banner. Silence both so what remains is the status code alone, matching the other
