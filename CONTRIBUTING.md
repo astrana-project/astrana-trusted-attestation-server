@@ -222,6 +222,32 @@ The
 [decision record on versioning](docs/adr/0049-version-numbers-indicate-what-an-update-means-and-container-image-changes-are-published-as-rebuilds-without-a-new-version.md)
 explains why versions work this way.
 
+## Automatic update pull requests
+
+Dependabot opens pull requests to update the project's dependencies. What it checks each week is set in
+`.github/dependabot.yml`.
+
+Updates to GitHub Actions, Prettier and development-only dependencies don't change the server. Their pull requests pass
+the changelog check and can be merged as they are.
+
+Updates to libraries the server ships with do change it, so they need a changelog entry and a new version of the
+implementation they ship in. Dependabot can't write either, and their pull requests fail the changelog check until
+someone does. Before merging one, add a signed-off commit to its branch that:
+
+- adds a new `PATCH` version to the implementation's changelog, as [Changelog and version](#changelog-and-version)
+  describes
+- names each updated library with its old and new versions, under "Security" with the advisories it fixes that affect
+  the server, or under "Changed" if it fixes none
+- for Java, sets the same version in `java/pom.xml`
+- regenerates the implementation's `sbom.json`, as its README describes
+
+Once you've pushed to the branch, Dependabot stops rebasing it. If `master` gets newer commits before you merge, update
+the branch yourself.
+
+`java/pom.xml` overrides some of the versions Spring Boot sets, to get security fixes sooner. Dependabot doesn't update
+these overrides, so update them yourself when a new patch release fixes an advisory. Once Spring Boot itself uses the
+same version or a newer one, remove the override.
+
 ## Reviewing a translation
 
 A machine drafted every language other than English in `shared/ui/ui-strings.json`, so each one needs a native speaker

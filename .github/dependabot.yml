@@ -1,0 +1,50 @@
+# Weekly version updates for the code libraries, the formatter and the GitHub Actions. Each ecosystem and folder gets
+# one pull request for its minor and patch updates. A new major version gets a pull request of its own, because it
+# matches no group.
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /dotnet
+    schedule:
+      interval: weekly
+    groups:
+      dotnet:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: maven
+    directory: /java
+    schedule:
+      interval: weekly
+    groups:
+      java:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: composer
+    directory: /php
+    schedule:
+      interval: weekly
+    groups:
+      php:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      formatting:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
