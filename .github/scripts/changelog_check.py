@@ -68,15 +68,18 @@ DEV_FILES = ("appsettings.Development.json", "launchSettings.json", "application
 # instead (decision record 49). The stylesheet's npm files and Sass source only build shared/ui/dist, which is released.
 # The PHP scripts run during the install or the image build, never in the running server, and a script not named here
 # counts as released until someone checks what runs it. A bill of materials is attached to the release, not part of the
-# software, and a dependency change that alters it is released through the project or lock file that made it.
+# software, and a dependency change that alters it is released through the project or lock file that made it. The Maven
+# wrapper runs Maven on a developer's computer, and the container image and every workflow build with Maven itself.
 BUILD_FILES = tuple(f"{impl}/{name}" for impl in IMPLS for name in ("Dockerfile", "sbom.json")) + (
     "shared/ui/package.json",
     "shared/ui/package-lock.json",
     "php/scripts/add-native-sbom-components.php",
     "php/scripts/generate-third-party-notices.php",
     "php/scripts/sync-shared-assets.php",
+    "java/mvnw",
+    "java/mvnw.cmd",
 )
-BUILD_DIRS = ("shared/ui/src/",)
+BUILD_DIRS = ("shared/ui/src/", "java/.mvn/")
 # The contract's specifications, which no implementation is built from or runs. Each implementation reads the contract
 # files it needs by name, and a change to the specification that calls for different behaviour is released through
 # the code that changes.
