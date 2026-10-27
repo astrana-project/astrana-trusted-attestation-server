@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.10] - 2026-10-27
+
+### Changed
+
+- Entity Framework Core, its SQL Server provider and ASP.NET Core's OpenID Connect library were updated from 10.0.13 to
+  10.0.14, and the MySQL provider for Entity Framework Core from 10.0.9 to 10.0.12. With it, the MySQL driver was
+  updated from 26.7.0 to 26.10.0.
+
 ## [1.0.9] - 2026-10-15
 
 ### Changed
