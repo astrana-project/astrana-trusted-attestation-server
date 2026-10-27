@@ -48,7 +48,7 @@ public class ThirdPartyNoticesTests
     {
         var notices = Notices();
 
-        Assert.Contains("MySql.Data 26.7.0", notices);
+        Assert.Contains(Shipped("MySql.Data"), notices);
         Assert.Contains("GPL-2.0-only WITH Universal-FOSS-exception-1.0", notices);
         Assert.Contains("GNU General Public License Version 2.0, June 1991", notices);
         Assert.Contains("The Universal FOSS Exception, Version 1.0", notices);
@@ -71,10 +71,10 @@ public class ThirdPartyNoticesTests
         // licence address and their author, so the texts and the copyright line come from the repository.
         var notices = Notices();
 
-        Assert.Contains("Npgsql 10.0.3", notices);
+        Assert.Contains(Shipped("Npgsql"), notices);
         Assert.Contains("Licence: PostgreSQL", notices);
         Assert.Contains("IN NO EVENT SHALL NPGSQL BE LIABLE", notices);
-        Assert.Contains("K4os.Compression.LZ4 1.3.8\nLicence: MIT\nCopyright (c) 2017 Milosz Krajewski", notices);
+        Assert.Contains($"{Shipped("K4os.Compression.LZ4")}\nLicence: MIT\nCopyright (c) 2017 Milosz Krajewski", notices);
         Assert.Contains("Permission is hereby granted, free of charge", notices);
     }
 
@@ -120,6 +120,10 @@ public class ThirdPartyNoticesTests
             .Select(target => target.Name.Replace('/', ' '))
             .ToList();
     }
+
+    /// <summary>"Id Version" for the shipped package with this id, so a version update needs no change here.</summary>
+    private static string Shipped(string id) =>
+        ShippedPackages().Single(package => package.StartsWith(id + " ", StringComparison.Ordinal));
 
     private static bool IsPackage(JsonElement libraries, string name) =>
         libraries.GetProperty(name).GetProperty("type").GetString() == "package";
