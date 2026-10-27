@@ -13,7 +13,7 @@
 
   <groupId>org.astrana</groupId>
   <artifactId>trusted-attestation-server</artifactId>
-  <version>1.0.8</version>
+  <version>1.0.9</version>
   <name>Astrana Trusted Attestation Server</name>
   <description>Spring Boot implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)</description>
   <!--
@@ -47,11 +47,7 @@
       advisories in the version the parent, or OpenSAML for Bouncy Castle, would otherwise bring in. Remove
       a line once the parent manages that version or a newer one.
     -->
-    <tomcat.version>11.0.27</tomcat.version>
-    <jackson-bom.version>3.1.7</jackson-bom.version>
-    <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
     <bouncycastle.version>1.86</bouncycastle.version>
-    <postgresql.version>42.7.14</postgresql.version>
   </properties>
 
   <!--
