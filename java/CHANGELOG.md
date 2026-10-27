@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.9] - 2026-10-27
+
+### Changed
+
+- Spring Boot was updated from 4.1.1 to 4.1.2, with the libraries it manages. Among them, Spring Framework was updated
+  from 7.0.9 to 7.0.10, Spring Security from 7.1.1 to 7.1.2, Spring Data JPA from 4.1.1 to 4.1.2, and Hibernate ORM from
+  7.4.5 to 7.4.13.
+
 ## [1.0.8] - 2026-10-16
 
 ### Security
