@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.14] - 2026-10-27
+
+### Changed
+
+- Laravel was updated from 13.37.0 to 13.38.0, with the libraries it uses.
+
 ## [1.0.13] - 2026-10-20
 
 ### Changed
