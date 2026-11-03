@@ -237,17 +237,19 @@ someone does. Before merging one, add a signed-off commit to its branch that:
 
 - adds a new `PATCH` version to the implementation's changelog, as [Changelog and version](#changelog-and-version)
   describes
-- names each updated library with its old and new versions, under "Security" with the advisories it fixes that affect
-  the server, or under "Changed" if it fixes none
+- names the updated library with its old and new versions, under "Security" with the advisories the update fixes that
+  affect the server, or under "Changed" if the update fixes none
+- adds "with the libraries it uses" when the update also changes the versions of the libraries that the updated library
+  uses
 - for Java, sets the same version in `java/pom.xml`
 - regenerates the implementation's `sbom.json`, as its README describes
 
 Once you've pushed to the branch, Dependabot stops rebasing it. If `master` gets newer commits before you merge, update
 the branch yourself.
 
-`java/pom.xml` overrides some of the versions Spring Boot sets, to get security fixes sooner. Dependabot doesn't update
-these overrides, so update them yourself when a new patch release fixes an advisory. Once Spring Boot itself uses the
-same version or a newer one, remove the override.
+`java/pom.xml` overrides some of the versions that Spring Boot or OpenSAML would otherwise use, to get security fixes
+sooner. Dependabot proposes updates to these overrides as it does for any other dependency. Once Spring Boot manages, or
+OpenSAML depends on, the same version or a newer one, remove the override.
 
 ## Reviewing a translation
 

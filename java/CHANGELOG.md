@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.10] - 2026-11-03
+
+### Changed
+
+- Guava, which OpenSAML uses, was updated from 33.0.0 to 33.8.0, with the libraries Guava uses.
+
 ## [1.0.9] - 2026-10-27
 
 ### Changed
