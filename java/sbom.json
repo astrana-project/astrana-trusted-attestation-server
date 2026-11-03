@@ -1,7 +1,7 @@
 {
   "bomFormat" : "CycloneDX",
   "specVersion" : "1.6",
-  "serialNumber" : "urn:uuid:44a013b0-ca83-36fa-9e02-99bd3538b5fd",
+  "serialNumber" : "urn:uuid:42e8f779-9f8a-3ddb-ab13-f682423e460a",
   "version" : 1,
   "metadata" : {
     "lifecycles" : [
@@ -57,10 +57,10 @@
     },
     "component" : {
       "type" : "library",
-      "bom-ref" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.9?type=jar",
+      "bom-ref" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.10?type=jar",
       "group" : "org.astrana",
       "name" : "trusted-attestation-server",
-      "version" : "1.0.9",
+      "version" : "1.0.10",
       "description" : "Spring Boot implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)",
       "licenses" : [
         {
@@ -70,7 +70,7 @@
           }
         }
       ],
-      "purl" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.9?type=jar",
+      "purl" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.10?type=jar",
       "externalReferences" : [
         {
           "type" : "website",
@@ -6036,44 +6036,44 @@
     },
     {
       "type" : "library",
-      "bom-ref" : "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+      "bom-ref" : "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
       "group" : "com.google.guava",
       "name" : "guava",
-      "version" : "33.0.0-jre",
+      "version" : "33.8.0-jre",
       "description" : "Guava is a suite of core and expanded libraries that include utility classes, Google's collections, I/O classes, and much more.",
       "scope" : "required",
       "hashes" : [
         {
           "alg" : "MD5",
-          "content" : "5d8aefac09131c3a74d6dab4b01bcff6"
+          "content" : "6cab07839b624bf0a3de7338c9bafcee"
         },
         {
           "alg" : "SHA-1",
-          "content" : "161ba27964a62f241533807a46b8711b13c1d94b"
+          "content" : "bb3b79346325315062192205fa6636dd5873151f"
         },
         {
           "alg" : "SHA-256",
-          "content" : "f4d85c3e4d411694337cb873abea09b242b664bb013320be6105327c45991537"
+          "content" : "97b79ec3f2c0a6313a0c2df51ce1abdf8907e6531803467b81efcaaf99b35161"
         },
         {
           "alg" : "SHA-512",
-          "content" : "bb122b4c6df2ae3282eefdf313f8d4a3d75e363cfb30ae65a5e51f744105e6fb7b5b77c8cc07a1d37fea0947aa22ac3070063174826408b57a44b2f26856ff3b"
+          "content" : "ef92dc2efc21f7e6a453ca3a905e25853e1fc375a5ec51b375815f55ea72248a062534a8961d756ea1de7d95f1b8d0eca5a2dc32aeaebea6f0c808e00c476c82"
         },
         {
           "alg" : "SHA-384",
-          "content" : "dd0d01893159e2d734b885386635024c94606d5fe6259951e1f2ce37f026f60a419fefa536aaaa6274fdd2d5505e640a"
+          "content" : "fc47fdce7bd427580a31f350aa93fa3b4e35701f121af072159fd9fab3c3d1f978905e070bf268ff5aeff8a0d684633a"
         },
         {
           "alg" : "SHA3-384",
-          "content" : "a1b5933d73ea9881293e19fab4bbef2b301a88e480f4fcb2d1187e383dba0d5c02c8884997fd3f0d20456ab8c27e3898"
+          "content" : "ebee6b14c5914076220b507469f8a5a106c0ce6799f4384ba38e5b700af11df3f46a2fc8f0eecf2c5647f138f22ba95b"
         },
         {
           "alg" : "SHA3-256",
-          "content" : "ed01cc65afe540179c8e54dbc09331b679521cc5a6617389814fe2038603c7ba"
+          "content" : "06a4042eb73c404e68e84706d79a0178b6fb50346f8008397055193a493bf256"
         },
         {
           "alg" : "SHA3-512",
-          "content" : "6a422f8b319cbc21a87c7e03ff94ac4da0eedd8b9960212fb14446bd21da281afd8140ec7f3d3043e80e8c5b16ce50b5c27a235908f23ae4127e8d925a16886a"
+          "content" : "ac4a6c0ac067e73cf118611f45e646bc220b8b6edf04b5759bb8b5d2b5540196886d82f06261cc6c5e2e7f29f841f9c4e2d04ee4e6d6b34dd10974d11e2aa831"
         }
       ],
       "licenses" : [
@@ -6083,7 +6083,7 @@
           }
         }
       ],
-      "purl" : "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+      "purl" : "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
       "externalReferences" : [
         {
           "type" : "website",
@@ -6092,10 +6092,6 @@
         {
           "type" : "build-system",
           "url" : "https://github.com/google/guava/actions"
-        },
-        {
-          "type" : "distribution-intake",
-          "url" : "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
         },
         {
           "type" : "issue-tracker",
@@ -6109,44 +6105,44 @@
     },
     {
       "type" : "library",
-      "bom-ref" : "pkg:maven/com.google.guava/failureaccess@1.0.2?type=jar",
+      "bom-ref" : "pkg:maven/com.google.guava/failureaccess@1.0.3?type=jar",
       "group" : "com.google.guava",
       "name" : "failureaccess",
-      "version" : "1.0.2",
+      "version" : "1.0.3",
       "description" : "Contains com.google.common.util.concurrent.internal.InternalFutureFailureAccess and InternalFutures. Most users will never need to use this artifact. Its classes are conceptually a part of Guava, but they're in this separate artifact so that Android libraries can use them without pulling in all of Guava (just as they can use ListenableFuture by depending on the listenablefuture artifact).",
       "scope" : "required",
       "hashes" : [
         {
           "alg" : "MD5",
-          "content" : "3f75955b49b6758fd6d1e1bd9bf777b3"
+          "content" : "29a782e90f6b37218b18bb880d2a8f4a"
         },
         {
           "alg" : "SHA-1",
-          "content" : "c4a06a64e650562f30b7bf9aaec1bfed43aca12b"
+          "content" : "aeaffd00d57023a2c947393ed251f0354f0985fc"
         },
         {
           "alg" : "SHA-256",
-          "content" : "8a8f81cf9b359e3f6dfa691a1e776985c061ef2f223c9b2c80753e1b458e8064"
+          "content" : "cbfc3906b19b8f55dd7cfd6dfe0aa4532e834250d7f080bd8d211a3e246b59cb"
         },
         {
           "alg" : "SHA-512",
-          "content" : "ff4ee76aa661708989d53d45576cff3beea9ebbd86481dbbf2ee8c81bb22f882097b430588312b711025f0e890f22c6799d722ccd422a6a7278de08660fe2f51"
+          "content" : "72be228e7805da5623e42bf024ded7d9147023c66b22f4dbd04ac6898201af46ee82e1f92ea51eb0595f1b49151c4b8ecb862653d4906c17609c42544ee97abf"
         },
         {
           "alg" : "SHA-384",
-          "content" : "85a7bd379da27ad57a4e5c02099fef206083caa52244597ac858a921b48e2912cfa7ef0e7d0c7a10ab2dd8d0f7d6ada0"
+          "content" : "9dd1a2a08efda311604992d3e7cee64873bc8c64de3b423b1b3a3dcc1f7f0810bb03901fbfe39a5f835accb0646f4ad8"
         },
         {
           "alg" : "SHA3-384",
-          "content" : "652b22d09b297320e62ac254801e7d3a0fd2a8038461c5cbf7a53a27d681f62b768b964aa62c864453c4e7af217c8c4a"
+          "content" : "ffd67766c165ee77e96824e06de2c19864a6e61f785b2085eb825f308f173d71f2555559d90d910f33f3367378ace0e3"
         },
         {
           "alg" : "SHA3-256",
-          "content" : "a650b2f7982affc2dbb7e2807fbb0fbf58b74fd8dc111cc6dc5e95a00179b7e3"
+          "content" : "08a77b528a72ca412b36e4004692705ebfd75cfb4897c88632d367d08a34b09f"
         },
         {
           "alg" : "SHA3-512",
-          "content" : "2c5ee7629a8fb1c952f437b80fcd1cff86c54ff81de02eda1eb73c0bbfe38d3f072946f8c6396c7f1e46e16a6d44ad393dfe6fd2dd96f75ebb854263d36bb193"
+          "content" : "7cba6c266babbe8272f029eea6e2cbddadee96eb1a16916a6eb2441a55837867ce717385d4388735fd83f2f6555931077c0ebda011a1ee9a37ac38c8c0c43a65"
         }
       ],
       "licenses" : [
@@ -6156,7 +6152,7 @@
           }
         }
       ],
-      "purl" : "pkg:maven/com.google.guava/failureaccess@1.0.2?type=jar",
+      "purl" : "pkg:maven/com.google.guava/failureaccess@1.0.3?type=jar",
       "externalReferences" : [
         {
           "type" : "website",
@@ -6164,7 +6160,7 @@
         },
         {
           "type" : "build-system",
-          "url" : "https://travis-ci.org/google/guava"
+          "url" : "https://github.com/google/guava/actions"
         },
         {
           "type" : "distribution-intake",
@@ -6255,45 +6251,45 @@
     },
     {
       "type" : "library",
-      "bom-ref" : "pkg:maven/com.google.errorprone/error_prone_annotations@2.23.0?type=jar",
+      "bom-ref" : "pkg:maven/com.google.errorprone/error_prone_annotations@2.52.0?type=jar",
       "publisher" : "Google LLC",
       "group" : "com.google.errorprone",
       "name" : "error_prone_annotations",
-      "version" : "2.23.0",
+      "version" : "2.52.0",
       "description" : "Error Prone is a static analysis tool for Java that catches common programming mistakes at compile-time.",
       "scope" : "required",
       "hashes" : [
         {
           "alg" : "MD5",
-          "content" : "b3ea764beb68c9b44cf57c1b5a5608b2"
+          "content" : "cf0439bb26f5593a79ae144c3068fb3f"
         },
         {
           "alg" : "SHA-1",
-          "content" : "43a27853b6c7d54893e0b1997c2c778c347179eb"
+          "content" : "83177bbb5db5bfe120666ae93fdaf44625ad7a7d"
         },
         {
           "alg" : "SHA-256",
-          "content" : "ec6f39f068b6ff9ac323c68e28b9299f8c0a80ca512dccb1d4a70f40ac3ec054"
+          "content" : "24822b246a2da324006fc5a1c940b1d2cf9cd716e530155c39fea695d5ab01c4"
         },
         {
           "alg" : "SHA-512",
-          "content" : "a71637e21cdd4f236494af2fabe6ddcf3173c53627b9157913195e9f5b4a6b1d000122d7eb10229059f50deb8115d91fd25d2f12a3887936a19238477c623bc7"
+          "content" : "43b7708a96b064d86eb41d52370152bd76dc090ec1e010cc1ef9e8f17280cc9116c228c4de2e3d02c3302b1e01e8fded6fcaf2e2c79e8c2131d5b9dd59c342e3"
         },
         {
           "alg" : "SHA-384",
-          "content" : "1301f6229ac0c890bcf1356ef255d97dcebcf6a35f45f3321d7b13b164a4d89a96459fea25c5b0d280d86388eb05cbfb"
+          "content" : "c4ceb32d69f2efeb9de7a449dafd717ff142f2fa90211d4fe72d2432d925db383e2587443ce98143da59cbc32633d9f4"
         },
         {
           "alg" : "SHA3-384",
-          "content" : "31b07b9d8541da42debf6dd119254d1e480c05549ee7ecf4295adc2553130ec5220ae9e5e0da74a55f75044bd2a794b6"
+          "content" : "1eb974e66e8d2385af077abc30b8ddd71b712876929caecdcb7d47bcd13d159762cd5f39d4beb5d920ad44e3af698e9c"
         },
         {
           "alg" : "SHA3-256",
-          "content" : "0c3566a22f558ba7bbbcab6b00bef402032f55cb299b949aa947b08db528bd58"
+          "content" : "d7345c75e7c7b2af03a9f62fc432427ebed75f101e1a8f95289ca3f12019a8b4"
         },
         {
           "alg" : "SHA3-512",
-          "content" : "50d8990e8ffcd78e62899cde5790fbde4bdd3e362494d5261aff80bcefc3224c2c1df58bd9d4cda32a893dd8d94c8b0f65e24fda0e6a42d7176c2aed56e50358"
+          "content" : "8b16f76b03cdc7512b56b67bde5ce9b5afa7c3b2d85635c761055eee3e91736bec100123d935343d8e0dc563bd97087bcd9760bb9fd627f2846bd11f10cb19bb"
         }
       ],
       "licenses" : [
@@ -6303,7 +6299,7 @@
           }
         }
       ],
-      "purl" : "pkg:maven/com.google.errorprone/error_prone_annotations@2.23.0?type=jar",
+      "purl" : "pkg:maven/com.google.errorprone/error_prone_annotations@2.52.0?type=jar",
       "externalReferences" : [
         {
           "type" : "website",
@@ -6317,44 +6313,44 @@
     },
     {
       "type" : "library",
-      "bom-ref" : "pkg:maven/com.google.j2objc/j2objc-annotations@2.8?type=jar",
+      "bom-ref" : "pkg:maven/com.google.j2objc/j2objc-annotations@3.1?type=jar",
       "group" : "com.google.j2objc",
       "name" : "j2objc-annotations",
-      "version" : "2.8",
+      "version" : "3.1",
       "description" : "A set of annotations that provide additional information to the J2ObjC translator to modify the result of translation.",
       "scope" : "required",
       "hashes" : [
         {
           "alg" : "MD5",
-          "content" : "c50af69b704dc91050efb98e0dff66d1"
+          "content" : "abe8bd3abff622b9a8b15c3a737aa741"
         },
         {
           "alg" : "SHA-1",
-          "content" : "c85270e307e7b822f1086b93689124b89768e273"
+          "content" : "a892ca9507839bbdb900d64310ac98256cab992f"
         },
         {
           "alg" : "SHA-256",
-          "content" : "f02a95fa1a5e95edb3ed859fd0fb7df709d121a35290eff8b74dce2ab7f4d6ed"
+          "content" : "84d3a150518485f8140ea99b8a985656749629f6433c92b80c75b36aba3b099b"
         },
         {
           "alg" : "SHA-512",
-          "content" : "f8263868a792b41707c9e7fe6fa5650a14cd93fbeafad20efe3772a3058fc933eb59782ec59e6eb9b9c569aa96da80134ae9fdf7547b69c44a97087efddceeff"
+          "content" : "34ee5aad57b0b507e89c897306f73043f80fa0eb02b453e54d9052feb0808a0d2ed835d888946211921d2bf733780b19ff636479ce19b9f48814ba6008733ce1"
         },
         {
           "alg" : "SHA-384",
-          "content" : "e6087ec31fec8289158496ad2ed6ce8472d5d513808a312e0782cedac3b86c37a62a63c0b5ea3839491d109fe9e148a1"
+          "content" : "7b760a346a586d6a3fa4477807e2f02f091e61898fc9a6ff449e43c55b6465fbbc17720663183c84c41d4d8814085e51"
         },
         {
           "alg" : "SHA3-384",
-          "content" : "10add34bfeb8612283eef89ac96747a3c9b755acd80ad526e1addaeb7efd6323c52b9bfa1a3d34adb40e1ccb963ee65d"
+          "content" : "a2166c1c08f947c0e60aa7c9167602942e7bac37ba45863d34c0132a1f352e7807a382588d350b93bdbbbbe315a3573f"
         },
         {
           "alg" : "SHA3-256",
-          "content" : "b3336f8abd6b1f73b9f06d306974557000a000073bfbae6b54fda26d17dbb072"
+          "content" : "3d4d3b8bfd2ad13351a53610aa4bf1c5a69d2bde4272c281003120ed9bcddb8c"
         },
         {
           "alg" : "SHA3-512",
-          "content" : "d376c184a6df071c4e93b913d175b5c2e63deac37105dc20342c19bdda62e4e9598ca1e8bfb4f4fd5cdee6dd5ac3b8af49e2c5193e324d59a59ce1f7adeab627"
+          "content" : "0a574b379a3f8022f0b88252c87d0e6b6cfa434fdb981efd1b24387025a962d7ac4e90161e8bd048df142bf52f4fc41e4a0c1d45e4eeb872c5954aad552988e9"
         }
       ],
       "licenses" : [
@@ -6364,7 +6360,7 @@
           }
         }
       ],
-      "purl" : "pkg:maven/com.google.j2objc/j2objc-annotations@2.8?type=jar",
+      "purl" : "pkg:maven/com.google.j2objc/j2objc-annotations@3.1?type=jar",
       "externalReferences" : [
         {
           "type" : "website",
@@ -6376,7 +6372,7 @@
         },
         {
           "type" : "vcs",
-          "url" : "http://svn.sonatype.org/spice/trunk/oss/oss-parent-9/j2objc-annotations"
+          "url" : "http://github.com/google/j2objc"
         }
       ]
     },
@@ -10334,7 +10330,7 @@
   ],
   "dependencies" : [
     {
-      "ref" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.9?type=jar",
+      "ref" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.10?type=jar",
       "dependsOn" : [
         "pkg:maven/org.springframework.boot/spring-boot-starter-web@4.1.2?type=jar",
         "pkg:maven/org.springframework.boot/spring-boot-starter-data-jpa@4.1.2?type=jar",
@@ -11006,7 +11002,7 @@
         "pkg:maven/net.shibboleth/shib-support@9.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-security@9.2.3?type=jar",
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/org.apache.santuario/xmlsec@3.0.6?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
         "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar"
@@ -11016,7 +11012,7 @@
       "ref" : "pkg:maven/org.opensaml/opensaml-core-api@5.2.3?type=jar",
       "dependsOn" : [
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/io.dropwizard.metrics/metrics-core@4.2.39?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
         "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar",
@@ -11028,18 +11024,17 @@
       "dependsOn" : [ ]
     },
     {
-      "ref" : "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+      "ref" : "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
       "dependsOn" : [
-        "pkg:maven/com.google.guava/failureaccess@1.0.2?type=jar",
+        "pkg:maven/com.google.guava/failureaccess@1.0.3?type=jar",
         "pkg:maven/com.google.guava/listenablefuture@9999.0-empty-to-avoid-conflict-with-guava?type=jar",
-        "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar",
-        "pkg:maven/org.checkerframework/checker-qual@3.55.1?type=jar",
-        "pkg:maven/com.google.errorprone/error_prone_annotations@2.23.0?type=jar",
-        "pkg:maven/com.google.j2objc/j2objc-annotations@2.8?type=jar"
+        "pkg:maven/org.jspecify/jspecify@1.0.1?type=jar",
+        "pkg:maven/com.google.errorprone/error_prone_annotations@2.52.0?type=jar",
+        "pkg:maven/com.google.j2objc/j2objc-annotations@3.1?type=jar"
       ]
     },
     {
-      "ref" : "pkg:maven/com.google.guava/failureaccess@1.0.2?type=jar",
+      "ref" : "pkg:maven/com.google.guava/failureaccess@1.0.3?type=jar",
       "dependsOn" : [ ]
     },
     {
@@ -11047,19 +11042,11 @@
       "dependsOn" : [ ]
     },
     {
-      "ref" : "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar",
+      "ref" : "pkg:maven/com.google.errorprone/error_prone_annotations@2.52.0?type=jar",
       "dependsOn" : [ ]
     },
     {
-      "ref" : "pkg:maven/org.checkerframework/checker-qual@3.55.1?type=jar",
-      "dependsOn" : [ ]
-    },
-    {
-      "ref" : "pkg:maven/com.google.errorprone/error_prone_annotations@2.23.0?type=jar",
-      "dependsOn" : [ ]
-    },
-    {
-      "ref" : "pkg:maven/com.google.j2objc/j2objc-annotations@2.8?type=jar",
+      "ref" : "pkg:maven/com.google.j2objc/j2objc-annotations@3.1?type=jar",
       "dependsOn" : [ ]
     },
     {
@@ -11069,10 +11056,14 @@
       ]
     },
     {
+      "ref" : "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar",
+      "dependsOn" : [ ]
+    },
+    {
       "ref" : "pkg:maven/net.shibboleth/shib-support@9.2.3?type=jar",
       "dependsOn" : [
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
         "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar"
       ]
@@ -11094,7 +11085,7 @@
       "dependsOn" : [
         "pkg:maven/net.shibboleth/shib-support@9.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-networking@9.2.3?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
         "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
         "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.86?type=jar",
@@ -11106,7 +11097,7 @@
       "ref" : "pkg:maven/net.shibboleth/shib-networking@9.2.3?type=jar",
       "dependsOn" : [
         "pkg:maven/net.shibboleth/shib-support@9.2.3?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/org.apache.httpcomponents.client5/httpclient5@5.6.5?type=jar",
         "pkg:maven/org.apache.httpcomponents.client5/httpclient5-cache@5.6.5?type=jar",
         "pkg:maven/org.apache.httpcomponents.core5/httpcore5@5.4.4?type=jar",
@@ -11162,7 +11153,7 @@
         "pkg:maven/org.opensaml/opensaml-messaging-api@5.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-security@9.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-networking@9.2.3?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/io.dropwizard.metrics/metrics-core@4.2.39?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
         "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar",
@@ -11177,7 +11168,7 @@
         "pkg:maven/net.shibboleth/shib-networking@9.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-security@9.2.3?type=jar",
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/org.cryptacular/cryptacular@1.3.0?type=jar",
         "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
         "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.86?type=jar",
@@ -11216,7 +11207,7 @@
         "pkg:maven/org.opensaml/opensaml-messaging-api@5.2.3?type=jar",
         "pkg:maven/org.opensaml/opensaml-security-api@5.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-security@9.2.3?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
         "pkg:maven/org.apache.santuario/xmlsec@3.0.6?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
@@ -11250,7 +11241,7 @@
         "pkg:maven/net.shibboleth/shib-networking@9.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-velocity@9.2.3?type=jar",
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/io.dropwizard.metrics/metrics-core@4.2.39?type=jar",
         "pkg:maven/org.apache.santuario/xmlsec@3.0.6?type=jar",
         "pkg:maven/org.apache.velocity/velocity-engine-core@2.4.1?type=jar",
@@ -11313,7 +11304,7 @@
         "pkg:maven/org.opensaml/opensaml-security-api@5.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-networking@9.2.3?type=jar",
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
         "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar",
         "pkg:maven/net.shibboleth/shib-support@9.2.3?type=jar"
@@ -11330,7 +11321,7 @@
         "pkg:maven/org.opensaml/opensaml-xmlsec-api@5.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-networking@9.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-security@9.2.3?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/org.apache.httpcomponents.client5/httpclient5@5.6.5?type=jar",
         "pkg:maven/org.apache.httpcomponents.core5/httpcore5@5.4.4?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
@@ -11356,7 +11347,7 @@
         "pkg:maven/org.opensaml/opensaml-security-api@5.2.3?type=jar",
         "pkg:maven/org.opensaml/opensaml-xmlsec-api@5.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-support@9.2.3?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
         "pkg:maven/org.apache.santuario/xmlsec@3.0.6?type=jar",
         "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
@@ -11369,7 +11360,7 @@
       "ref" : "pkg:maven/net.shibboleth/shib-velocity@9.2.3?type=jar",
       "dependsOn" : [
         "pkg:maven/net.shibboleth/shib-support@9.2.3?type=jar",
-        "pkg:maven/com.google.guava/guava@33.0.0-jre?type=jar",
+        "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/org.apache.velocity/velocity-engine-core@2.4.1?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
         "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar"
@@ -11460,6 +11451,10 @@
       "dependsOn" : [
         "pkg:maven/org.checkerframework/checker-qual@3.55.1?type=jar"
       ]
+    },
+    {
+      "ref" : "pkg:maven/org.checkerframework/checker-qual@3.55.1?type=jar",
+      "dependsOn" : [ ]
     },
     {
       "ref" : "pkg:maven/com.mysql/mysql-connector-j@9.7.0?type=jar",
