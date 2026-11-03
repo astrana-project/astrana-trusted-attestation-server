@@ -13,7 +13,7 @@
 
   <groupId>org.astrana</groupId>
   <artifactId>trusted-attestation-server</artifactId>
-  <version>1.0.9</version>
+  <version>1.0.10</version>
   <name>Astrana Trusted Attestation Server</name>
   <description>Spring Boot implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)</description>
   <!--
@@ -43,16 +43,17 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <!--
-      Security patches ahead of the Spring Boot parent. Each pins the patch release that fixes published
-      advisories in the version the parent, or OpenSAML for Bouncy Castle, would otherwise bring in. Remove
-      a line once the parent manages that version or a newer one.
+      The versions set here replace versions with published vulnerabilities that the Spring Boot parent, or
+      OpenSAML for Bouncy Castle and Guava, would otherwise use. Remove a line once the parent manages that
+      version or a newer one, or once OpenSAML depends on that version or a newer one.
     -->
     <bouncycastle.version>1.86</bouncycastle.version>
+    <guava.version>33.8.0-jre</guava.version>
   </properties>
 
   <!--
-    OpenSAML brings in Bouncy Castle. Its three modules are held to one version, because Bouncy Castle
-    supports only matching versions of them together.
+    OpenSAML depends on Bouncy Castle and Guava. Bouncy Castle's three modules are held to one version,
+    because Bouncy Castle supports only matching versions of them together.
   -->
   <dependencyManagement>
     <dependencies>
@@ -70,6 +71,11 @@
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcutil-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
