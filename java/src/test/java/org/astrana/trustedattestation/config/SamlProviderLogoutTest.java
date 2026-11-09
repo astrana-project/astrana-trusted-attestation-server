@@ -3,18 +3,15 @@ package org.astrana.trustedattestation.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
-import java.math.BigInteger;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,10 +22,6 @@ import java.util.zip.Inflater;
 import java.util.zip.InflaterOutputStream;
 import org.astrana.trustedattestation.config.TrustedAttestationProperties.Protocol;
 import org.astrana.trustedattestation.security.MemberIdentityResolver;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -71,13 +64,14 @@ class SamlProviderLogoutTest {
 
     private static final String REQUESTER = "urn:oasis:names:tc:SAML:2.0:status:Requester";
 
-    private static final KeyPair PROVIDER_KEY = keyPair();
+    private static final KeyPair PROVIDER_KEY = TestCredentials.keyPair();
 
-    private static final X509Certificate PROVIDER_CERTIFICATE = certificate("idp.example", PROVIDER_KEY);
+    private static final X509Certificate PROVIDER_CERTIFICATE =
+            TestCredentials.certificate("idp.example", PROVIDER_KEY);
 
-    private static final KeyPair OWN_KEY = keyPair();
+    private static final KeyPair OWN_KEY = TestCredentials.keyPair();
 
-    private static final X509Certificate OWN_CERTIFICATE = certificate("sp.example", OWN_KEY);
+    private static final X509Certificate OWN_CERTIFICATE = TestCredentials.certificate("sp.example", OWN_KEY);
 
     @Test
     void aLogoutRequestNamingAnotherMemberKeepsTheSessionAndIsAnsweredRequester() {
@@ -242,7 +236,7 @@ class SamlProviderLogoutTest {
         });
     }
 
-    private static String inflate(byte[] deflated) {
+    static String inflate(byte[] deflated) {
         return new String(
                 transform(stream -> {
                     try (InflaterOutputStream inflater = new InflaterOutputStream(stream, new Inflater(true))) {
@@ -271,34 +265,6 @@ class SamlProviderLogoutTest {
             signature.update(content.getBytes(StandardCharsets.UTF_8));
             return signature.sign();
         } catch (java.security.GeneralSecurityException exception) {
-            throw new IllegalStateException(exception);
-        }
-    }
-
-    private static KeyPair keyPair() {
-        try {
-            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-            generator.initialize(2048);
-            return generator.generateKeyPair();
-        } catch (java.security.GeneralSecurityException exception) {
-            throw new IllegalStateException(exception);
-        }
-    }
-
-    private static X509Certificate certificate(String commonName, KeyPair keys) {
-        try {
-            X500Name name = new X500Name("CN=" + commonName);
-            Instant now = Instant.now();
-            return new JcaX509CertificateConverter()
-                    .getCertificate(new JcaX509v3CertificateBuilder(
-                                    name,
-                                    BigInteger.ONE,
-                                    Date.from(now.minus(1, ChronoUnit.DAYS)),
-                                    Date.from(now.plus(1, ChronoUnit.DAYS)),
-                                    name,
-                                    keys.getPublic())
-                            .build(new JcaContentSignerBuilder("SHA256withRSA").build(keys.getPrivate())));
-        } catch (Exception exception) {
             throw new IllegalStateException(exception);
         }
     }

@@ -8,3 +8,7 @@ scenario's stack, identity provider, database, relationship type, jurisdiction a
 `test-cases.txt` holds the Gherkin scenarios for behaviour the personas cannot represent on their own, such as
 concurrency, database role permissions, malformed input and refusing to start without TLS. It refers to personas by name
 where one applies.
+
+`invalid-manifests.json` holds manifests that every implementation's manifest validator must refuse. Each
+implementation's unit tests read it, so that the three refuse the same manifests. When you add a rule to the validators,
+add a manifest that breaks it.
