@@ -234,6 +234,17 @@ public sealed class ApiBodyOverKestrelTests : IAsyncLifetime
         Assert.Equal("close", reader.LastHeaders.GetValueOrDefault("Connection"));
     }
 
+    [Fact]
+    public async Task A_body_declared_exactly_at_the_discard_bound_without_a_session_is_answered_401_and_the_connection_stays_usable()
+    {
+        // The whole of such a body is read and thrown away, so the connection can be used again, as on Tomcat.
+        var statuses = await SendOnOneConnection(
+            Request("PUT", KeyPath, JsonPaddedTo((int)ApiBodyLimit.DiscardBytes)),
+            Request("POST", AttestPath, SmallBody));
+
+        Assert.Equal([401, 200], statuses);
+    }
+
     /// <summary>
     /// Sends a request the way a reverse proxy does: the body's length declared as 3 megabytes, part of it sent,
     /// the answer read, 1.5 megabytes more sent before the proxy reacts, then no more. Closing under the proxy

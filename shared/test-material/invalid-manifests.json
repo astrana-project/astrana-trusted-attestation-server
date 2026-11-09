@@ -1,0 +1,205 @@
+{
+  "_note": "See README.md. 'valid' is a manifest every validator accepts. Each entry in 'invalid' changes it in one way: 'set' replaces or adds fields, and 'remove' drops fields. The validator must then report at least one error that contains every string in 'error'. The strings are the parts of the message that all three implementations share, so they leave out quoted values and the wording that differs.",
+  "valid": {
+    "manifest_version": 1,
+    "default_locale": "en",
+    "name": { "en": "Acme Bank", "fr": "Banque Acme" },
+    "description": { "en": "Retail and commercial banking", "fr": "Banque de détail et commerciale" },
+    "website": { "en": "https://acmebank.example", "fr": "https://acmebank.example/fr" },
+    "support_url": { "en": "https://acmebank.example/contact" },
+    "logo_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "logo_data_dark": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "privacy_notice_url": { "en": "https://acmebank.example/privacy", "fr": "https://acmebank.example/fr/privacy" },
+    "jurisdictions": ["US", "US-NY", "US-CA"],
+    "relationship_types": ["employee", "client"],
+    "enrollment_url": "https://ata.acmebank.example/",
+    "attestation_url": "https://ata.acmebank.example/api/v1/attest"
+  },
+  "invalid": [
+    {
+      "case": "manifest_version is not 1",
+      "set": { "manifest_version": 2 },
+      "error": ["manifest_version must be 1"]
+    },
+    {
+      "case": "default_locale is one letter",
+      "set": { "default_locale": "e" },
+      "error": ["default_locale", "is not a locale tag"]
+    },
+    {
+      "case": "default_locale uses an underscore",
+      "set": { "default_locale": "en_GB" },
+      "error": ["default_locale", "is not a locale tag"]
+    },
+    {
+      "case": "default_locale has text after a valid tag",
+      "set": { "default_locale": "en-GB!" },
+      "error": ["default_locale", "is not a locale tag"]
+    },
+    {
+      "case": "name is empty",
+      "set": { "name": {} },
+      "error": ["name is required and must be a locale-keyed object"]
+    },
+    {
+      "case": "name has no entry for the default locale",
+      "set": { "name": { "fr": "Banque Acme" } },
+      "error": ["name has no entry for the default locale"]
+    },
+    {
+      "case": "name has a key that is not a locale tag",
+      "set": { "name": { "en": "Acme Bank", "french": "Banque Acme" } },
+      "error": ["name has key", "which is not a locale tag"]
+    },
+    {
+      "case": "name is blank in one locale",
+      "set": { "name": { "en": "Acme Bank", "fr": " " } },
+      "error": ["name.fr is empty"]
+    },
+    {
+      "case": "description has no entry for the default locale",
+      "set": { "description": { "fr": "Banque de détail et commerciale" } },
+      "error": ["description has no entry for the default locale"]
+    },
+    {
+      "case": "description has a key that is not a locale tag",
+      "set": { "description": { "en": "Retail and commercial banking", "french": "Banque de détail" } },
+      "error": ["description has key", "which is not a locale tag"]
+    },
+    {
+      "case": "description is blank in one locale",
+      "set": { "description": { "en": "Retail and commercial banking", "fr": "" } },
+      "error": ["description.fr is empty"]
+    },
+    {
+      "case": "website has no entry for the default locale",
+      "set": { "website": { "fr": "https://acmebank.example/fr" } },
+      "error": ["website has no entry for the default locale"]
+    },
+    {
+      "case": "website has a key that is not a locale tag",
+      "set": { "website": { "en": "https://acmebank.example", "french": "https://acmebank.example/fr" } },
+      "error": ["website has key", "which is not a locale tag"]
+    },
+    {
+      "case": "website is blank in one locale",
+      "set": { "website": { "en": "https://acmebank.example", "fr": " " } },
+      "error": ["website.fr is empty"]
+    },
+    {
+      "case": "website uses http",
+      "set": { "website": { "en": "http://acmebank.example" } },
+      "error": ["website.en must be an absolute", "https://"]
+    },
+    {
+      "case": "website spells the scheme in upper case",
+      "set": { "website": { "en": "HTTPS://acmebank.example" } },
+      "error": ["website.en must be an absolute", "https://"]
+    },
+    {
+      "case": "support_url has no entry for the default locale",
+      "set": { "support_url": { "fr": "https://acmebank.example/fr/contact" } },
+      "error": ["support_url has no entry for the default locale"]
+    },
+    {
+      "case": "support_url uses http",
+      "set": { "support_url": { "en": "http://acmebank.example/contact" } },
+      "error": ["support_url.en must be an absolute", "https://"]
+    },
+    {
+      "case": "privacy_notice_url has no entry for the default locale",
+      "set": { "privacy_notice_url": { "fr": "https://acmebank.example/fr/privacy" } },
+      "error": ["privacy_notice_url has no entry for the default locale"]
+    },
+    {
+      "case": "privacy_notice_url has a key that is not a locale tag",
+      "set": {
+        "privacy_notice_url": {
+          "en": "https://acmebank.example/privacy",
+          "french": "https://acmebank.example/fr/privacy"
+        }
+      },
+      "error": ["privacy_notice_url has key", "which is not a locale tag"]
+    },
+    {
+      "case": "privacy_notice_url is blank in one locale",
+      "set": { "privacy_notice_url": { "en": "https://acmebank.example/privacy", "fr": " " } },
+      "error": ["privacy_notice_url.fr is empty"]
+    },
+    {
+      "case": "privacy_notice_url uses http",
+      "set": { "privacy_notice_url": { "en": "http://acmebank.example/privacy" } },
+      "error": ["privacy_notice_url.en must be an absolute", "https://"]
+    },
+    {
+      "case": "relationship_types is empty",
+      "set": { "relationship_types": [] },
+      "error": ["relationship_types must list at least one value"]
+    },
+    {
+      "case": "relationship_types has a value outside the governed vocabulary",
+      "set": { "relationship_types": ["employee", "patient"] },
+      "error": ["relationship_types contains", "which is not in the governed enum"]
+    },
+    {
+      "case": "relationship_types has a duplicate",
+      "set": { "relationship_types": ["employee", "employee"] },
+      "error": ["relationship_types contains duplicates"]
+    },
+    {
+      "case": "logo_data is a URL",
+      "set": { "logo_data": "https://acmebank.example/logo.png" },
+      "error": ["logo_data must be a base64 image data URI"]
+    },
+    {
+      "case": "logo_data_dark is a URL",
+      "set": { "logo_data_dark": "https://acmebank.example/logo-dark.png" },
+      "error": ["logo_data_dark must be a base64 image data URI"]
+    },
+    {
+      "case": "logo_data_dark is set without logo_data",
+      "remove": ["logo_data"],
+      "error": ["logo_data_dark is set without logo_data"]
+    },
+    {
+      "case": "enrollment_url is empty",
+      "set": { "enrollment_url": "" },
+      "error": ["enrollment_url is required"]
+    },
+    {
+      "case": "enrollment_url uses http",
+      "set": { "enrollment_url": "http://ata.acmebank.example/" },
+      "error": ["enrollment_url must be an absolute", "https://"]
+    },
+    {
+      "case": "attestation_url is empty",
+      "set": { "attestation_url": "" },
+      "error": ["attestation_url is required"]
+    },
+    {
+      "case": "attestation_url is only spaces",
+      "set": { "attestation_url": "   " },
+      "error": ["attestation_url is required"]
+    },
+    {
+      "case": "attestation_url spells the scheme in upper case",
+      "set": { "attestation_url": "HTTPS://ata.acmebank.example/api/v1/attest" },
+      "error": ["attestation_url must be an absolute", "https://"]
+    },
+    {
+      "case": "jurisdictions has a lower-case code",
+      "set": { "jurisdictions": ["us"] },
+      "error": ["jurisdictions contains", "which is not an ISO 3166-1 alpha-2 or ISO 3166-2 subdivision code"]
+    },
+    {
+      "case": "jurisdictions has a three-letter code",
+      "set": { "jurisdictions": ["USA"] },
+      "error": ["jurisdictions contains", "which is not an ISO 3166-1 alpha-2 or ISO 3166-2 subdivision code"]
+    },
+    {
+      "case": "jurisdictions has a duplicate",
+      "set": { "jurisdictions": ["US", "US"] },
+      "error": ["jurisdictions contains duplicates"]
+    }
+  ]
+}

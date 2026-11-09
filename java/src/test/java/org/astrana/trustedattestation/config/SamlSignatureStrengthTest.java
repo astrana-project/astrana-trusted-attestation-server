@@ -42,6 +42,17 @@ class SamlSignatureStrengthTest {
     }
 
     @Test
+    void aDoctypeIsRefusedSoNoEntityInItIsExpanded() {
+        // Read with its DOCTYPE, this response would name SHA-1 through the entity. The parser refuses any
+        // DOCTYPE, so it reads nothing. OpenSAML refuses such a response before this runs, see
+        // SamlResponseRefusalTest.
+        String withEntity =
+                "<!DOCTYPE samlp:Response [<!ENTITY weak \"" + RSA_SHA1 + "\">]>" + signedResponse("&weak;", SHA256);
+
+        assertThat(SamlSignatureStrength.weakAlgorithms(withEntity)).isEmpty();
+    }
+
+    @Test
     void anUnsignedOrUnparseableResponseReportsNoWeakAlgorithms() {
         // No signature means no algorithms to judge here (an unsigned assertion is refused elsewhere), and a
         // response that will not parse has already failed the signature check.

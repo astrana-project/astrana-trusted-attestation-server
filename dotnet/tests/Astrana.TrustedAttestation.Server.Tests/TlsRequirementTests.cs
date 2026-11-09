@@ -77,6 +77,22 @@ public class TlsRequirementTests
     }
 
     [Fact]
+    public void TheUrlsSettingIsJudgedRatherThanTheAspNetCoreUrlsVariableWhenBothAreSet()
+    {
+        // Kestrel binds what urls names, so that is what has to be https.
+        Assert.Null(EnforcementOf(settings:
+            [("urls", "https://localhost:7443"), ("ASPNETCORE_URLS", "http://localhost:5000")]));
+        Assert.Throws<InvalidOperationException>(() => Enforce(settings:
+            [("urls", "http://localhost:5000"), ("ASPNETCORE_URLS", "https://localhost:7443")]));
+    }
+
+    [Fact]
+    public void AnEmptyEntryInTheAddressListIsNotAnEndpoint()
+    {
+        Assert.Null(EnforcementOf(settings: ("ASPNETCORE_URLS", "https://localhost:7443; ")));
+    }
+
+    [Fact]
     public void AKestrelEndpointCountsAsWellAsTheUrlsSetting()
     {
         // Configuring endpoints under Kestrel rather than urls is the more usual production shape, and a
@@ -129,6 +145,20 @@ public class TlsRequirementTests
         Assert.Contains("ASPNETCORE_HTTP_PORTS=8080", refusal.Message, StringComparison.Ordinal);
 
         Assert.Null(EnforcementOf(new TlsOptions { TerminatedByProxy = true }, ("ASPNETCORE_HTTP_PORTS", "8080")));
+    }
+
+    [Fact]
+    public void ThePortSettingsAreJudgedRatherThanTheirAspNetCoreVariablesWhenBothAreSet()
+    {
+        var https = Assert.Throws<InvalidOperationException>(() => Enforce(settings:
+            [("HTTPS_PORTS", "8443"), ("ASPNETCORE_HTTPS_PORTS", "9443")]));
+        Assert.Contains("ASPNETCORE_HTTPS_PORTS=8443", https.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("9443", https.Message, StringComparison.Ordinal);
+
+        var http = Assert.Throws<InvalidOperationException>(() => Enforce(settings:
+            [("HTTP_PORTS", "8080"), ("ASPNETCORE_HTTP_PORTS", "9090")]));
+        Assert.Contains("ASPNETCORE_HTTP_PORTS=8080", http.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("9090", http.Message, StringComparison.Ordinal);
     }
 
     [Fact]

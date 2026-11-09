@@ -436,6 +436,17 @@ final class SamlClientTest extends TestCase
     }
 
     #[Test]
+    public function an_algorithm_is_strong_only_when_its_name_ends_in_a_strong_hash(): void
+    {
+        self::assertTrue(SamlClient::isStrongAlgorithm('http://www.w3.org/2001/04/xmldsig-more#rsa-sha384'));
+        self::assertTrue(SamlClient::isStrongAlgorithm('http://www.w3.org/2001/04/xmlenc#SHA512'));
+
+        // SHA-256 named anywhere but at the end does not make SHA-1 strong.
+        self::assertFalse(SamlClient::isStrongAlgorithm('http://idp.example/sha256/xmldsig#rsa-sha1'));
+        self::assertFalse(SamlClient::isStrongAlgorithm(''));
+    }
+
+    #[Test]
     public function an_unsigned_or_unparseable_response_reports_no_weak_algorithms(): void
     {
         // No signature means no algorithms to judge here (an unsigned assertion is refused elsewhere by

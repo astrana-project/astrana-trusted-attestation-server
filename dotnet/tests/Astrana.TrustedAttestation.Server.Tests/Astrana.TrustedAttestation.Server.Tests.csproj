@@ -21,6 +21,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- The manifests every implementation's validator must refuse, read from the repository's single copy. -->
+  <ItemGroup>
+    <None Include="..\..\..\shared\test-material\invalid-manifests.json" Link="invalid-manifests.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Astrana.TrustedAttestation.Server\Astrana.TrustedAttestation.Server.csproj" />
   </ItemGroup>

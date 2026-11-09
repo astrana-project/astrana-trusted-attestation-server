@@ -49,6 +49,9 @@ final class IdTokenVerificationTest extends TestCase
     /** @var list<array<string, string>> what the provider currently publishes */
     private array $publishedKeys = [];
 
+    /** @var list<string>|null the signing algorithms the provider advertises, or null when it lists none */
+    private ?array $advertisedAlgorithms = null;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -68,12 +71,13 @@ final class IdTokenVerificationTest extends TestCase
         // not replace this one: Laravel accumulates stubs and the earliest match wins, so a rotation
         // has to be a change of data rather than a change of stub.
         Http::fake([
-            '*/.well-known/openid-configuration' => Http::response([
+            '*/.well-known/openid-configuration' => fn () => Http::response(array_filter([
                 'issuer' => self::ISSUER,
                 'authorization_endpoint' => self::ISSUER.'/auth',
                 'token_endpoint' => self::ISSUER.'/token',
                 'jwks_uri' => self::ISSUER.'/jwks',
-            ]),
+                'id_token_signing_alg_values_supported' => $this->advertisedAlgorithms,
+            ], static fn (mixed $value): bool => $value !== null)),
             '*/jwks' => fn () => Http::response(['keys' => $this->publishedKeys]),
         ]);
     }
@@ -491,6 +495,30 @@ final class IdTokenVerificationTest extends TestCase
         $this->expectException(SignatureInvalidException::class);
 
         $this->client()->verifyIdToken($forged, self::NONCE);
+    }
+
+    #[Test]
+    public function a_token_signed_with_an_algorithm_the_provider_advertises_is_accepted(): void
+    {
+        $this->advertisedAlgorithms = ['RS256'];
+        $this->publish(openssl_pkey_get_private($this->privateKey), $this->kid, alg: null);
+
+        $claims = $this->client()->verifyIdToken($this->token(), self::NONCE);
+
+        self::assertSame('member-subject', $claims['sub']);
+    }
+
+    #[Test]
+    public function a_token_signed_with_an_algorithm_the_provider_does_not_advertise_is_refused(): void
+    {
+        // The key carries no alg, so only the advertised list stops the token's own header choosing RS256.
+        $this->advertisedAlgorithms = ['ES256'];
+        $this->publish(openssl_pkey_get_private($this->privateKey), $this->kid, alg: null);
+
+        $this->expectException(IdentityProviderException::class);
+        $this->expectExceptionMessage('unsupported algorithm');
+
+        $this->client()->verifyIdToken($this->token(), self::NONCE);
     }
 
     #[Test]

@@ -48,6 +48,12 @@ class LanguageControllerTest {
         return java.net.URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
+    /** A form choosing French, padded with an extra field to exactly this many bytes. */
+    private static String paddedTo(int bytes) {
+        String form = "locale=fr&next=%2Fme&pad=";
+        return form + "x".repeat(bytes - form.length());
+    }
+
     private ResponseEntity<Void> post(String locale, String next) {
         StringBuilder body = new StringBuilder();
         if (locale != null) {
@@ -183,6 +189,21 @@ class LanguageControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
         assertThat(setCookie(response)).isNull();
         assertThat(location(response)).isEqualTo("/me");
+    }
+
+    @Test
+    void aFormExactlyAtTheSizeLimitIsRead() {
+        assertThat(setCookie(controller.setLanguage(form(paddedTo(LanguageController.MAX_FORM_BYTES)))))
+                .startsWith("ata_locale=fr;");
+    }
+
+    @Test
+    void aFormOneByteOverTheSizeLimitSetsNoCookieAndStillRedirects() {
+        ResponseEntity<Void> response = controller.setLanguage(form(paddedTo(LanguageController.MAX_FORM_BYTES + 1)));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
+        assertThat(setCookie(response)).isNull();
+        assertThat(location(response)).isEqualTo("/");
     }
 
     @Test
