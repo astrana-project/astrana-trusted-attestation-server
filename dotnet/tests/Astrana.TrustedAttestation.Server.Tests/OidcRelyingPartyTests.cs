@@ -131,6 +131,9 @@ public class OidcRelyingPartyTests
     // The authorized-party (azp) rule -- OpenID Connect Core 3.1.3.7
     // ------------------------------------------------------------------------------------------------
 
+    private static readonly AuthenticationScheme Scheme =
+        new(OpenIdConnectDefaults.AuthenticationScheme, null, typeof(OpenIdConnectHandler));
+
     [Fact]
     public void A_single_audience_needs_no_authorized_party()
     {
@@ -161,12 +164,37 @@ public class OidcRelyingPartyTests
             ["some-other-client", ClientId], authorizedParty: "some-other-client", ClientId));
     }
 
+    private static async Task<TokenValidatedContext> TokenValidated(params Claim[] claims)
+    {
+        var options = Configured();
+        var context = new TokenValidatedContext(
+            new DefaultHttpContext(), Scheme, options, new ClaimsPrincipal(new ClaimsIdentity(claims, "oidc")),
+            new AuthenticationProperties());
+
+        await options.Events.TokenValidated(context);
+        return context;
+    }
+
+    [Fact]
+    public async Task A_sign_in_whose_token_has_several_audiences_and_no_authorized_party_is_refused()
+    {
+        var context = await TokenValidated(new Claim("aud", "another-client"), new Claim("aud", ClientId));
+
+        Assert.NotNull(context.Result?.Failure);
+    }
+
+    [Fact]
+    public async Task A_sign_in_whose_token_has_several_audiences_and_names_this_client_as_authorized_party_goes_on()
+    {
+        var context = await TokenValidated(
+            new Claim("aud", "another-client"), new Claim("aud", ClientId), new Claim("azp", ClientId));
+
+        Assert.Null(context.Result);
+    }
+
     // ------------------------------------------------------------------------------------------------
     // What a sign-in keeps, and when it is refused
     // ------------------------------------------------------------------------------------------------
-
-    private static readonly AuthenticationScheme Scheme =
-        new(OpenIdConnectDefaults.AuthenticationScheme, null, typeof(OpenIdConnectHandler));
 
     private static AuthenticationProperties EveryToken()
     {

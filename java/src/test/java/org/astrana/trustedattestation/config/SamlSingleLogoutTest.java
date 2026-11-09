@@ -3,17 +3,13 @@ package org.astrana.trustedattestation.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
-import java.math.BigInteger;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Base64;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -21,10 +17,6 @@ import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 import org.astrana.trustedattestation.config.TrustedAttestationProperties.Protocol;
 import org.astrana.trustedattestation.security.MemberIdentityResolver;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
@@ -62,9 +54,10 @@ class SamlSingleLogoutTest {
 
     private static final String SIGNATURE_ALGORITHM = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
 
-    private static final KeyPair PROVIDER_KEY = keyPair();
+    private static final KeyPair PROVIDER_KEY = TestCredentials.keyPair();
 
-    private static final X509Certificate PROVIDER_CERTIFICATE = certificate(PROVIDER_KEY, "CN=idp.example");
+    private static final X509Certificate PROVIDER_CERTIFICATE =
+            TestCredentials.certificate("idp.example", PROVIDER_KEY);
 
     // -- The service provider's metadata --------------------------------------------------------------
 
@@ -156,8 +149,9 @@ class SamlSingleLogoutTest {
             boolean withSigningKey, boolean withOwnSingleLogout) {
         Consumer<java.util.Collection<Saml2X509Credential>> signing = credentials -> {
             if (withSigningKey) {
-                KeyPair key = keyPair();
-                credentials.add(Saml2X509Credential.signing(key.getPrivate(), certificate(key, "CN=sp.example")));
+                KeyPair key = TestCredentials.keyPair();
+                credentials.add(
+                        Saml2X509Credential.signing(key.getPrivate(), TestCredentials.certificate("sp.example", key)));
             }
         };
 
@@ -279,34 +273,6 @@ class SamlSingleLogoutTest {
             signature.update(content.getBytes(StandardCharsets.UTF_8));
             return signature.sign();
         } catch (java.security.GeneralSecurityException ex) {
-            throw new IllegalStateException(ex);
-        }
-    }
-
-    private static KeyPair keyPair() {
-        try {
-            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-            generator.initialize(2048);
-            return generator.generateKeyPair();
-        } catch (java.security.GeneralSecurityException ex) {
-            throw new IllegalStateException(ex);
-        }
-    }
-
-    private static X509Certificate certificate(KeyPair key, String subject) {
-        try {
-            X500Name name = new X500Name(subject);
-            Instant now = Instant.now();
-            return new JcaX509CertificateConverter()
-                    .getCertificate(new JcaX509v3CertificateBuilder(
-                                    name,
-                                    BigInteger.ONE,
-                                    Date.from(now.minus(1, ChronoUnit.DAYS)),
-                                    Date.from(now.plus(1, ChronoUnit.DAYS)),
-                                    name,
-                                    key.getPublic())
-                            .build(new JcaContentSignerBuilder("SHA256withRSA").build(key.getPrivate())));
-        } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
     }

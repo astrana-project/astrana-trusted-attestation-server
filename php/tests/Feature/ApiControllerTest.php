@@ -208,6 +208,19 @@ final class ApiControllerTest extends TestCase
     }
 
     #[Test]
+    public function set_key_that_changed_no_row_is_not_found_even_when_the_re_read_finds_one(): void
+    {
+        // The row vanished between the lookup and the write, and a row is there again by the re-read. The
+        // key was not stored, so the answer is 404 and not the re-read row.
+        $this->store->finds = [$this->relationship('employee')];
+        $this->store->updateCount = 0;
+
+        $response = $this->controller()->setKey($this->request(['sub' => 'alice'], ['public_key' => base64_encode(self::rawKey())]), 'employee');
+
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    #[Test]
     public function set_key_with_a_conflicting_key_is_conflict(): void
     {
         $this->store->finds = [$this->relationship('employee')];
@@ -525,6 +538,9 @@ final class ProgrammableStore implements RelationshipStore
 
     public bool $keyHeldElsewhere = false;
 
+    /** How many rows a key write changes. 0 is a row that vanished between the lookup and the write. */
+    public int $updateCount = 1;
+
     public int $deleteCount = 0;
 
     /** @var list<MemberRelationship> */
@@ -554,7 +570,7 @@ final class ProgrammableStore implements RelationshipStore
 
     public function updateKey(int $id, string $rawPublicKey): int
     {
-        return 1;
+        return $this->updateCount;
     }
 
     public function clearKey(int $id): int
