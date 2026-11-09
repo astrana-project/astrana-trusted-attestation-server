@@ -1,17 +1,17 @@
 # Contributing
 
-Every change comes in as a pull request. Merging into `master` releases it, so a pull request has to be ready for
-production before it merges.
+Every change comes in as a pull request. When a pull request merges into `master`, the Release workflow publishes any
+new version in its changelogs at once, so a pull request has to be ready for production before it merges.
 
 A pull request is not ready if it makes an observable change in only some of the three implementations, or leaves the
-changelog or the tests for later. Open a draft pull request if you want early eyes on the work, and mark it ready for
-review only when it is complete.
+changelog or the tests for later. Open a draft pull request if you want feedback early, and mark it ready for review
+only when it is complete.
 
 ## Before you start
 
-Every change has an issue. For anything beyond a small fix, open the issue before you start work, and describe what you
-intend to change and why. If we agree it should be done, go ahead. The maintainer does not review a pull request until
-it links to its issue.
+Every change starts with an issue. For anything beyond a small fix, open the issue before you start work, and describe
+what you intend to change and why. If the maintainer agrees it should be done, go ahead. The maintainer does not review
+a pull request until it links to its issue.
 
 **Never raise a security vulnerability in an issue or a pull request.** Report it privately, as described in
 [SECURITY.md](SECURITY.md).
@@ -29,89 +29,112 @@ heading first, or use `git push --no-verify` for that one push.
 ## What a pull request needs
 
 - Make one change per pull request. Link the issue, write a short title in the imperative and write a description that
-  says what changed and why. They become the commit message on `master`.
+  explains what changed and why. They become the commit message on `master`.
 
-- If the change alters anything observable from outside the application (the API, a response, a status code, the
-  manifest, the pages), make it in all three implementations, in the contract or the shared interface in `shared/ui`,
-  and in the conformance suite, in the same pull request. The three implementations must behave identically.
+- If the change alters anything observable from outside the server, such as the API, a response, a status code, the
+  manifest or a page, make it in all three implementations and in the contract or the shared interface in `shared/ui`,
+  with the tests [Tests](#tests) lists, all in the same pull request. The three implementations must behave identically.
 
-- If you add or change code, add or update the unit tests for it. The project targets 80% unit test coverage or higher.
+- Add or update the tests for every code change, as [Tests](#tests) describes.
 
-- Add a changelog entry, sign off every commit and run the formatters.
+- Add a changelog entry where [Changelog and version](#changelog-and-version) requires one, sign off every commit and
+  run the formatters.
 
 - Keep your branch up to date with `master`.
 
-- All the checks must pass: the unit tests of each implementation, the conformance, differential and accessibility
-  suites, the SonarQube Cloud quality gate, CodeQL, the Hadolint, Trivy and Gitleaks scans, the arm64 image builds,
-  formatting, script tests, changelog and sign-off.
+- All the checks must pass. They are the unit tests of each implementation, the conformance, differential and
+  accessibility suites, the SonarQube Cloud quality gate, CodeQL, the Hadolint, Trivy and Gitleaks scans, the arm64
+  container image builds, and the formatting, script test, changelog and sign-off checks.
 
 ## Code
 
 Write code that is easy to understand and maintain. Name things for what they are or do, so that a reader does not need
-to open them to find out. Keep each function to one job and short enough to hold in your head, and keep its complexity
-low.
+to open them to find out. Give each function one job, keep it short enough to hold in your head, and keep its complexity
+low. The SonarQube Cloud quality gate checks complexity, duplication and coverage on every pull request.
 
 Put code where a reader would look for it, and keep the structure the same across similar parts of the codebase. Make
-dependencies explicit rather than reaching for shared state. Let the code and its structure describe themselves. Add a
-comment only where it adds something the code cannot say. If the reason for something matters beyond the lines next to
-it, write it in an architecture decision record, not in a comment. Remove dead code and leftover debugging rather than
-commenting it out. The SonarQube Cloud quality gate checks complexity, duplication and coverage on every pull request.
+dependencies explicit rather than using shared state.
 
-Do not repeat yourself without a reason. Write each implementation in the idiom of its own stack, not in a style carried
-over from one of the others.
+Let the code and its structure describe themselves. Add a comment only where it adds something the code cannot say. If
+the reason for something matters beyond the lines next to it, write it in an architecture decision record, not in a
+comment. Remove dead code and leftover debugging rather than commenting it out.
+
+Do not repeat yourself without a reason. Write each implementation in the idiom of its own stack, not in the style of
+one of the others.
 
 Keep third-party dependencies to a minimum. Each one is part of the attack surface of every organisation that runs this
 software, and a vulnerability in one means a release. Use what the language and the framework already provide. Add a
 dependency only when it does something they do not, and say in the pull request why it is needed. The
 [decision record on dependencies](docs/adr/0006-keep-third-party-dependencies-to-a-minimum.md) gives the reasoning.
 
-The pages must stay accessible to the Web Content Accessibility Guidelines (WCAG) 2.1 at level AA, as
-[decision record 33](docs/adr/0033-one-accessible-interface-shared-by-all-three-implementations.md) requires, with the
+The pages must meet the Web Content Accessibility Guidelines (WCAG) 2.1 at level AA, as the
+[decision record on the shared interface](docs/adr/0033-one-accessible-interface-shared-by-all-three-implementations.md)
+requires, with the
 [markup the shared interface describes](shared/ui/README.md#the-markup-the-landing-page-and-the-self-service-page-carry).
 
-`shared/` holds the single source of the API contract, the database schemas, the stylesheet and interface strings, and
-the relationship-type vocabulary. Each implementation copies them in at build time. Never edit an implementation's copy.
-Change the source in `shared/`. Import `relationship-types.json`, never retype its values. Keep request and response
-shapes exactly as `openapi.yaml` defines them.
+`shared/contract`, `shared/schema` and `shared/ui` contain the single source of the API contract, the database schemas,
+the stylesheet and interface strings, and the relationship-type vocabulary. Each implementation copies the files it uses
+at build time. Never edit an implementation's copy. Change the source in `shared/`. Import `relationship-types.json`,
+never retype its values. Keep request and response shapes exactly as `openapi.yaml` defines them.
 
 These rules keep the design secure, so do not weaken them.
 
 - The application refuses to run without TLS, without the identity provider's discovery document under OpenID Connect,
   or without a valid manifest.
 - The manifest is built from an allowlist of public fields, never by serialising the configuration.
-- The audit log is append-only. The application's database role holds `INSERT` on it and nothing else, apart from
+- The audit log is append-only. The application's database role has `INSERT` on it and nothing else, apart from
   executing the retention procedure and, on PostgreSQL, using the sequence that numbers its rows.
 - Attestation keys and attestation lookups are never logged.
-- Error responses carry a status code only, with no body and no `Content-Type`.
-- No route carries a member identifier. The session supplies it.
+- Error responses have a status code only, with no body and no `Content-Type`.
+- No route contains a member identifier. The session supplies it.
 - `PUT` on a relationship's attestation key never creates a relationship, and a member can never grant, extend or
   restore their own.
 
 ## Tests
 
-Work test first, always. Before you write or change any code, write the test that describes the behaviour you want, run
-it and see it fail for the reason you expect. Then write the smallest code that makes it pass, and tidy the code only
-while the tests pass.
+The maintainer recommends writing the test first. Write the test that describes the behaviour you want before you change
+the code, run it and see it fail for the reason you expect. Then write the smallest code that makes it pass.
 
-- A bug fix starts with a test that reproduces the bug.
-- A change to observable behaviour starts with the conformance or differential case in `shared/test`, as well as the
-  unit tests in each implementation.
-- Do not write code that no failing test asked for.
+The tests each kind of change needs:
+
+| Change                                                                                                  | Tests it needs                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Code in one implementation that changes nothing observable from outside the server                      | Unit tests in that implementation                                                                                                                                                                                                                                        |
+| Behaviour observable from outside the server, such as a response, a status code, the manifest or a page | A check in `shared/test/conformance/check.py`, unit tests in each implementation, and, where the three implementations could answer differently, a case in `shared/test/differential.py`, or in `shared/test/differential_auth.py` for a change a signed-in member makes |
+| A new page                                                                                              | The tests for observable behaviour, and checks of the new page in `shared/test/accessibility.py`                                                                                                                                                                         |
+| The database schema or its procedures, in `shared/schema`                                               | A check in `shared/test/schema-checks.py`, or in `shared/test/role-checks.py` for what each database role may do                                                                                                                                                         |
+| A bug fix                                                                                               | A test that reproduces the bug, in the suite where the bug shows                                                                                                                                                                                                         |
+
 - Do not change a test to make it pass, unless a decision has changed the behaviour it describes.
 - Give every unit test its own dependencies, so that no test can affect another.
 
+Continuous integration does not run `schema-checks.py` or `role-checks.py`. Run them yourself against a copy of the
+database on each of the three engines, as [the database checks](shared/test/README.md#the-database-checks) describes.
+
+The unit tests are in `dotnet/tests/` (xUnit), `java/src/test/` (JUnit) and `php/tests/` (PHPUnit), and each
+implementation's README explains how to run them. [The suites' README](shared/test/README.md) describes what each suite
+checks and how to run it.
+
+Every class of application code needs at least 80% unit test coverage. Application code is the project's own logic, such
+as its services, its validators and the decisions its controllers make. The rule leaves out framework wiring,
+configuration classes and the code that reads and writes the database, because the conformance suite tests them through
+the running server.
+
+SonarQube Cloud shows each file's coverage, and it measures every file except the start-up code. Its quality gate also
+fails a pull request whose new code has less than 80% coverage.
+
 ## Secrets
 
-**Never commit a secret.** That means any password, token, private key, client secret or connection string that carries
-a password, for any system, your own test accounts included. The settings files in the implementations hold none, the
-development settings included. For local development, each implementation's README shows where credentials go instead:
-.NET user secrets, or a file Git ignores.
+**Never commit a secret.** That means any password, token, private key, client secret or connection string that contains
+a password, for any system, your own test accounts included. The settings files in the implementations contain none, the
+development settings included. For local development, each implementation's README shows where credentials go instead.
+For .NET that is user secrets, and otherwise a file Git ignores.
 
 There is one exception. The demonstrations, the tests in `shared/test` and continuous integration start their own
-containers, and the made-up passwords and client secrets for those containers are in the repository. They open nothing
-but those containers, which run on your own computer or in continuous integration. A demonstration publishes its ports
-on every network address of your computer, so run it only on a network you trust. Never use these passwords and secrets
-anywhere else, and never swap in a real password.
+containers, and the made-up passwords and client secrets for those containers are in the repository. They give access to
+nothing but those containers, which run on your own computer or in continuous integration. A demonstration publishes its
+ports on every network address of your computer, so run it only on a network you trust. Never use these passwords and
+secrets anywhere else, and never swap in a real password.
 
 If you commit a secret by mistake, treat it as exposed, even after you remove it, because it stays in the history.
 Revoke or replace it first. Then tell the maintainer. If the secret gives access to anything real, tell them privately,
@@ -154,7 +177,7 @@ consequences.
 - Cite only lower-numbered records. If you need a later one, either the order is wrong or the sentence belongs in the
   later record.
 - Do not end with a pointer to the contract, and do not point to this file, SECURITY.md, the README or the installation
-  pages anywhere in a record. The contract and the schema files hold the detail.
+  pages anywhere in a record. The contract and the schema files contain the detail.
 - Write an HTTP status as its code and name, `HTTP 404 - Not Found`.
 - Leave out counts that will change, such as how many identity providers or locales are tested.
 - Keep it short. A record that runs past a screen is usually two decisions.
@@ -168,13 +191,12 @@ use no bold for emphasis.
 
 ## Review and merging
 
-Only the maintainer merges. Every change that is not the maintainer's own is reviewed by the maintainer before it
-merges. The maintainer's own changes go through the same automated checks as everyone else's.
+Only the maintainer merges, and reviews every change that is not their own before merging it. The maintainer's own
+changes go through the same automated checks as everyone else's.
 
-Pull requests are squash-merged. Your branch becomes one commit on `master`, and its intermediate commits do not reach
-`master`. Your branch commits need no particular message style, because nothing reads them apart from the sign-off line.
-The pull request title and description are what survive, and the changelog is written by hand rather than generated from
-commits.
+Pull requests are squash-merged. Your branch becomes one commit on `master`, and its intermediate commits are not kept.
+Your branch commits need no particular message style, because nothing reads them apart from the sign-off line. The pull
+request title and description are what survive, and the changelog is written by hand rather than generated from commits.
 
 The [code of conduct](CODE_OF_CONDUCT.md#decisions) sets out how decisions about the project are made and how to
 disagree with one.
@@ -187,15 +209,16 @@ Each implementation has its own `CHANGELOG.md` (`dotnet/`, `java/`, `php/`), in
 Add a heading for the new version, `## [X.Y.Z] - YYYY-MM-DD`, and list your changes under it. Do not add an `Unreleased`
 section. Date the heading the day you finalise the entry. If the pull request merges on a later day, update the date
 before it merges, or the maintainer will when merging. The version you write is the one released when the pull request
-merges, and the tag and the Docker image take their version from it. Java's jar takes its version from `java/pom.xml`.
-When you bump a version, set it in `java/pom.xml` for Java. Regenerate the implementation's `sbom.json` as its README
-describes whenever a dependency or the version changes. The changelog check compares both versions with the changelog.
+merges, and the Git tag and the container image take their version from it. The Java implementation's jar takes its
+version from `java/pom.xml`, so when you bump the Java implementation's version, set it there too. Regenerate the
+implementation's `sbom.json` as its README describes whenever a dependency or the version changes. The changelog check
+compares the versions in `java/pom.xml` and `sbom.json` with the changelog.
 
-[Versions and releases](docs/versions.md#what-each-number-means) says what each number means. Choose the version as
+[Versions and releases](docs/versions.md#what-each-number-means) explains what each number means. Choose the version as
 follows.
 
 - If you make a functional change, in `shared/contract`, `shared/schema` or `shared/ui` or anywhere observable from
-  outside the application, bump the same new `MINOR` or `MAJOR` in all three changelogs, with the same entry in each.
+  outside the server, bump the same new `MINOR` or `MAJOR` in all three changelogs, with the same entry in each.
 - If you fix a defect in `shared/contract`, `shared/schema` or `shared/ui`, or make any other change there that is not
   functional, bump `PATCH` in all three changelogs, each one step above that implementation's current version, with the
   same entry in each. The three patch numbers can differ.
@@ -274,18 +297,18 @@ placeholder in curly brackets, such as `{org}`, exactly as written. A correction
 ## Releasing
 
 Releases are published only by the Release workflow, which runs on each push to `master`, so each time a pull request
-merges. Never publish an image, a tag or a GitHub release from your own computer. The workflow publishes with the
-`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets, and those credentials exist only in the repository's
-continuous integration secrets. A release that fails, for example because those secrets are not set, is tried again on
-the next push to `master`, or when the maintainer runs the Release workflow by hand.
+merges. Never publish a container image, a Git tag or a GitHub release from your own computer. The workflow publishes
+with the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets, and those credentials exist only in the
+repository's continuous integration secrets. A release that fails, for example because those secrets are not set, is
+tried again on the next push to `master`, or when the maintainer runs the Release workflow by hand.
 
-The workflow signs each image and each release's software bill of materials, and the installation guides show users how
-to check those signatures. The signing identity is made from the repository's name, the workflow file's path and the
-branch, so renaming any of them changes it. The verify commands in the installation guides, and the identity the
-workflow checks its own signatures against, must then be updated in the same pull request. The workflow's
-`id-token: write` permission must stay, because signing depends on it.
-[Decision record 44](docs/adr/0044-anyone-can-check-where-a-published-image-came-from.md) explains why releases are
-signed this way.
+The workflow signs each container image and each release's software bill of materials, and the installation guides show
+users how to check those signatures. The signing identity is made from the repository's name, the workflow file's path
+and the branch, so renaming any of them changes it. If you rename one, update the verify commands in the installation
+guides and the identity the workflow checks its own signatures against, in the same pull request. The workflow's
+`id-token: write` permission must stay, because signing depends on it. The
+[decision record on checking where a published container image came from](docs/adr/0044-anyone-can-check-where-a-published-image-came-from.md)
+explains why releases are signed this way.
 
 ## Developer Certificate of Origin
 
@@ -308,15 +331,14 @@ them too. Signing off a change means you have reviewed it, you understand it and
 written.
 
 To credit an assistant, add a `Co-Authored-By` line naming it to the pull request description. Pull requests are
-squash-merged, so a line in a branch commit does not reach `master`, and the description does.
+squash-merged, so `master` keeps the pull request description but not a line in a branch commit.
 
 ## Formatting
 
 Run the formatters before you push. `scripts/format.sh` (`scripts\format.ps1` on Windows) runs them all, skipping any
 whose toolchain you do not have. `scripts/check.sh` (`scripts\check.ps1` on Windows) runs the formatting, sign-off and
-changelog checks, with `--tests` (`-Tests` on Windows) for the unit tests as well. The integration suites run with
-`scripts/integration.sh`, and the SonarQube Cloud quality gate runs only in continuous integration. Prettier formats the
-Markdown, YAML, JSON, SCSS and CSS in the repository. To run it by hand:
+changelog checks, with `--tests` (`-Tests` on Windows) for the unit tests as well. Prettier formats the Markdown, YAML,
+JSON, SCSS and CSS in the repository. To run it by hand:
 
 ```
 npm ci
@@ -336,11 +358,11 @@ machine-formatted.
 
 ## Building and testing locally
 
-Each implementation's README ([.NET](dotnet/README.md), [Java](java/README.md), [PHP](php/README.md)) says how to build,
-configure and run it. The conformance, differential and accessibility suites run against all three implementations at
-once, in the same Docker stack that continuous integration uses. `scripts/integration.sh` (`scripts\integration.ps1` on
-Windows) builds it, runs the suites and tears it down. The first run downloads several gigabytes of images and takes a
-while. The commands it runs:
+Each implementation's README ([.NET](dotnet/README.md), [Java](java/README.md), [PHP](php/README.md)) explains how to
+build, configure and run it. The conformance, differential and accessibility suites run against all three
+implementations at once, in the same Docker stack that continuous integration uses. `scripts/integration.sh`
+(`scripts\integration.ps1` on Windows) builds it, runs the suites and tears it down. The first run downloads several
+gigabytes of container images and takes a while. The commands it runs:
 
 ```
 docker compose -f shared/test/ci/docker-compose.ci.yml up -d --build keycloak postgres dotnet-app java-app php-app proxy
@@ -353,4 +375,5 @@ To run them by hand in Git Bash on Windows, set `MSYS_NO_PATHCONV=1` first, or G
 path. `scripts/integration.sh` sets it for you. The report is `shared/test/ci/reports/index.html`, and
 [the suites' own README](shared/test/README.md) describes what each suite checks, the identity provider matrix and the
 database checks. A change to `shared/contract`, `shared/schema` or `shared/ui` changes all three implementations, so it
-is not complete until those suites pass against all three, not only the one you work in.
+is not complete until those suites pass against all three, not only the one you work in. The SonarQube Cloud quality
+gate runs only in continuous integration.

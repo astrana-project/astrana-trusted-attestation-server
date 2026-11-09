@@ -6,8 +6,9 @@ anything.
 
 ## The repository
 
-This repository holds three implementations of the Astrana Trusted Attestation Server, in `dotnet/`, `java/` and `php/`,
-built against one shared contract in `shared/`. The [layout](README.md#layout) in the README shows where everything is.
+This repository contains three implementations of the Astrana Trusted Attestation Server, in `dotnet/`, `java/` and
+`php/`, built against one shared contract in `shared/`. The [layout](README.md#layout) in the README shows where
+everything is.
 
 ## Acting for someone
 
@@ -15,13 +16,20 @@ Commit, push, open a pull request or create an issue only when the person you ar
 a file unless they tell you to. When you open a pull request, credit yourself as
 [AI coding assistants](CONTRIBUTING.md#ai-coding-assistants) describes.
 
+## Working test first
+
+Work test first, always. This is stricter than CONTRIBUTING.md, which recommends it for people. Before you write or
+change any code, write the test that describes the behaviour you want, run it and see it fail for the reason you expect.
+Then write the smallest code that makes it pass, and tidy the code only while the tests pass. A bug fix starts with the
+test that reproduces the bug. Do not write code that no failing test asked for.
+
 ## Where the rules are
 
-- Working test first, in [Tests](CONTRIBUTING.md#tests)
+- The tests each change needs, in [Tests](CONTRIBUTING.md#tests)
 - Making an observable change in all three implementations, in
   [What a pull request needs](CONTRIBUTING.md#what-a-pull-request-needs)
-- The strictest security posture becoming the shared one, in
-  [decision record 5](docs/adr/0005-three-implementations-held-to-behavioural-parity.md#decision)
+- The strictest security posture becoming the shared one, in the
+  [decision record on parity](docs/adr/0005-three-implementations-held-to-behavioural-parity.md#decision)
 - Code style, `shared/` as the single source, dependencies and the security rules, in [Code](CONTRIBUTING.md#code)
 - Formatting, in [Formatting](CONTRIBUTING.md#formatting)
 - Signing off commits, in [Developer Certificate of Origin](CONTRIBUTING.md#developer-certificate-of-origin)
