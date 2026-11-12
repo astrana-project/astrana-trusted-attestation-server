@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html). [Versions and releases](../docs/versions.md) says what each
 number means and how the versions of the three implementations relate.
 
+## [1.0.16] - 2026-11-12
+
+### Security
+
+- xmlseclibs, which the SAML sign-in uses to check signatures, was updated from 3.1.5 to 4.0.1, with php-saml from 4.3.2
+  to 4.4.1. For a server that signs members in with SAML, this fixed GHSA-7mf5-fjj8-mvjc, through which anyone could use
+  up the server's processor time without signing in, by posting a SAML response whose signature carried an XPath
+  transform that takes a long time to evaluate.
+- For a server that also has a SAML private key configured with `TRUSTED_ATTESTATION_SAML_SP_PRIVATE_KEY`, the same
+  update fixed GHSA-39hg-wfcm-v4wv and GHSA-7h47-29x2-r2gc, through which someone could decrypt an encrypted assertion
+  meant for the server by sending it many altered copies.
+
+### Changed
+
+- phpseclib 3.0.58, which xmlseclibs 4 uses, was added, with the two libraries phpseclib uses.
+- A server with a SAML private key configured stopped accepting assertions encrypted with RSA-1.5 key transport. An
+  identity system that encrypts assertions that way needs to use RSA-OAEP instead.
+- Laravel was updated from 13.39.0 to 13.40.0, with the libraries it uses.
+
 ## [1.0.15] - 2026-11-04
 
 ### Changed
