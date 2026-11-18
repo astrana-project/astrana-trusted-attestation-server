@@ -1,7 +1,7 @@
 {
   "bomFormat" : "CycloneDX",
   "specVersion" : "1.6",
-  "serialNumber" : "urn:uuid:42e8f779-9f8a-3ddb-ab13-f682423e460a",
+  "serialNumber" : "urn:uuid:cf6d0234-fb82-38fe-a556-bfa10d067a40",
   "version" : 1,
   "metadata" : {
     "lifecycles" : [
@@ -57,10 +57,10 @@
     },
     "component" : {
       "type" : "library",
-      "bom-ref" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.10?type=jar",
+      "bom-ref" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.11?type=jar",
       "group" : "org.astrana",
       "name" : "trusted-attestation-server",
-      "version" : "1.0.10",
+      "version" : "1.0.11",
       "description" : "Spring Boot implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)",
       "licenses" : [
         {
@@ -70,7 +70,7 @@
           }
         }
       ],
-      "purl" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.10?type=jar",
+      "purl" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.11?type=jar",
       "externalReferences" : [
         {
           "type" : "website",
@@ -5463,44 +5463,44 @@
     },
     {
       "type" : "library",
-      "bom-ref" : "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
+      "bom-ref" : "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87?type=jar",
       "group" : "org.bouncycastle",
       "name" : "bcprov-jdk18on",
-      "version" : "1.86",
-      "description" : "The Bouncy Castle Crypto package is a Java implementation of cryptographic algorithms. This jar contains the JCA/JCE provider and low-level API for the BC Java version 1.86 for Java 1.8 and later.",
+      "version" : "1.87",
+      "description" : "The Bouncy Castle Crypto package is a Java implementation of cryptographic algorithms. This jar contains the JCA/JCE provider and low-level API for the BC Java version 1.87 for Java 1.8 and later.",
       "scope" : "required",
       "hashes" : [
         {
           "alg" : "MD5",
-          "content" : "be1401108af4f440b82b47194c72506b"
+          "content" : "a92e20542c707afd3274a229bbee3e23"
         },
         {
           "alg" : "SHA-1",
-          "content" : "830c8467bed8e4c1148262386b09fc42aedcf262"
+          "content" : "3cf2bbc1280a743fd3d4d7d556883c13e5d28be5"
         },
         {
           "alg" : "SHA-256",
-          "content" : "2af190b300cbb0b35e248ccf5f4a06b6072030aeb3da7a98ec73abe5b4cb371f"
+          "content" : "12d2d3dd82a9ec15e92ec7c7943ee64f6097c6dc12c07e984f1693b77565b9aa"
         },
         {
           "alg" : "SHA-512",
-          "content" : "4502851281929ef645316ae96ad7d6db6a54d11ce024a66bec654c2eef62b80f174b67a2a15de86b2698f33b696459e21ecfec4a846350f4297394e9a331c43b"
+          "content" : "fec4187f2d152ec10dcbb6928407bfa6dacea393d716bd024cbed907251d181e4eeda389501792435d6b5dac13a468b2f230c2fac80dd6382b9c0a6e4d85ff71"
         },
         {
           "alg" : "SHA-384",
-          "content" : "57247c80abb35a29f4f4e0b6d21fd842635a37be2275bb2759e5a10095a9864ee30310fe4b630e22ff786f325fb9d8d6"
+          "content" : "15c760de2553442f7ffadb8ce11d588322591d944ce4aa564b5585032c951b0e3184873842df9be6740930bae86e31a5"
         },
         {
           "alg" : "SHA3-384",
-          "content" : "202f0933e870819363c1f189f5afe122ea5308994d2b8b5ce737fd5fd80880339eec4bb99579145b505728fda75a353e"
+          "content" : "c6f023a95268fa9092d201b8225e7c2c8934f18d44d5eb13daa9d780215bcf4eaf46e5fafabc5b0e7554e34689641421"
         },
         {
           "alg" : "SHA3-256",
-          "content" : "0719f22928c6193425cb53e335dae9bf103c49425276aad6833f8e7131b615e1"
+          "content" : "8c05defb10b3b6f03127fef3b45f1553b75d57a26e43910cc9dd10a3d20f9d08"
         },
         {
           "alg" : "SHA3-512",
-          "content" : "a77e4e6333032744f390c63a0a48c366bc1e0bcd4b5755f4ba18549be761af8ebe37e6fd2c7bec0f0c85fd235150fb7d4c57f3518b500dbd079749646ed3654f"
+          "content" : "775a7cad19e9792b4b9553e665f8f1d7540acec39984162406219d6b2dccf9272ef871f6c068cf46dfcc462383c3810b10e49bda087b7344e17eab4bbecdedc8"
         }
       ],
       "licenses" : [
@@ -5511,7 +5511,7 @@
           }
         }
       ],
-      "purl" : "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
+      "purl" : "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87?type=jar",
       "externalReferences" : [
         {
           "type" : "website",
@@ -5529,44 +5529,44 @@
     },
     {
       "type" : "library",
-      "bom-ref" : "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.86?type=jar",
+      "bom-ref" : "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.87?type=jar",
       "group" : "org.bouncycastle",
       "name" : "bcpkix-jdk18on",
-      "version" : "1.86",
+      "version" : "1.87",
       "description" : "The Bouncy Castle Java APIs for CMS, PKCS, EAC, TSP, CMP, CRMF, OCSP, and certificate generation. This jar contains APIs for Java 1.8 and later. The APIs are designed primarily to be used in conjunction with the BC Java provider but may also be used with other providers providing cryptographic services.",
       "scope" : "required",
       "hashes" : [
         {
           "alg" : "MD5",
-          "content" : "f99f3ee0907b890a9c87411fd5a696db"
+          "content" : "2fd22a2a694b2f0b1b2f285d1625bb6f"
         },
         {
           "alg" : "SHA-1",
-          "content" : "fb5ea65959db10fe5d61148bb2b77f6e231455b1"
+          "content" : "ce798f0dafb058963024bbe1096f77192cf3edd7"
         },
         {
           "alg" : "SHA-256",
-          "content" : "8d8b41a4b149bdae8d331f059a578870954d1e3ff29f8269a9eb3ee19a7e4ef7"
+          "content" : "a44be2660d72ed88673372b8cc2d53a25a5aaf27122fb803ed93f07147536aa1"
         },
         {
           "alg" : "SHA-512",
-          "content" : "2923c0da3848b47d1953bdba3ae50441f3a3416f3646a26244c080414f31fbde875e4e50619a0ef34670c877367a45438a346260fc8b047e753b553debd40b37"
+          "content" : "2536343dc1593cc0f6f80a71ea2ef2ea56460bbca4a6a301f306e5e144d5baaa633ae448a5e431fbb0483a6c902c5a56ca7e10fe98a0bd69dbaf5e504a481436"
         },
         {
           "alg" : "SHA-384",
-          "content" : "a176fbe121a322d83017263c5e9e0d53383ad58a0c46dbd9e52c4862f2114f1f85db2b8b5f093ef6b0c00d8dea4578da"
+          "content" : "a64726259b2c3622c9d8fda1eee14339be5ab54c336f6385ed80dd1df38bc6251573f0ce3e209c9433a233001f368120"
         },
         {
           "alg" : "SHA3-384",
-          "content" : "7525c6ff2f539fecc61f380113bb1480d2bdf6de70786001f0641057b3328312f75246bc8faccd96fe5c048fb6943de2"
+          "content" : "05c094a0b1781d314da49061d3c0bc232cf2b48378bc3108fb4ed644c05581e5b930cf2773dd15bf7685a17feb3373d8"
         },
         {
           "alg" : "SHA3-256",
-          "content" : "2784ec8965c90cb2c8da5669017f006be339972bda47c20921740159ce1eed16"
+          "content" : "586c9a5b17b2441fe3d46797b7cd8e02d6c1ea59288b218b23937e060ec75711"
         },
         {
           "alg" : "SHA3-512",
-          "content" : "7ac8aa04c956d7066b8161f177378c71cf3be58d35624d6567ffc7efb80a61365f0c02f1480861b7e25b818d823d184c9dfa23c0f3b94a5b81e0b087f69de7bd"
+          "content" : "c47eeedf3c94d3de956ac703b0df07c27a9a9d1d63c7a479546dc7e5ef4405c7cac819742d29e8fea037c5178ad0dc3fa9989d7f6107235d1804eff8362a36c5"
         }
       ],
       "licenses" : [
@@ -5577,7 +5577,7 @@
           }
         }
       ],
-      "purl" : "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.86?type=jar",
+      "purl" : "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.87?type=jar",
       "externalReferences" : [
         {
           "type" : "website",
@@ -5595,44 +5595,44 @@
     },
     {
       "type" : "library",
-      "bom-ref" : "pkg:maven/org.bouncycastle/bcutil-jdk18on@1.86?type=jar",
+      "bom-ref" : "pkg:maven/org.bouncycastle/bcutil-jdk18on@1.87?type=jar",
       "group" : "org.bouncycastle",
       "name" : "bcutil-jdk18on",
-      "version" : "1.86",
+      "version" : "1.87",
       "description" : "The Bouncy Castle Java APIs for ASN.1 extension and utility APIs used to support bcpkix and bctls. This jar contains APIs for Java 1.8 and later.",
       "scope" : "required",
       "hashes" : [
         {
           "alg" : "MD5",
-          "content" : "c409099f16278109e7545aad128cc029"
+          "content" : "73d8aa1ab4f4d35867cac98195006d8a"
         },
         {
           "alg" : "SHA-1",
-          "content" : "2c8e77f5601c2b84c8773af4caf403a34daca357"
+          "content" : "90400832bd1c3395f354775c0a3f18bd552fccff"
         },
         {
           "alg" : "SHA-256",
-          "content" : "1c268e15f785aafb1e4670d8d6e5f856f69475e96c162dadcd1ff9b350e9139f"
+          "content" : "af46dd381553fdc466cd0c18f8bf2144c7dbcb7337eee3e16cab15e96613ddf0"
         },
         {
           "alg" : "SHA-512",
-          "content" : "aeb9138f96d5c48491974974534bb3b07931a18d36ccbed828940ae0361f5ef8f5b0ad6c776a1aebb4d2c0416edf8b7d143d821bfe7136d7948c4e5807b1c426"
+          "content" : "bc24b3c837e2a8acd80a587be5e61c886ac36ad2a7a27d63496a7e28c8cc92d429605daf3999a6da208f27f1fa101d880f368c2bcddc298a2781191f49897669"
         },
         {
           "alg" : "SHA-384",
-          "content" : "2f4ceb52be9fd05b578257258042aa6ba00e61f4e1e665e1823db85b19adb34d7e20fbee9941aec7ab861cb512c8295b"
+          "content" : "fde5913e37b6d7aa0e513648d97f1aa3c97839c0502aa6f21fa310e00004cb9b9e3faae0873f74c18854c3aa6324cee6"
         },
         {
           "alg" : "SHA3-384",
-          "content" : "8feb7bc4f93aa8c2f1f4fd0c869720c97f146d272830cbe20472ca4f6daaccc03b5ae5ab20ee7ee24b8a0dfa8e48bb4c"
+          "content" : "320660aa1fbfd91768832da85dd331aaa2d82d309ad71f02f6fe3815b6ffb02e9fb05ad227475aa2f073ecbf678466ff"
         },
         {
           "alg" : "SHA3-256",
-          "content" : "5409b4b49308f8cc6b45e368d2dde5486c92d76706a0428d2987e30e7e86e20e"
+          "content" : "90b9eb308847f88810fe1a6a05b1fb7948cc78ad4f6bf21b1eb55629a05eb285"
         },
         {
           "alg" : "SHA3-512",
-          "content" : "d4443dba282b4d01c04e10df23c9d7be8b896d20cf70adbbffdf065307b40a30ab4e21617f890f7d4a64e261617fa0a2091fa3a1461e73921411c42133df6134"
+          "content" : "14660d9351e62a7bceac9e7ca3037cb4e724f59b8ce3b161195201488a13a6e3ae83cbc721d60f5e9c184708d43cc294894d440652e50b9715c6b0c16e20aa31"
         }
       ],
       "licenses" : [
@@ -5643,7 +5643,7 @@
           }
         }
       ],
-      "purl" : "pkg:maven/org.bouncycastle/bcutil-jdk18on@1.86?type=jar",
+      "purl" : "pkg:maven/org.bouncycastle/bcutil-jdk18on@1.87?type=jar",
       "externalReferences" : [
         {
           "type" : "website",
@@ -10330,7 +10330,7 @@
   ],
   "dependencies" : [
     {
-      "ref" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.10?type=jar",
+      "ref" : "pkg:maven/org.astrana/trusted-attestation-server@1.0.11?type=jar",
       "dependsOn" : [
         "pkg:maven/org.springframework.boot/spring-boot-starter-web@4.1.2?type=jar",
         "pkg:maven/org.springframework.boot/spring-boot-starter-data-jpa@4.1.2?type=jar",
@@ -11087,8 +11087,8 @@
         "pkg:maven/net.shibboleth/shib-networking@9.2.3?type=jar",
         "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
-        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
-        "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.86?type=jar",
+        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87?type=jar",
+        "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.87?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
         "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar"
       ]
@@ -11131,19 +11131,19 @@
       ]
     },
     {
-      "ref" : "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
+      "ref" : "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87?type=jar",
       "dependsOn" : [ ]
     },
     {
-      "ref" : "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.86?type=jar",
+      "ref" : "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.87?type=jar",
       "dependsOn" : [
-        "pkg:maven/org.bouncycastle/bcutil-jdk18on@1.86?type=jar"
+        "pkg:maven/org.bouncycastle/bcutil-jdk18on@1.87?type=jar"
       ]
     },
     {
-      "ref" : "pkg:maven/org.bouncycastle/bcutil-jdk18on@1.86?type=jar",
+      "ref" : "pkg:maven/org.bouncycastle/bcutil-jdk18on@1.87?type=jar",
       "dependsOn" : [
-        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar"
+        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87?type=jar"
       ]
     },
     {
@@ -11170,8 +11170,8 @@
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
         "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/org.cryptacular/cryptacular@1.3.0?type=jar",
-        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
-        "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.86?type=jar",
+        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87?type=jar",
+        "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.87?type=jar",
         "pkg:maven/org.apache.httpcomponents.core5/httpcore5@5.4.4?type=jar",
         "pkg:maven/org.apache.httpcomponents.client5/httpclient5@5.6.5?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
@@ -11182,8 +11182,8 @@
     {
       "ref" : "pkg:maven/org.cryptacular/cryptacular@1.3.0?type=jar",
       "dependsOn" : [
-        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
-        "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.86?type=jar"
+        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87?type=jar",
+        "pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.87?type=jar"
       ]
     },
     {
@@ -11208,7 +11208,7 @@
         "pkg:maven/org.opensaml/opensaml-security-api@5.2.3?type=jar",
         "pkg:maven/net.shibboleth/shib-security@9.2.3?type=jar",
         "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
-        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
+        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87?type=jar",
         "pkg:maven/org.apache.santuario/xmlsec@3.0.6?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
         "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar",
@@ -11350,7 +11350,7 @@
         "pkg:maven/com.google.guava/guava@33.8.0-jre?type=jar",
         "pkg:maven/commons-codec/commons-codec@1.21.0?type=jar",
         "pkg:maven/org.apache.santuario/xmlsec@3.0.6?type=jar",
-        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.86?type=jar",
+        "pkg:maven/org.bouncycastle/bcprov-jdk18on@1.87?type=jar",
         "pkg:maven/org.opensaml/opensaml-security-impl@5.2.3?type=jar",
         "pkg:maven/org.slf4j/slf4j-api@2.0.20?type=jar",
         "pkg:maven/com.google.code.findbugs/jsr305@3.0.2?type=jar"
