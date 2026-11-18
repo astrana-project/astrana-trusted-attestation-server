@@ -2,10 +2,10 @@
     "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
     "bomFormat": "CycloneDX",
     "specVersion": "1.6",
-    "serialNumber": "urn:uuid:0f5d15ce-a37d-4501-ab86-bb31fb0c8a28",
+    "serialNumber": "urn:uuid:f90c04d6-f8b3-4430-9025-3e047371ae7c",
     "version": 1,
     "metadata": {
-        "timestamp": "2026-11-11T07:16:49Z",
+        "timestamp": "2026-11-17T22:26:40Z",
         "tools": [
             {
                 "name": "composer",
@@ -21,10 +21,10 @@
             }
         ],
         "component": {
-            "bom-ref": "astrana/trusted-attestation-server-1.0.16.0",
+            "bom-ref": "astrana/trusted-attestation-server-1.0.17.0",
             "type": "application",
             "name": "trusted-attestation-server",
-            "version": "1.0.16",
+            "version": "1.0.17",
             "group": "astrana",
             "description": "Laravel implementation of Astrana Trusted Attestation Server, one of three held to parity (decision record 5 in docs/adr)",
             "licenses": [
@@ -35,7 +35,7 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/astrana/trusted-attestation-server@1.0.16",
+            "purl": "pkg:composer/astrana/trusted-attestation-server@1.0.17",
             "properties": [
                 {
                     "name": "cdx:composer:package:type",
@@ -615,10 +615,10 @@
             ]
         },
         {
-            "bom-ref": "guzzlehttp/guzzle-8.3.1.0",
+            "bom-ref": "guzzlehttp/guzzle-8.5.1.0",
             "type": "library",
             "name": "guzzle",
-            "version": "8.3.1",
+            "version": "8.5.1",
             "group": "guzzlehttp",
             "description": "Guzzle is a PHP HTTP client library",
             "author": "Graham Campbell, Michael Dowling, Jeremy Lindblom, George Mponos, Tobias Nyholm, M\u00e1rk S\u00e1gi-Kaz\u00e1r, Tobias Schultze",
@@ -630,17 +630,17 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/guzzlehttp/guzzle@8.3.1",
+            "purl": "pkg:composer/guzzlehttp/guzzle@8.5.1",
             "externalReferences": [
                 {
                     "type": "distribution",
-                    "url": "https://api.github.com/repos/guzzle/guzzle/zipball/7d9b1f430bb65ac664e120af227bf9a795ad6333",
-                    "comment": "dist reference: 7d9b1f430bb65ac664e120af227bf9a795ad6333"
+                    "url": "https://api.github.com/repos/guzzle/guzzle/zipball/5509cc8494c9016a08801cd328e0559bf356852e",
+                    "comment": "dist reference: 5509cc8494c9016a08801cd328e0559bf356852e"
                 },
                 {
                     "type": "vcs",
                     "url": "https://github.com/guzzle/guzzle.git",
-                    "comment": "source reference: 7d9b1f430bb65ac664e120af227bf9a795ad6333"
+                    "comment": "source reference: 5509cc8494c9016a08801cd328e0559bf356852e"
                 },
                 {
                     "type": "issue-tracker",
@@ -649,18 +649,18 @@
                 },
                 {
                     "type": "vcs",
-                    "url": "https://github.com/guzzle/guzzle/tree/8.3.1",
+                    "url": "https://github.com/guzzle/guzzle/tree/8.5.1",
                     "comment": "as detected from Composer manifest 'support.source'"
                 }
             ],
             "properties": [
                 {
                     "name": "cdx:composer:package:distReference",
-                    "value": "7d9b1f430bb65ac664e120af227bf9a795ad6333"
+                    "value": "5509cc8494c9016a08801cd328e0559bf356852e"
                 },
                 {
                     "name": "cdx:composer:package:sourceReference",
-                    "value": "7d9b1f430bb65ac664e120af227bf9a795ad6333"
+                    "value": "5509cc8494c9016a08801cd328e0559bf356852e"
                 },
                 {
                     "name": "cdx:composer:package:type",
@@ -723,10 +723,10 @@
             ]
         },
         {
-            "bom-ref": "guzzlehttp/psr7-3.2.0.0",
+            "bom-ref": "guzzlehttp/psr7-3.4.0.0",
             "type": "library",
             "name": "psr7",
-            "version": "3.2.0",
+            "version": "3.4.0",
             "group": "guzzlehttp",
             "description": "PSR-7 message implementation that also provides common utility methods",
             "author": "Graham Campbell, Michael Dowling, George Mponos, Tobias Nyholm, M\u00e1rk S\u00e1gi-Kaz\u00e1r, Tobias Schultze, M\u00e1rk S\u00e1gi-Kaz\u00e1r",
@@ -738,17 +738,17 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/guzzlehttp/psr7@3.2.0",
+            "purl": "pkg:composer/guzzlehttp/psr7@3.4.0",
             "externalReferences": [
                 {
                     "type": "distribution",
-                    "url": "https://api.github.com/repos/guzzle/psr7/zipball/cdc139396207a5eba10c242d241fb014cb098390",
-                    "comment": "dist reference: cdc139396207a5eba10c242d241fb014cb098390"
+                    "url": "https://api.github.com/repos/guzzle/psr7/zipball/180bd6fcebd1dc289cbec5c576135f4b6f576e02",
+                    "comment": "dist reference: 180bd6fcebd1dc289cbec5c576135f4b6f576e02"
                 },
                 {
                     "type": "vcs",
                     "url": "https://github.com/guzzle/psr7.git",
-                    "comment": "source reference: cdc139396207a5eba10c242d241fb014cb098390"
+                    "comment": "source reference: 180bd6fcebd1dc289cbec5c576135f4b6f576e02"
                 },
                 {
                     "type": "issue-tracker",
@@ -757,18 +757,18 @@
                 },
                 {
                     "type": "vcs",
-                    "url": "https://github.com/guzzle/psr7/tree/3.2.0",
+                    "url": "https://github.com/guzzle/psr7/tree/3.4.0",
                     "comment": "as detected from Composer manifest 'support.source'"
                 }
             ],
             "properties": [
                 {
                     "name": "cdx:composer:package:distReference",
-                    "value": "cdc139396207a5eba10c242d241fb014cb098390"
+                    "value": "180bd6fcebd1dc289cbec5c576135f4b6f576e02"
                 },
                 {
                     "name": "cdx:composer:package:sourceReference",
-                    "value": "cdc139396207a5eba10c242d241fb014cb098390"
+                    "value": "180bd6fcebd1dc289cbec5c576135f4b6f576e02"
                 },
                 {
                     "name": "cdx:composer:package:type",
@@ -831,10 +831,10 @@
             ]
         },
         {
-            "bom-ref": "laravel/framework-13.40.0.0",
+            "bom-ref": "laravel/framework-13.42.0.0",
             "type": "library",
             "name": "framework",
-            "version": "v13.40.0",
+            "version": "v13.42.0",
             "group": "laravel",
             "description": "The Laravel Framework.",
             "author": "Taylor Otwell",
@@ -846,17 +846,17 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/laravel/framework@v13.40.0",
+            "purl": "pkg:composer/laravel/framework@v13.42.0",
             "externalReferences": [
                 {
                     "type": "distribution",
-                    "url": "https://api.github.com/repos/laravel/framework/zipball/1449bf241017087fbd38c118ecaabef3f6797fdc",
-                    "comment": "dist reference: 1449bf241017087fbd38c118ecaabef3f6797fdc"
+                    "url": "https://api.github.com/repos/laravel/framework/zipball/f5c01f6b63803f16f38ebb31622c4fea412bd022",
+                    "comment": "dist reference: f5c01f6b63803f16f38ebb31622c4fea412bd022"
                 },
                 {
                     "type": "vcs",
                     "url": "https://github.com/laravel/framework.git",
-                    "comment": "source reference: 1449bf241017087fbd38c118ecaabef3f6797fdc"
+                    "comment": "source reference: f5c01f6b63803f16f38ebb31622c4fea412bd022"
                 },
                 {
                     "type": "website",
@@ -877,11 +877,11 @@
             "properties": [
                 {
                     "name": "cdx:composer:package:distReference",
-                    "value": "1449bf241017087fbd38c118ecaabef3f6797fdc"
+                    "value": "f5c01f6b63803f16f38ebb31622c4fea412bd022"
                 },
                 {
                     "name": "cdx:composer:package:sourceReference",
-                    "value": "1449bf241017087fbd38c118ecaabef3f6797fdc"
+                    "value": "f5c01f6b63803f16f38ebb31622c4fea412bd022"
                 },
                 {
                     "name": "cdx:composer:package:type",
@@ -938,10 +938,10 @@
             ]
         },
         {
-            "bom-ref": "laravel/serializable-closure-2.1.0.0",
+            "bom-ref": "laravel/serializable-closure-2.2.0.0",
             "type": "library",
             "name": "serializable-closure",
-            "version": "v2.1.0",
+            "version": "v2.2.0",
             "group": "laravel",
             "description": "Laravel Serializable Closure provides an easy and secure way to serialize closures in PHP.",
             "author": "Taylor Otwell, Nuno Maduro",
@@ -953,17 +953,17 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/laravel/serializable-closure@v2.1.0",
+            "purl": "pkg:composer/laravel/serializable-closure@v2.2.0",
             "externalReferences": [
                 {
                     "type": "distribution",
-                    "url": "https://api.github.com/repos/laravel/serializable-closure/zipball/2d5869a838bbcf37e0d8b0568fc41914e81374b5",
-                    "comment": "dist reference: 2d5869a838bbcf37e0d8b0568fc41914e81374b5"
+                    "url": "https://api.github.com/repos/laravel/serializable-closure/zipball/2bfb44e8af009b553ed2c060c94b0bc3c67b4769",
+                    "comment": "dist reference: 2bfb44e8af009b553ed2c060c94b0bc3c67b4769"
                 },
                 {
                     "type": "vcs",
                     "url": "https://github.com/laravel/serializable-closure.git",
-                    "comment": "source reference: 2d5869a838bbcf37e0d8b0568fc41914e81374b5"
+                    "comment": "source reference: 2bfb44e8af009b553ed2c060c94b0bc3c67b4769"
                 },
                 {
                     "type": "issue-tracker",
@@ -979,11 +979,11 @@
             "properties": [
                 {
                     "name": "cdx:composer:package:distReference",
-                    "value": "2d5869a838bbcf37e0d8b0568fc41914e81374b5"
+                    "value": "2bfb44e8af009b553ed2c060c94b0bc3c67b4769"
                 },
                 {
                     "name": "cdx:composer:package:sourceReference",
-                    "value": "2d5869a838bbcf37e0d8b0568fc41914e81374b5"
+                    "value": "2bfb44e8af009b553ed2c060c94b0bc3c67b4769"
                 },
                 {
                     "name": "cdx:composer:package:type",
@@ -1430,10 +1430,10 @@
             ]
         },
         {
-            "bom-ref": "monolog/monolog-3.12.1.0",
+            "bom-ref": "monolog/monolog-3.13.0.0",
             "type": "library",
             "name": "monolog",
-            "version": "3.12.1",
+            "version": "3.13.0",
             "group": "monolog",
             "description": "Sends your logs to files, sockets, inboxes, databases and various web services",
             "author": "Jordi Boggiano",
@@ -1445,17 +1445,17 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/monolog/monolog@3.12.1",
+            "purl": "pkg:composer/monolog/monolog@3.13.0",
             "externalReferences": [
                 {
                     "type": "distribution",
-                    "url": "https://api.github.com/repos/Seldaek/monolog/zipball/d7059e4c691d05ea1222b5124bed0f961be46e15",
-                    "comment": "dist reference: d7059e4c691d05ea1222b5124bed0f961be46e15"
+                    "url": "https://api.github.com/repos/Seldaek/monolog/zipball/1f5f55bb4a9a230ff6d8a4ceccea31d10b0142ac",
+                    "comment": "dist reference: 1f5f55bb4a9a230ff6d8a4ceccea31d10b0142ac"
                 },
                 {
                     "type": "vcs",
                     "url": "https://github.com/Seldaek/monolog.git",
-                    "comment": "source reference: d7059e4c691d05ea1222b5124bed0f961be46e15"
+                    "comment": "source reference: 1f5f55bb4a9a230ff6d8a4ceccea31d10b0142ac"
                 },
                 {
                     "type": "website",
@@ -1469,18 +1469,18 @@
                 },
                 {
                     "type": "vcs",
-                    "url": "https://github.com/Seldaek/monolog/tree/3.12.1",
+                    "url": "https://github.com/Seldaek/monolog/tree/3.13.0",
                     "comment": "as detected from Composer manifest 'support.source'"
                 }
             ],
             "properties": [
                 {
                     "name": "cdx:composer:package:distReference",
-                    "value": "d7059e4c691d05ea1222b5124bed0f961be46e15"
+                    "value": "1f5f55bb4a9a230ff6d8a4ceccea31d10b0142ac"
                 },
                 {
                     "name": "cdx:composer:package:sourceReference",
-                    "value": "d7059e4c691d05ea1222b5124bed0f961be46e15"
+                    "value": "1f5f55bb4a9a230ff6d8a4ceccea31d10b0142ac"
                 },
                 {
                     "name": "cdx:composer:package:type",
@@ -2529,10 +2529,10 @@
             ]
         },
         {
-            "bom-ref": "ramsey/uuid-4.9.4.0",
+            "bom-ref": "ramsey/uuid-4.10.0.0",
             "type": "library",
             "name": "uuid",
-            "version": "4.9.4",
+            "version": "4.10.0",
             "group": "ramsey",
             "description": "A PHP library for generating and working with universally unique identifiers (UUIDs).",
             "licenses": [
@@ -2543,17 +2543,17 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/ramsey/uuid@4.9.4",
+            "purl": "pkg:composer/ramsey/uuid@4.10.0",
             "externalReferences": [
                 {
                     "type": "distribution",
-                    "url": "https://api.github.com/repos/ramsey/uuid/zipball/75d73f48d02797c2c285a7e9f348fadc0102ffe2",
-                    "comment": "dist reference: 75d73f48d02797c2c285a7e9f348fadc0102ffe2"
+                    "url": "https://api.github.com/repos/ramsey/uuid/zipball/f9aa3efc8015fcbc013d84d699583b268ccb593a",
+                    "comment": "dist reference: f9aa3efc8015fcbc013d84d699583b268ccb593a"
                 },
                 {
                     "type": "vcs",
                     "url": "https://github.com/ramsey/uuid.git",
-                    "comment": "source reference: 75d73f48d02797c2c285a7e9f348fadc0102ffe2"
+                    "comment": "source reference: f9aa3efc8015fcbc013d84d699583b268ccb593a"
                 },
                 {
                     "type": "issue-tracker",
@@ -2562,18 +2562,18 @@
                 },
                 {
                     "type": "vcs",
-                    "url": "https://github.com/ramsey/uuid/tree/4.9.4",
+                    "url": "https://github.com/ramsey/uuid/tree/4.10.0",
                     "comment": "as detected from Composer manifest 'support.source'"
                 }
             ],
             "properties": [
                 {
                     "name": "cdx:composer:package:distReference",
-                    "value": "75d73f48d02797c2c285a7e9f348fadc0102ffe2"
+                    "value": "f9aa3efc8015fcbc013d84d699583b268ccb593a"
                 },
                 {
                     "name": "cdx:composer:package:sourceReference",
-                    "value": "75d73f48d02797c2c285a7e9f348fadc0102ffe2"
+                    "value": "f9aa3efc8015fcbc013d84d699583b268ccb593a"
                 },
                 {
                     "name": "cdx:composer:package:type",
@@ -3720,10 +3720,10 @@
             ]
         },
         {
-            "bom-ref": "symfony/polyfill-php85-1.43.0.0",
+            "bom-ref": "symfony/polyfill-php85-1.44.0.0",
             "type": "library",
             "name": "polyfill-php85",
-            "version": "v1.43.0",
+            "version": "v1.44.0",
             "group": "symfony",
             "description": "Symfony polyfill backporting some PHP 8.5+ features to lower PHP versions",
             "author": "Nicolas Grekas, Symfony Community",
@@ -3735,17 +3735,17 @@
                     }
                 }
             ],
-            "purl": "pkg:composer/symfony/polyfill-php85@v1.43.0",
+            "purl": "pkg:composer/symfony/polyfill-php85@v1.44.0",
             "externalReferences": [
                 {
                     "type": "distribution",
-                    "url": "https://api.github.com/repos/symfony/polyfill-php85/zipball/86a42cbcc07adc331481a5ab310a4024bfc227f6",
-                    "comment": "dist reference: 86a42cbcc07adc331481a5ab310a4024bfc227f6"
+                    "url": "https://api.github.com/repos/symfony/polyfill-php85/zipball/94c794cb5ba51784bc259f11e9f128593297d8dc",
+                    "comment": "dist reference: 94c794cb5ba51784bc259f11e9f128593297d8dc"
                 },
                 {
                     "type": "vcs",
                     "url": "https://github.com/symfony/polyfill-php85.git",
-                    "comment": "source reference: 86a42cbcc07adc331481a5ab310a4024bfc227f6"
+                    "comment": "source reference: 94c794cb5ba51784bc259f11e9f128593297d8dc"
                 },
                 {
                     "type": "website",
@@ -3754,18 +3754,18 @@
                 },
                 {
                     "type": "vcs",
-                    "url": "https://github.com/symfony/polyfill-php85/tree/v1.43.0",
+                    "url": "https://github.com/symfony/polyfill-php85/tree/v1.44.0",
                     "comment": "as detected from Composer manifest 'support.source'"
                 }
             ],
             "properties": [
                 {
                     "name": "cdx:composer:package:distReference",
-                    "value": "86a42cbcc07adc331481a5ab310a4024bfc227f6"
+                    "value": "94c794cb5ba51784bc259f11e9f128593297d8dc"
                 },
                 {
                     "name": "cdx:composer:package:sourceReference",
-                    "value": "86a42cbcc07adc331481a5ab310a4024bfc227f6"
+                    "value": "94c794cb5ba51784bc259f11e9f128593297d8dc"
                 },
                 {
                     "name": "cdx:composer:package:type",
@@ -4690,12 +4690,13 @@
             ]
         },
         {
-            "ref": "guzzlehttp/guzzle-8.3.1.0",
+            "ref": "guzzlehttp/guzzle-8.5.1.0",
             "dependsOn": [
                 "guzzlehttp/promises-3.1.0.0",
-                "guzzlehttp/psr7-3.2.0.0",
+                "guzzlehttp/psr7-3.4.0.0",
                 "psr/http-client-1.0.3.0",
                 "psr/http-factory-1.1.0.0",
+                "symfony/deprecation-contracts-3.8.1.0",
                 "symfony/polyfill-php80-1.43.0.0",
                 "symfony/polyfill-php82-1.43.0.0"
             ]
@@ -4707,10 +4708,11 @@
             ]
         },
         {
-            "ref": "guzzlehttp/psr7-3.2.0.0",
+            "ref": "guzzlehttp/psr7-3.4.0.0",
             "dependsOn": [
                 "psr/http-factory-1.1.0.0",
                 "psr/http-message-2.0.0.0",
+                "symfony/deprecation-contracts-3.8.1.0",
                 "symfony/polyfill-php80-1.43.0.0",
                 "symfony/polyfill-php82-1.43.0.0"
             ]
@@ -4722,31 +4724,31 @@
             ]
         },
         {
-            "ref": "laravel/framework-13.40.0.0",
+            "ref": "laravel/framework-13.42.0.0",
             "dependsOn": [
                 "brick/math-1.0.0.0",
                 "doctrine/inflector-2.1.1.0",
                 "dragonmantank/cron-expression-3.6.1.0",
                 "egulias/email-validator-4.0.4.0",
                 "fruitcake/php-cors-1.4.0.0",
-                "guzzlehttp/guzzle-8.3.1.0",
+                "guzzlehttp/guzzle-8.5.1.0",
                 "guzzlehttp/promises-3.1.0.0",
-                "guzzlehttp/psr7-3.2.0.0",
+                "guzzlehttp/psr7-3.4.0.0",
                 "guzzlehttp/uri-template-2.0.1.0",
                 "laravel/prompts-0.3.27.0",
-                "laravel/serializable-closure-2.1.0.0",
+                "laravel/serializable-closure-2.2.0.0",
                 "league/commonmark-2.10.7.0",
                 "league/flysystem-3.36.0.0",
                 "league/flysystem-local-3.35.3.0",
                 "league/uri-7.10.0.0",
-                "monolog/monolog-3.12.1.0",
+                "monolog/monolog-3.13.0.0",
                 "nesbot/carbon-3.15.1.0",
                 "nunomaduro/termwind-2.4.1.0",
                 "psr/container-2.0.2.0",
                 "psr/http-message-2.0.0.0",
                 "psr/log-3.0.2.0",
                 "psr/simple-cache-3.0.0.0",
-                "ramsey/uuid-4.9.4.0",
+                "ramsey/uuid-4.10.0.0",
                 "symfony/console-8.1.11.0",
                 "symfony/error-handler-8.1.10.0",
                 "symfony/finder-8.1.11.0",
@@ -4755,7 +4757,7 @@
                 "symfony/mailer-8.1.10.0",
                 "symfony/mime-8.1.10.0",
                 "symfony/polyfill-php84-1.43.0.0",
-                "symfony/polyfill-php85-1.43.0.0",
+                "symfony/polyfill-php85-1.44.0.0",
                 "symfony/polyfill-php86-1.43.0.0",
                 "symfony/process-8.1.10.0",
                 "symfony/routing-8.1.11.0",
@@ -4773,7 +4775,7 @@
             ]
         },
         {
-            "ref": "laravel/serializable-closure-2.1.0.0"
+            "ref": "laravel/serializable-closure-2.2.0.0"
         },
         {
             "ref": "league/commonmark-2.10.7.0",
@@ -4822,7 +4824,7 @@
             ]
         },
         {
-            "ref": "monolog/monolog-3.12.1.0",
+            "ref": "monolog/monolog-3.13.0.0",
             "dependsOn": [
                 "psr/log-3.0.2.0"
             ]
@@ -4909,7 +4911,7 @@
             "ref": "ramsey/collection-2.1.1.0"
         },
         {
-            "ref": "ramsey/uuid-4.9.4.0",
+            "ref": "ramsey/uuid-4.10.0.0",
             "dependsOn": [
                 "brick/math-1.0.0.0",
                 "ramsey/collection-2.1.1.0"
@@ -4932,7 +4934,7 @@
             "dependsOn": [
                 "symfony/deprecation-contracts-3.8.1.0",
                 "symfony/polyfill-mbstring-1.43.3.0",
-                "symfony/polyfill-php85-1.43.0.0",
+                "symfony/polyfill-php85-1.44.0.0",
                 "symfony/service-contracts-3.8.1.0",
                 "symfony/string-8.1.10.0"
             ]
@@ -4947,7 +4949,7 @@
             "ref": "symfony/error-handler-8.1.10.0",
             "dependsOn": [
                 "psr/log-3.0.2.0",
-                "symfony/polyfill-php85-1.43.0.0",
+                "symfony/polyfill-php85-1.44.0.0",
                 "symfony/var-dumper-8.1.10.0"
             ]
         },
@@ -5031,7 +5033,7 @@
             "ref": "symfony/polyfill-php84-1.43.0.0"
         },
         {
-            "ref": "symfony/polyfill-php85-1.43.0.0"
+            "ref": "symfony/polyfill-php85-1.44.0.0"
         },
         {
             "ref": "symfony/polyfill-php86-1.43.0.0"
@@ -5109,10 +5111,10 @@
             "ref": "voku/portable-ascii-2.1.1.0"
         },
         {
-            "ref": "astrana/trusted-attestation-server-1.0.16.0",
+            "ref": "astrana/trusted-attestation-server-1.0.17.0",
             "dependsOn": [
                 "firebase/php-jwt-7.2.1.0",
-                "laravel/framework-13.40.0.0",
+                "laravel/framework-13.42.0.0",
                 "onelogin/php-saml-4.4.1.0",
                 "deb/libicu76-76.1-4",
                 "deb/libpq5-17.11-0+deb13u1"
